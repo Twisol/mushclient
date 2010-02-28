@@ -1338,6 +1338,7 @@ bool CMUSHclientApp::SpellCheck (CWnd * pWnd, CEdit * pEdit)
 
 
 LUALIB_API int luaopen_progress_dialog(lua_State *L);
+LUALIB_API int luaopen_json(lua_State *L);
 
 void CMUSHclientApp::OpenLuaDelayed ()
   {
@@ -1355,6 +1356,7 @@ void CMUSHclientApp::OpenLuaDelayed ()
   luaopen_progress_dialog (m_SpellChecker_Lua);    // progress dialog
   luaopen_bc (m_SpellChecker_Lua);   // open bc library 
   luaopen_lsqlite3 (m_SpellChecker_Lua);   // open sqlite library
+  luaopen_json (m_SpellChecker_Lua);
   lua_pushcfunction(m_SpellChecker_Lua, luaopen_lpeg);   // open lpeg library
   lua_call(m_SpellChecker_Lua, 0, 0);
 

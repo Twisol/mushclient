@@ -37,6 +37,7 @@ extern "C"
   }
 
 LUALIB_API int luaopen_progress_dialog(lua_State *L);
+LUALIB_API int luaopen_json(lua_State *L);
 
 /////////////////////////////////////////////////////////////////////////////
 // CTextView

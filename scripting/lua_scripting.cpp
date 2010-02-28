@@ -26,6 +26,7 @@ extern "C"
 //LUALIB_API int luaopen_trie(lua_State *L);
 
 LUALIB_API int luaopen_progress_dialog(lua_State *L);
+LUALIB_API int luaopen_json(lua_State *L);
 
 
 
@@ -185,6 +186,7 @@ void CScriptEngine::OpenLuaDelayed ()
   luaopen_bits (L);   // bit manipulation library
   luaopen_compress (L);  // compression (utils) library
   luaopen_progress_dialog (L);    // progress dialog
+  luaopen_json (L);
 //  luaopen_trie (L);   // open trie library
   luaopen_bc (L);   // open bc library   
   luaopen_lsqlite3 (L);   // open sqlite library

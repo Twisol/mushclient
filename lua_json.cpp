@@ -18,8 +18,7 @@ static ptrdiff_t table_maxn(lua_State* L)
 		// L: ... table, key, value
 		lua_pop(L, 1); // don't need value
 		// L: ... table, key
-		int ltype = lua_type(L, -1);
-		if (ltype == LUA_TNUMBER)
+		if (lua_type(L, -1) == LUA_TNUMBER)
 		{
 			double dbl = lua_tonumber(L, -1);
 			ptrdiff_t num = lua_tointeger(L, -1);
@@ -98,6 +97,33 @@ static json_object* encode_lua_table_array(lua_State* L)
 	return obj;
 }
 
+static json_object* encode_lua_table_object(lua_State* L)
+{
+	// L: ... table
+
+	luaL_checkstack(L, 2, "Nested too deep!");
+
+	json_object* obj = json_object_new_object();
+	json_object* member = NULL;
+
+	lua_pushnil(L); // first key
+	// L: ... table, nil
+	while (lua_next(L, -2) != 0)
+	{
+		// L: ... table, key, value
+		if (lua_type(L, -2) == LUA_TSTRING)
+		{
+			member = encode_lua_data(L);
+			json_object_object_add(obj, lua_tostring(L, -2), member);
+		}
+		lua_pop(L, 1);
+		// L: ... table, key
+	}
+	// L: ... table
+
+	return obj;
+}
+
 static json_object* encode_lua_table(lua_State* L)
 {
 	// L: ... table
@@ -108,15 +134,16 @@ static json_object* encode_lua_table(lua_State* L)
 	{
 		case 0:
 			luaL_error(L, "Ambiguity: empty table could be either array or object.");
+			break;
 		case 1:
 			obj = encode_lua_table_array(L);
 			break;
 		case 2:
-			obj = json_object_new_object();
-			json_object_object_add(obj, "type", json_object_new_string("Array"));
+			obj = encode_lua_table_object(L);
 			break;
 		case 3:
 			luaL_error(L, "Unable to convert mixed table!");
+			break;
 	}
 
 	return obj;

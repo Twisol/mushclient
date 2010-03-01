@@ -1,69 +1,194 @@
 #include "stdafx.h"
-#include <cmath>
+#include <cstring>
 #include "json/json.h"
 
 static json_object* encode_lua_data(lua_State* L);
 
+static ptrdiff_t table_maxn(lua_State* L)
+{
+	// L:  ... table
+	luaL_checkstack(L, 2, "Nested too deep!");
+
+	ptrdiff_t max = 0;
+
+	lua_pushnil(L); // first key
+	// L: ... table, nil
+	while (lua_next(L, -2) != 0)
+	{
+		// L: ... table, key, value
+		lua_pop(L, 1); // don't need value
+		// L: ... table, key
+		int ltype = lua_type(L, -1);
+		if (ltype == LUA_TNUMBER)
+		{
+			double dbl = lua_tonumber(L, -1);
+			ptrdiff_t num = lua_tointeger(L, -1);
+
+			if (num == dbl && num > max)
+				max = num;
+		}
+	}
+	// L: ... table
+
+	return max;
+}
+
+// Returns 1 if it's a JSON array, 2 if it's a JSON object,
+// 3 if it's invalid, and 0 for uncertain (empty table {})
+static unsigned char lua_table_json_type(lua_State* L)
+{
+	// L: ... table
+	luaL_checkstack(L, 2, "Nested too deep!");
+
+	unsigned int numArrayEntries = 0;
+	unsigned char type = 0;
+	int ltype;
+
+	lua_pushnil(L); // first key
+	// L: ... table, nil
+	while (lua_next(L, -2) != 0)
+	{
+		// L: .. table, key, value
+		lua_pop(L, 1); // don't need the value
+		// L: .. table, key
+		ltype = lua_type(L, -1);
+
+		if (type != 2 && ltype == LUA_TNUMBER)
+		{
+			if (type != 1) type = 1;
+		}
+		else if (type != 1 && ltype == LUA_TSTRING)
+		{
+			if (type != 2) type = 2;
+		}
+		else
+		{
+			type = 3;
+			break;
+		}
+	}
+	// L: ... table
+
+	return type;
+}
+
+static json_object* encode_lua_table_array(lua_State* L)
+{
+	// L: ... table
+
+	luaL_checkstack(L, 2, "Nested too deep!");
+
+	json_object* obj = json_object_new_array();
+	json_object* member = NULL;
+
+	for (ptrdiff_t i = 1; i <= table_maxn(L); ++i)
+	{
+		lua_pushnumber(L, i);
+		// L: ... table, index
+		lua_gettable(L, -2);
+		// L: ... table, value
+
+		member = encode_lua_data(L);
+		json_object_array_add(obj, member);
+
+		lua_pop(L, 1);
+		// L: ... table
+	}
+
+	return obj;
+}
+
 static json_object* encode_lua_table(lua_State* L)
 {
+	// L: ... table
+
 	json_object* obj = NULL;
 
-	obj = json_object_new_array();
-	json_object_array_add(obj, json_object_new_string("Got table!"));
+	switch (lua_table_json_type(L))
+	{
+		case 0:
+			luaL_error(L, "Ambiguity: empty table could be either array or object.");
+		case 1:
+			obj = encode_lua_table_array(L);
+			break;
+		case 2:
+			obj = json_object_new_object();
+			json_object_object_add(obj, "type", json_object_new_string("Array"));
+			break;
+		case 3:
+			luaL_error(L, "Unable to convert mixed table!");
+	}
 
 	return obj;
 }
 
 static json_object* encode_lua_number(lua_State* L)
 {
-	return json_object_new_double(lua_tonumber(L, -1));
+	// L: ... number
+	double dbl = lua_tonumber(L, -1);
+	ptrdiff_t num = lua_tointeger(L, -1);
+
+	if (num == dbl)
+		return json_object_new_int(num);
+	else
+		return json_object_new_double(dbl);
 }
 
 static json_object* encode_lua_string(lua_State* L)
 {
+	// L: ... string
 	return json_object_new_string(lua_tostring(L, -1));
 }
 
 static json_object* encode_lua_boolean(lua_State* L)
 {
+	// L: ... bool
 	return json_object_new_boolean(lua_toboolean(L, -1));
 }
 
 static json_object* encode_lua_nil(lua_State* L)
 {
+	// L: ... nil
 	return NULL;
 }
 
 static json_object* encode_lua_data(lua_State* L)
 {
-	int ltype = lua_type(L, 1);
+	// L: ... item
+
+	json_object* obj = NULL;
+
+	int ltype = lua_type(L, -1);
 	switch (ltype)
 	{
-		//case LUA_TTABLE:
-		//	return encode_lua_table(L);
+		case LUA_TTABLE:
+			obj = encode_lua_table(L);
+			break;
 		case LUA_TNUMBER:
-			return encode_lua_number(L);
+			obj = encode_lua_number(L);
+			break;
 		case LUA_TSTRING:
-			return encode_lua_string(L);
+			obj = encode_lua_string(L);
+			break;
 		case LUA_TBOOLEAN:
-			return encode_lua_boolean(L);
+			obj = encode_lua_boolean(L);
+			break;
 		case LUA_TNIL:
-			return encode_lua_nil(L);
+			obj = encode_lua_nil(L);
+			break;
 		default:
 			luaL_error(L, "Invalid data type: %s", lua_typename(L, ltype));
-			lua_error(L);
 	}
 
-	luaL_error(L, "Shouldn't be here!");
-	return NULL; // never executed
+	return obj;
 }
 
 static int Ljson_encode(lua_State* L)
 {
-	lua_settop(L, 1);
+	lua_settop(L, 1); // L: item
 	const char* encoded = json_object_to_json_string(encode_lua_data(L));
-	lua_pop(L, 1);
-	lua_pushstring(L, encoded);
+	lua_pop(L, 1); // L: -
+	lua_pushstring(L, encoded); // L: encoded
 
 	return 1;
 }
@@ -91,5 +216,6 @@ LUALIB_API int luaopen_json(lua_State *L)
 	luaL_register(L, NULL, json_meta);
 	lua_pop(L, 1);
 	luaL_register(L, "json", json_lib);
+
 	return 1;
 }

@@ -244,6 +244,40 @@ static int Ljson_encode(lua_State* L)
 	return 1;
 }
 
+static int Ljson_array(lua_State* L)
+{
+	lua_settop(L, 1);
+	luaL_argcheck(L, lua_type(L, 1) == LUA_TTABLE, 1, "expected table");
+
+	json_object* obj = encode_lua_table_array(L);
+	lua_pop(L, 1);
+
+	json_object** ud = (json_object**)lua_newuserdata(L, sizeof(json_object*));
+	// L: userdata
+	luaL_getmetatable(L, json_metaname);
+	lua_setmetatable(L, -2);
+	*ud = obj;
+
+	return 1;
+}
+
+static int Ljson_object(lua_State* L)
+{
+	lua_settop(L, 1);
+	luaL_argcheck(L, lua_type(L, 1) == LUA_TTABLE, 1, "expected table");
+
+	json_object* obj = encode_lua_table_object(L);
+	lua_pop(L, 1);
+
+	json_object** ud = (json_object**)lua_newuserdata(L, sizeof(json_object*));
+	// L: userdata
+	luaL_getmetatable(L, json_metaname);
+	lua_setmetatable(L, -2);
+	*ud = obj;
+
+	return 1;
+}
+
 static int Ljson_tojson(lua_State* L)
 {
 	json_object* obj = *((json_object**)luaL_checkudata(L, 1, json_metaname));
@@ -267,11 +301,14 @@ static int Ljson_gc_(lua_State* L)
 static const luaL_reg json_meta[] = {
 	{"to_json", &Ljson_tojson},
 	{"to_lua", &Ljson_tolua},
+	{"__gc", &Ljson_gc_},
 	{NULL, NULL}
 };
 
 static const luaL_reg json_lib[] = {
 	{"encode", &Ljson_encode},
+	{"array", &Ljson_array},
+	{"object", &Ljson_object},
 	{NULL, NULL}
 };
 

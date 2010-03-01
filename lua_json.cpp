@@ -244,7 +244,7 @@ static int Ljson_encode(lua_State* L)
 	return 1;
 }
 
-static int Ljson_tostring(lua_State* L)
+static int Ljson_tojson(lua_State* L)
 {
 	json_object* obj = *((json_object**)luaL_checkudata(L, 1, json_metaname));
 	lua_pushstring(L, json_object_to_json_string(obj));
@@ -265,7 +265,7 @@ static int Ljson_gc_(lua_State* L)
 }
 
 static const luaL_reg json_meta[] = {
-	{"to_string", &Ljson_tostring},
+	{"to_json", &Ljson_tojson},
 	{"to_lua", &Ljson_tolua},
 	{NULL, NULL}
 };

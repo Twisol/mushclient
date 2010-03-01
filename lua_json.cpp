@@ -1,11 +1,17 @@
 #include "stdafx.h"
-#include <cstring>
 #include "json/json.h"
 
+// Metatable identifier in the Lua registry
 static const char* json_metaname = "mushclient.json";
 
-static json_object* encode_lua_data(lua_State* L);
+// JSON null value
+static json_object** json_null = NULL;
 
+/***************************************************
+  Private utility methods
+***************************************************/
+
+// Calculates the largest whole-number index of a table.
 static ptrdiff_t table_maxn(lua_State* L)
 {
 	// L:  ... table
@@ -33,6 +39,30 @@ static ptrdiff_t table_maxn(lua_State* L)
 
 	return max;
 }
+
+// Pushes a JSON object to the Lua stack
+static void push_json_udata(lua_State* L, json_object* obj)
+{
+	json_object** ud = NULL;
+	if (obj == NULL)
+	{
+		lua_pushlightuserdata(L, json_null);
+		lua_gettable(L, LUA_REGISTRYINDEX);
+	}
+	else
+	{
+		ud = (json_object**)lua_newuserdata(L, sizeof(json_object*));
+		luaL_getmetatable(L, json_metaname);
+		lua_setmetatable(L, -2);
+		*ud = obj;
+	}
+}
+
+/***************************************************
+  JSON encoding implementation
+***************************************************/
+
+static json_object* encode_lua_data(lua_State* L);
 
 // Returns 1 if it's a JSON array, 2 if it's a JSON object,
 // 3 if it's invalid, and 0 for uncertain (empty table {})
@@ -174,24 +204,6 @@ static json_object* encode_lua_number(lua_State* L)
 		return json_object_new_double(dbl);
 }
 
-static json_object* encode_lua_string(lua_State* L)
-{
-	// L: ... string
-	return json_object_new_string(lua_tostring(L, -1));
-}
-
-static json_object* encode_lua_boolean(lua_State* L)
-{
-	// L: ... bool
-	return json_object_new_boolean(lua_toboolean(L, -1));
-}
-
-static json_object* encode_lua_nil(lua_State* L)
-{
-	// L: ... nil
-	return NULL;
-}
-
 static json_object* encode_lua_data(lua_State* L)
 {
 	// L: ... item
@@ -199,8 +211,6 @@ static json_object* encode_lua_data(lua_State* L)
 	int ltype = lua_type(L, -1);
 	switch (ltype)
 	{
-		case LUA_TTABLE:
-			return encode_lua_table(L);
 		case LUA_TUSERDATA:
 		{
 			luaL_getmetatable(L, json_metaname);
@@ -213,20 +223,82 @@ static json_object* encode_lua_data(lua_State* L)
 			else
 				break;
 		}
+		case LUA_TTABLE:
+			return encode_lua_table(L);
 		case LUA_TNUMBER:
 			return encode_lua_number(L);
 		case LUA_TSTRING:
-			return encode_lua_string(L);
+			return json_object_new_string(lua_tostring(L, -1));
 		case LUA_TBOOLEAN:
-			return encode_lua_boolean(L);
+			return json_object_new_boolean(lua_toboolean(L, -1));
 		case LUA_TNIL:
-			return encode_lua_nil(L);
+			return NULL;
 	}
 
 	luaL_error(L, "Invalid data type: %s", lua_typename(L, ltype));
 	return NULL; // never reached
 }
 
+/***************************************************
+  JSON decoding implementation
+***************************************************/
+
+static void decode_json_data(lua_State* L, json_object* obj);
+
+static void decode_json_object(lua_State* L, json_object* obj)
+{
+	lua_newtable(L);
+	json_object_object_foreach(obj, key, val) {
+		lua_pushstring(L, key);
+		decode_json_data(L, val);
+		lua_rawset(L, -3);
+	}
+}
+
+static void decode_json_array(lua_State* L, json_object* obj)
+{
+	lua_newtable(L);
+	for (int i = 0; i < json_object_array_length(obj); ++i)
+	{
+		lua_pushinteger(L, i+1);
+		decode_json_data(L, json_object_array_get_idx(obj, i));
+		lua_rawset(L, -3);
+	}
+}
+
+static void decode_json_data(lua_State* L, json_object* obj)
+{
+	switch (json_object_get_type(obj))
+	{
+		case json_type_object:
+			decode_json_object(L, obj);
+			break;
+		case json_type_array:
+			decode_json_array(L, obj);
+			break;
+		case json_type_string:
+			lua_pushstring(L, json_object_get_string(obj));
+			break;
+		case json_type_double:
+			lua_pushnumber(L, json_object_get_double(obj));
+			break;
+		case json_type_int:
+			lua_pushinteger(L, json_object_get_int(obj));
+			break;
+		case json_type_boolean:
+			lua_pushboolean(L, json_object_get_boolean(obj));
+			break;
+		case json_type_null:
+			push_json_udata(L, NULL);
+			break;
+	}
+}
+
+/***************************************************
+  JSON library methods
+***************************************************/
+
+// Converts a Lua datum into a compiled JSON chunk
 static int Ljson_encode(lua_State* L)
 {
 	lua_settop(L, 1);
@@ -235,49 +307,62 @@ static int Ljson_encode(lua_State* L)
 	lua_pop(L, 1);
 	// L: -
 
-	json_object** ud = (json_object**)lua_newuserdata(L, sizeof(json_object*));
-	// L: userdata
-	luaL_getmetatable(L, json_metaname);
-	lua_setmetatable(L, -2);
-	*ud = obj;
-
+	push_json_udata(L, obj);
 	return 1;
 }
 
+// Converts a JSON string into a compiled JSON chunk
+static int Ljson_decode(lua_State* L)
+{
+	lua_settop(L, 1);
+	// L: json
+	json_object* obj = json_tokener_parse(luaL_checkstring(L, 1));
+	lua_pop(L, 1);
+	// L: -
+
+	if (is_error(obj))
+	{
+		lua_pushnil(L);
+		lua_pushstring(L, json_tokener_errors[-(unsigned int)obj]);
+	}
+	else
+	{
+		push_json_udata(L, obj);
+		lua_pushnil(L);
+	}
+
+	return 2;
+}
+
+// Converts a Lua table as a JSON array into a compiled JSON chunk
 static int Ljson_array(lua_State* L)
 {
 	lua_settop(L, 1);
 	luaL_argcheck(L, lua_type(L, 1) == LUA_TTABLE, 1, "expected table");
-
 	json_object* obj = encode_lua_table_array(L);
 	lua_pop(L, 1);
 
-	json_object** ud = (json_object**)lua_newuserdata(L, sizeof(json_object*));
-	// L: userdata
-	luaL_getmetatable(L, json_metaname);
-	lua_setmetatable(L, -2);
-	*ud = obj;
-
+	push_json_udata(L, obj);
 	return 1;
 }
 
+// Converts a Lua table as a JSON object into a compiled JSON chunk
 static int Ljson_object(lua_State* L)
 {
 	lua_settop(L, 1);
 	luaL_argcheck(L, lua_type(L, 1) == LUA_TTABLE, 1, "expected table");
-
 	json_object* obj = encode_lua_table_object(L);
 	lua_pop(L, 1);
 
-	json_object** ud = (json_object**)lua_newuserdata(L, sizeof(json_object*));
-	// L: userdata
-	luaL_getmetatable(L, json_metaname);
-	lua_setmetatable(L, -2);
-	*ud = obj;
-
+	push_json_udata(L, obj);
 	return 1;
 }
 
+/***************************************************
+  JSON object meta table and methods
+***************************************************/
+
+// Converts a compiled JSON chunk into a JSON string
 static int Ljson_tojson(lua_State* L)
 {
 	json_object* obj = *((json_object**)luaL_checkudata(L, 1, json_metaname));
@@ -285,11 +370,15 @@ static int Ljson_tojson(lua_State* L)
 	return 1;
 }
 
+// Converts a compiled JSON chunk into a Lua datum
 static int Ljson_tolua(lua_State* L)
 {
-	return 0;
+	json_object* obj = *((json_object**)luaL_checkudata(L, 1, json_metaname));
+	decode_json_data(L, obj);
+	return 1;
 }
 
+// Cleans up the JSON chunk once it's no longer accessible
 static int Ljson_gc_(lua_State* L)
 {
 	json_object* obj = *((json_object**)luaL_checkudata(L, 1, json_metaname));
@@ -305,8 +394,14 @@ static const luaL_reg json_meta[] = {
 	{NULL, NULL}
 };
 
+
+/***************************************************
+  Library setup data
+***************************************************/
+
 static const luaL_reg json_lib[] = {
 	{"encode", &Ljson_encode},
+	{"decode", &Ljson_decode},
 	{"array", &Ljson_array},
 	{"object", &Ljson_object},
 	{NULL, NULL}
@@ -331,11 +426,23 @@ LUALIB_API int luaopen_json(lua_State *L)
 
 	// add "null" JSON item
 	lua_pushstring(L, "null");
-	json_object** ud = (json_object**)lua_newuserdata(L, sizeof(json_object*));
+	// json, "null"
+	json_null = (json_object**)lua_newuserdata(L, sizeof(json_object*));
 	luaL_getmetatable(L, json_metaname);
 	lua_setmetatable(L, -2);
-	*ud = NULL;
+	*json_null = NULL;
+	// json, "null", null
+
+	// stick it in the registry
+	lua_pushlightuserdata(L, json_null);
+	// json, "null", null, light
+	lua_pushvalue(L, -2);
+	// json, "null", null, light, null
+	lua_settable(L, LUA_REGISTRYINDEX);
+	// json, "null", null
+
 	lua_rawset(L, -3);
+	// json
 
 	return 1;
 }

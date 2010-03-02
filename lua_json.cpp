@@ -70,6 +70,7 @@ static json_object* encode_lua_data(lua_State* L);
 static unsigned char lua_table_json_type(lua_State* L)
 {
 	// L: ... table
+
 	luaL_checkstack(L, 2, "Nested too deep!");
 
 	unsigned int numArrayEntries = 0;
@@ -113,19 +114,26 @@ static json_object* encode_lua_table_array(lua_State* L)
 	json_object* obj = json_object_new_array();
 	json_object* member = NULL;
 
+	// Push it to the stack in case the Lua stack overflows while inserting members.
+	push_json_udata(L, obj);
+	// L: ... table, udata
+
 	for (ptrdiff_t i = 1; i <= table_maxn(L); ++i)
 	{
 		lua_pushnumber(L, i);
-		// L: ... table, index
-		lua_gettable(L, -2);
-		// L: ... table, value
+		// L: ... table, udata, index
+		lua_gettable(L, -3);
+		// L: ... table, udata, value
 
 		member = encode_lua_data(L);
 		json_object_array_add(obj, member);
 
 		lua_pop(L, 1);
-		// L: ... table
+		// L: ... table, udata
 	}
+
+	lua_pop(L, 1);
+	// L: ... table
 
 	return obj;
 }
@@ -139,19 +147,26 @@ static json_object* encode_lua_table_object(lua_State* L)
 	json_object* obj = json_object_new_object();
 	json_object* member = NULL;
 
+	// Push it to the stack in case the Lua stack overflows while inserting members.
+	push_json_udata(L, obj);
+	// L: ... table, udata
+
 	lua_pushnil(L); // first key
-	// L: ... table, nil
-	while (lua_next(L, -2) != 0)
+	// L: ... table, udata, nil
+	while (lua_next(L, -3) != 0)
 	{
-		// L: ... table, key, value
+		// L: ... table, udata, key, value
 		if (lua_type(L, -2) == LUA_TSTRING)
 		{
 			member = encode_lua_data(L);
 			json_object_object_add(obj, lua_tostring(L, -2), member);
 		}
 		lua_pop(L, 1);
-		// L: ... table, key
+		// L: ... table, udata, key
 	}
+	// L: ... table, udata
+
+	lua_pop(L, 1);
 	// L: ... table
 
 	return obj;
@@ -248,6 +263,8 @@ static void decode_json_data(lua_State* L, json_object* obj);
 
 static void decode_json_object(lua_State* L, json_object* obj)
 {
+	luaL_checkstack(L, 3, "Nested too deep!");
+
 	lua_newtable(L);
 	json_object_object_foreach(obj, key, val) {
 		lua_pushstring(L, key);
@@ -258,6 +275,8 @@ static void decode_json_object(lua_State* L, json_object* obj)
 
 static void decode_json_array(lua_State* L, json_object* obj)
 {
+	luaL_checkstack(L, 3, "Nested too deep!");
+
 	lua_newtable(L);
 	for (int i = 0; i < json_object_array_length(obj); ++i)
 	{
@@ -324,15 +343,14 @@ static int Ljson_decode(lua_State* L)
 	if (is_error(obj))
 	{
 		lua_pushnil(L);
-		lua_pushstring(L, json_tokener_errors[-(unsigned int)obj]);
+		lua_pushstring(L, json_tokener_errors[-(int)obj]); // yes, it's weird
+		return 2;
 	}
 	else
 	{
 		push_json_udata(L, obj);
-		lua_pushnil(L);
+		return 1;
 	}
-
-	return 2;
 }
 
 // Converts a Lua table as a JSON array into a compiled JSON chunk
@@ -367,6 +385,7 @@ static int Ljson_object(lua_State* L)
 static int Ljson_tojson(lua_State* L)
 {
 	json_object* obj = *((json_object**)luaL_checkudata(L, 1, json_metaname));
+	lua_pop(L, 1);
 	lua_pushstring(L, json_object_to_json_string(obj));
 	return 1;
 }
@@ -375,6 +394,7 @@ static int Ljson_tojson(lua_State* L)
 static int Ljson_tolua(lua_State* L)
 {
 	json_object* obj = *((json_object**)luaL_checkudata(L, 1, json_metaname));
+	lua_pop(L, 1);
 	decode_json_data(L, obj);
 	return 1;
 }
@@ -383,8 +403,8 @@ static int Ljson_tolua(lua_State* L)
 static int Ljson_gc_(lua_State* L)
 {
 	json_object* obj = *((json_object**)luaL_checkudata(L, 1, json_metaname));
+	lua_pop(L, 1);
 	json_object_put(obj);
-
 	return 0;
 }
 

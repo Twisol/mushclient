@@ -12,21 +12,22 @@ static json_object** json_null = NULL;
 ***************************************************/
 
 // Calculates the largest whole-number index of a table.
-static lua_Number table_maxn(lua_State* L)
+static lua_Integer table_maxn(lua_State* L, int stack_idx)
 {
-	// L:  ... table
+	// L:  ...
 	luaL_checkstack(L, 2, "Nested too deep!");
 
 	lua_Integer max = 0, num = 0;
 	lua_Number dbl = 0;
 
 	lua_pushnil(L); // first key
-	// L: ... table, nil
-	while (lua_next(L, -2) != 0)
+	if (stack_idx < 0) --stack_idx; // adjust table index
+	// L: ... nil
+	while (lua_next(L, stack_idx) != 0)
 	{
-		// L: ... table, key, value
+		// L: ... key, value
 		lua_pop(L, 1); // don't need value
-		// L: ... table, key
+		// L: ... key
 		if (lua_type(L, -1) == LUA_TNUMBER)
 		{
 			dbl = lua_tonumber(L, -1);
@@ -36,7 +37,7 @@ static lua_Number table_maxn(lua_State* L)
 				max = num;
 		}
 	}
-	// L: ... table
+	// L: ...
 
 	return max;
 }
@@ -118,20 +119,20 @@ static json_object* encode_lua_table_array(lua_State* L)
 	push_json_udata(L, obj);
 	// L: ... table, udata
 
-	for (ptrdiff_t i = 1; i <= table_maxn(L); ++i)
+	for (lua_Integer i = 1; i <= table_maxn(L, -2); ++i)
 	{
 		lua_pushnumber(L, i);
 		// L: ... table, udata, index
 		lua_gettable(L, -3);
 		// L: ... table, udata, value
 
-		member = encode_lua_data(L);
-		json_object_array_add(obj, member);
+		json_object_array_add(obj, encode_lua_data(L));
 
 		lua_pop(L, 1);
 		// L: ... table, udata
 	}
 
+	json_object_get(obj); // add a reference for when it's GC'd
 	lua_pop(L, 1);
 	// L: ... table
 
@@ -166,6 +167,7 @@ static json_object* encode_lua_table_object(lua_State* L)
 	}
 	// L: ... table, udata
 
+	json_object_get(obj); // add a reference for when it's GC'd
 	lua_pop(L, 1);
 	// L: ... table
 

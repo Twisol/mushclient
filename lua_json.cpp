@@ -12,12 +12,13 @@ static json_object** json_null = NULL;
 ***************************************************/
 
 // Calculates the largest whole-number index of a table.
-static ptrdiff_t table_maxn(lua_State* L)
+static lua_Number table_maxn(lua_State* L)
 {
 	// L:  ... table
 	luaL_checkstack(L, 2, "Nested too deep!");
 
-	ptrdiff_t max = 0;
+	lua_Integer max = 0, num = 0;
+	lua_Number dbl = 0;
 
 	lua_pushnil(L); // first key
 	// L: ... table, nil
@@ -28,8 +29,8 @@ static ptrdiff_t table_maxn(lua_State* L)
 		// L: ... table, key
 		if (lua_type(L, -1) == LUA_TNUMBER)
 		{
-			double dbl = lua_tonumber(L, -1);
-			ptrdiff_t num = lua_tointeger(L, -1);
+			dbl = lua_tonumber(L, -1);
+			num = lua_tointeger(L, -1);
 
 			if (num == dbl && num > max)
 				max = num;
@@ -195,8 +196,8 @@ static json_object* encode_lua_json_udata(lua_State* L)
 static json_object* encode_lua_number(lua_State* L)
 {
 	// L: ... number
-	double dbl = lua_tonumber(L, -1);
-	ptrdiff_t num = lua_tointeger(L, -1);
+	lua_Number dbl = lua_tonumber(L, -1);
+	lua_Integer num = lua_tointeger(L, -1);
 
 	if (num == dbl)
 		return json_object_new_int(num);

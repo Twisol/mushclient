@@ -49,6 +49,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;LUA51"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -60,7 +61,7 @@
 				ProgramDataBaseFileName=".\WinDebug/"
 				BrowseInformation="1"
 				BrowseInformationFile=".\WinDebug/"
-				WarningLevel="1"
+				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
 			/>
@@ -146,7 +147,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;"
+				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;ZLIB_DLL;LUA51"
 				StringPooling="true"
 				RuntimeLibrary="0"

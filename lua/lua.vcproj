@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="json"
-	ProjectGUID="{2FA4FB4C-CC40-497C-9488-AFD1B73D094C}"
-	RootNamespace="json"
+	Name="lua"
+	ProjectGUID="{479CC5E3-EDB7-484B-83D7-993FDF20B10B}"
+	RootNamespace="lua"
 	>
 	<Platforms>
 		<Platform
@@ -18,7 +18,7 @@
 			Name="Debug|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="4"
+			ConfigurationType="2"
 			CharacterSet="2"
 			>
 			<Tool
@@ -38,7 +38,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/D &quot;WIN32&quot;"
+				AdditionalOptions="/D &quot;LUA_BUILD_AS_DLL&quot; /D &quot;_CRT_SECURE_NO_WARNINGS&quot;"
 				Optimization="0"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -58,12 +58,13 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLibrarianTool"
-				AdditionalOptions="/LTCG"
-				IgnoreAllDefaultLibraries="true"
+				Name="VCLinkerTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -75,6 +76,12 @@
 				Name="VCFxCopTool"
 			/>
 			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
@@ -82,7 +89,7 @@
 			Name="Release|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="4"
+			ConfigurationType="2"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -103,7 +110,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/D &quot;WIN32&quot;"
+				AdditionalOptions="/D &quot;LUA_BUILD_AS_DLL&quot; /D &quot;_CRT_SECURE_NO_WARNINGS&quot;"
 				RuntimeLibrary="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="true"
@@ -120,12 +127,13 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLibrarianTool"
-				AdditionalOptions="/LTCG"
-				IgnoreAllDefaultLibraries="true"
+				Name="VCLinkerTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -135,6 +143,12 @@
 			/>
 			<Tool
 				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -150,31 +164,123 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\arraylist.c"
+				RelativePath=".\lapi.c"
 				>
 			</File>
 			<File
-				RelativePath=".\debug.c"
+				RelativePath=".\lauxlib.c"
 				>
 			</File>
 			<File
-				RelativePath=".\json_object.c"
+				RelativePath=".\lbaselib.c"
 				>
 			</File>
 			<File
-				RelativePath=".\json_tokener.c"
+				RelativePath=".\lcode.c"
 				>
 			</File>
 			<File
-				RelativePath=".\json_util.c"
+				RelativePath=".\ldblib.c"
 				>
 			</File>
 			<File
-				RelativePath=".\linkhash.c"
+				RelativePath=".\ldebug.c"
 				>
 			</File>
 			<File
-				RelativePath=".\printbuf.c"
+				RelativePath=".\ldo.c"
+				>
+			</File>
+			<File
+				RelativePath=".\ldump.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lfunc.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lgc.c"
+				>
+			</File>
+			<File
+				RelativePath=".\linit.c"
+				>
+			</File>
+			<File
+				RelativePath=".\liolib.c"
+				>
+			</File>
+			<File
+				RelativePath=".\llex.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lmathlib.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lmem.c"
+				>
+			</File>
+			<File
+				RelativePath=".\loadlib.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lobject.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lopcodes.c"
+				>
+			</File>
+			<File
+				RelativePath=".\loslib.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lparser.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lstate.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lstring.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lstrlib.c"
+				>
+			</File>
+			<File
+				RelativePath=".\ltable.c"
+				>
+			</File>
+			<File
+				RelativePath=".\ltablib.c"
+				>
+			</File>
+			<File
+				RelativePath=".\ltm.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lundump.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lvm.c"
+				>
+			</File>
+			<File
+				RelativePath=".\lzio.c"
+				>
+			</File>
+			<File
+				RelativePath=".\print.c"
 				>
 			</File>
 		</Filter>
@@ -184,47 +290,95 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\arraylist.h"
+				RelativePath=".\lapi.h"
 				>
 			</File>
 			<File
-				RelativePath=".\bits.h"
+				RelativePath=".\lauxlib.h"
 				>
 			</File>
 			<File
-				RelativePath=".\config.h"
+				RelativePath=".\lcode.h"
 				>
 			</File>
 			<File
-				RelativePath=".\debug.h"
+				RelativePath=".\ldebug.h"
 				>
 			</File>
 			<File
-				RelativePath=".\json.h"
+				RelativePath=".\ldo.h"
 				>
 			</File>
 			<File
-				RelativePath=".\json_object.h"
+				RelativePath=".\lfunc.h"
 				>
 			</File>
 			<File
-				RelativePath=".\json_object_private.h"
+				RelativePath=".\lgc.h"
 				>
 			</File>
 			<File
-				RelativePath=".\json_tokener.h"
+				RelativePath=".\llex.h"
 				>
 			</File>
 			<File
-				RelativePath=".\json_util.h"
+				RelativePath=".\llimits.h"
 				>
 			</File>
 			<File
-				RelativePath=".\linkhash.h"
+				RelativePath=".\lmem.h"
 				>
 			</File>
 			<File
-				RelativePath=".\printbuf.h"
+				RelativePath=".\lobject.h"
+				>
+			</File>
+			<File
+				RelativePath=".\lopcodes.h"
+				>
+			</File>
+			<File
+				RelativePath=".\lparser.h"
+				>
+			</File>
+			<File
+				RelativePath=".\lstate.h"
+				>
+			</File>
+			<File
+				RelativePath=".\lstring.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ltable.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ltm.h"
+				>
+			</File>
+			<File
+				RelativePath=".\lua.h"
+				>
+			</File>
+			<File
+				RelativePath=".\luaconf.h"
+				>
+			</File>
+			<File
+				RelativePath=".\lualib.h"
+				>
+			</File>
+			<File
+				RelativePath=".\lundump.h"
+				>
+			</File>
+			<File
+				RelativePath=".\lvm.h"
+				>
+			</File>
+			<File
+				RelativePath=".\lzio.h"
 				>
 			</File>
 		</Filter>

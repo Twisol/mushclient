@@ -40,9 +40,3 @@ ucp.h
 
 4. Rename pcre_chartables.c.dist as pcre_chartables.c
    Rename pcre.h.generic as pcre.h
-
-5. Edit: pcre_compile.c and add:
-
-#pragma warning(disable: 4018)
-
-to the start of the file.

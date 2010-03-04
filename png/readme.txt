@@ -30,11 +30,11 @@ pngwtran.c
 pngwutil.c
 
 
-3. Edit: png.h and change
+4. Edit: png.h and change
 
 #include "zlib.h"
 
 to
 
-#include "../zlib/zlib.h"
+#include "zlib\zlib.h"
 

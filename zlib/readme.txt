@@ -28,13 +28,3 @@ zconf.h
 zlib.h
 zutil.c
 zutil.h
-
-
-3. Edit: zconf.h and after the lines:
-
-#ifndef ZCONF_H
-#define ZCONF_H
-
-add:
-
-#undef ZLIB_DLL      // NJG

@@ -17,10 +17,11 @@ These are:
 * png
 * sqlite
 * zlib
+* json
+* lua
 
 In each of those folders is a readme.txt file which explains where to get the relevant libraries, and any minor adjustments needed to make them work with MUSHclient.
 
 You also need the following files:
 
-* lua5.1.dll  (available from the normal MUSHclient download)
 * locale/en.dll (put this under your WinRel or WinDebug directory)

@@ -3,8 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 9.00
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MUSHclient", "MUSHclient\MUSHclient.vcproj", "{A72BFD9B-2A5C-4509-BB92-593FF2C8CE95}"
 	ProjectSection(ProjectDependencies) = postProject
 		{174C356C-2E1C-4BC2-BD99-12EBB64F69E1} = {174C356C-2E1C-4BC2-BD99-12EBB64F69E1}
-		{479CC5E3-EDB7-484B-83D7-993FDF20B10B} = {479CC5E3-EDB7-484B-83D7-993FDF20B10B}
 		{75D2A5D0-3E0B-4A41-A1DC-F4DED194FD56} = {75D2A5D0-3E0B-4A41-A1DC-F4DED194FD56}
+		{479CC5E3-EDB7-484B-83D7-993FDF20B10B} = {479CC5E3-EDB7-484B-83D7-993FDF20B10B}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlite3", "sqlite3\sqlite3.vcproj", "{174C356C-2E1C-4BC2-BD99-12EBB64F69E1}"
@@ -24,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 		readme.txt = readme.txt
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mc_resources", "resources\mc_resources.vcproj", "{5DB5F310-B3AC-42D9-9B3A-BAE950AB21CA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -59,6 +61,10 @@ Global
 		{479CC5E3-EDB7-484B-83D7-993FDF20B10B}.Debug|Win32.Build.0 = Debug|Win32
 		{479CC5E3-EDB7-484B-83D7-993FDF20B10B}.Release|Win32.ActiveCfg = Release|Win32
 		{479CC5E3-EDB7-484B-83D7-993FDF20B10B}.Release|Win32.Build.0 = Release|Win32
+		{5DB5F310-B3AC-42D9-9B3A-BAE950AB21CA}.Debug|Win32.ActiveCfg = Debug|Win32
+		{5DB5F310-B3AC-42D9-9B3A-BAE950AB21CA}.Debug|Win32.Build.0 = Debug|Win32
+		{5DB5F310-B3AC-42D9-9B3A-BAE950AB21CA}.Release|Win32.ActiveCfg = Release|Win32
+		{5DB5F310-B3AC-42D9-9B3A-BAE950AB21CA}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

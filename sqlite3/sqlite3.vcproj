@@ -103,7 +103,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/D &quot;"
+				AdditionalOptions="/D &quot;SQLITE_SOUNDEX&quot; /D &quot;SQLITE_ENABLE_FTS3&quot; /D &quot;SQLITE_ENABLE_FTS3_PARENTHESIS&quot;"
 				RuntimeLibrary="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="true"

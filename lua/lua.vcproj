@@ -59,6 +59,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="$(OutDir)\$(ProjectName)5.1.dll"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -128,6 +129,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="$(OutDir)\$(ProjectName)5.1.dll"
 			/>
 			<Tool
 				Name="VCALinkTool"

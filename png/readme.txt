@@ -1,8 +1,6 @@
 PNG built as follows:
 
-1. Download recent version from http://sourceforge.net/projects/libpng/files/
-
-    In this case: libpng-1.4.0.tar.gz
+1. Download: http://sourceforge.net/projects/libpng/files/01-libpng-master/1.4.0/lpng140.zip/download
 
 2. Unzip and untar the file, eg.
 

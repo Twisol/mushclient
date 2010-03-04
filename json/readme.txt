@@ -6,7 +6,7 @@ JSON-C built as follows:
 
 3. Copy the following files to the "json" directory in the MUSHclient source:
 
-config.h.in
+config.h.win32
 
 arraylist.c
 arraylist.h
@@ -26,4 +26,12 @@ linkhash.h
 printbuf.c
 printbuf.h
 
-4. Rename config.h.in to config.h.
+4. Rename config.h.win32 to config.h.
+
+5: Edit: json_object.h and change
+
+typedef int boolean;
+
+to
+
+typedef unsigned char boolean;

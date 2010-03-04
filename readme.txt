@@ -24,4 +24,4 @@ In each of those folders is a readme.txt file which explains where to get the re
 
 You also need the following files:
 
-* locale/en.dll (put this under your WinRel or WinDebug directory)
+* locale/en.dll (put this under your root Release or Debug directory)

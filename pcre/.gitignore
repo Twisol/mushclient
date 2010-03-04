@@ -1,3 +1,7 @@
+Debug/
+Release/
+*.vcproj.*
+
 chartables.c
 pcre.h
 pcre_chartables.c

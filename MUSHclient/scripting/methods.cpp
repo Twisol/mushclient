@@ -25,7 +25,7 @@
 #include <direct.h>
 #include "..\dmetaph.h"
 
-#include "..\png\png.h"
+#include "png\png.h"
 
 #ifdef _DEBUG
 //#define new DEBUG_NEW

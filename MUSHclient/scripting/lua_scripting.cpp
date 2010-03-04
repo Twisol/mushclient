@@ -5,8 +5,8 @@
 #include "..\dialogs\ScriptErrorDlg.h"
 #include <io.h>  // for popen
 #include <fcntl.h>  // for popen
-#include "..\pcre\config.h"
-#include "..\pcre\pcre_internal.h"
+#include "pcre\config.h"
+#include "pcre\pcre_internal.h"
 
 #ifdef USE_LUA
 

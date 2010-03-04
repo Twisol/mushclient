@@ -1,3 +1,7 @@
+Debug/
+Release/
+*.vcproj.*
+
 png.c
 png.h
 pngconf.h

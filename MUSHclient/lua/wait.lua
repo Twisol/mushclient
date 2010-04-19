@@ -93,6 +93,7 @@ function time (seconds)
                   bit.bor (timer_flag.Enabled,
                            timer_flag.OneShot,
                            timer_flag.Temporary,
+                           timer_flag.ActiveWhenClosed,
                            timer_flag.Replace), 
                    "wait.timer_resume"))
 
@@ -129,6 +130,7 @@ function regexp (regexp, timeout, flags)
                    bit.bor (timer_flag.Enabled,
                             timer_flag.OneShot,
                             timer_flag.Temporary,
+                            timer_flag.ActiveWhenClosed,
                             timer_flag.Replace), 
                    "wait.timer_resume"))
 
@@ -154,7 +156,6 @@ end -- function match
 -- ----------------------------------------------------------
 function make (f)
   assert (type (f) == "function", "wait.make requires a function")
-  assert (not (GetInfo (106) or GetInfo (107)), "Not connected to MUD")
   assert (GetOption ("enable_timers") == 1, "Timers not enabled")
   assert (GetOption ("enable_triggers") == 1, "Triggers not enabled")
   coroutine.wrap (f) () -- make coroutine, resume it

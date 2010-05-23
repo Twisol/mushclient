@@ -213,12 +213,12 @@
 			RelativePathToProject=".\png\png.vcproj"
 		/>
 		<ProjectReference
-			ReferencedProjectIdentifier="{2FA4FB4C-CC40-497C-9488-AFD1B73D094C}"
-			RelativePathToProject=".\json\json.vcproj"
-		/>
-		<ProjectReference
 			ReferencedProjectIdentifier="{479CC5E3-EDB7-484B-83D7-993FDF20B10B}"
 			RelativePathToProject=".\lua\lua.vcproj"
+		/>
+		<ProjectReference
+			ReferencedProjectIdentifier="{C344057C-C2FC-4F69-AD86-840E810AED90}"
+			RelativePathToProject=".\jansson\jansson.vcproj"
 		/>
 	</References>
 	<Files>

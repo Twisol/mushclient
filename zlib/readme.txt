@@ -12,7 +12,6 @@ crc32.c
 crc32.h
 deflate.c
 deflate.h
-gzio.c
 inffast.c
 inffast.h
 inffixed.h

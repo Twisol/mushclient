@@ -4,4 +4,4 @@ Lua built as follows:
 
 2. Unzip and untar the file
 
-3. Copy all files from src/ (EXCEPT the Makefile) to lua/ in the MUSHclient source.
+3. Copy all files from src/ (except Makefile, lua.c, and luac.c) to lua/ in the MUSHclient source.

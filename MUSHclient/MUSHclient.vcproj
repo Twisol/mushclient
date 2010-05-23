@@ -73,6 +73,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/LTCG"
 				AdditionalDependencies="dsound.lib"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
@@ -162,6 +163,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/LTCG"
 				AdditionalDependencies="dsound.lib"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"

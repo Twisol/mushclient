@@ -5018,9 +5018,8 @@ long CMUSHclientDoc::CheckObjectName (CString & strObjectName,
   strObjectName.TrimRight ();
 
   // check label conforms to naming conventions
-  if (bConform)
-    if (CheckLabel (strObjectName))
-      return eInvalidObjectLabel;
+  if (bConform && CheckLabel (strObjectName))
+    return eInvalidObjectLabel;
 
   // object names are keyed in lower case
   strObjectName.MakeLower ();
@@ -6517,69 +6516,64 @@ CPluginsDlg dlg;
 void CMUSHclientDoc::LogCommand (const char * text)
   {
 
-  if (m_logfile && 
-      LoggingInput () &&
-      !m_bLogRaw)
+  if (!m_logfile || !LoggingInput() || m_bLogRaw)
+    return;
+
+  CString strMessage = text;
+
+  // strip trailing endline
+  if (strMessage.Right (2) == ENDLINE)
+    strMessage = strMessage.Left (strMessage.GetLength () - 2);
+
+  // this is open in text mode, don't want \r\r\n
+  strMessage.Replace (ENDLINE, "\n");
+
+  // get appropriate preamble
+  CString strPreamble = m_strLogLinePreambleInput;
+
+  // allow %n for newline
+  strPreamble.Replace ("%n", "\n");
+
+  if (strPreamble.Find ('%') != -1)
+    strPreamble = FormatTime (CTime::GetCurrentTime(), strPreamble, m_bLogHTML);
+
+  // get appropriate Postamble
+  CString strPostamble = m_strLogLinePostambleInput;
+
+  // allow %n for newline
+  strPostamble.Replace ("%n", "\n");
+
+  if (strPostamble.Find ('%') != -1)
+    strPostamble = FormatTime (CTime::GetCurrentTime(), strPostamble, m_bLogHTML);
+
+  // line preamble
+  WriteToLog (strPreamble); 
+  // line itself
+  if (m_bLogHTML)
     {
-
-    CString strMessage = text;
-
-    // strip trailing endline
-    if (strMessage.Right (2) == ENDLINE)
-      strMessage = strMessage.Left (strMessage.GetLength () - 2);
-
-    // this is open in text mode, don't want \r\r\n
-    strMessage.Replace (ENDLINE, "\n");
-
-    // get appropriate preamble
-    CString strPreamble = m_strLogLinePreambleInput;
-
-    // allow %n for newline
-    strPreamble.Replace ("%n", "\n");
-
-    if (strPreamble.Find ('%') != -1)
-      strPreamble = FormatTime (CTime::GetCurrentTime(), strPreamble, m_bLogHTML);
-
-    // get appropriate Postamble
-    CString strPostamble = m_strLogLinePostambleInput;
-
-    // allow %n for newline
-    strPostamble.Replace ("%n", "\n");
-
-    if (strPostamble.Find ('%') != -1)
-      strPostamble = FormatTime (CTime::GetCurrentTime(), strPostamble, m_bLogHTML);
-
-    // line preamble
-    WriteToLog (strPreamble); 
-    // line itself
     // fix up HTML sequences
-    if (m_bLogHTML)
+    strMessage = FixHTMLString (strMessage);
+
+    // change to command colour if wanted
+    if (m_bLogInColour && m_echo_colour != SAMECOLOUR)
       {
-      strMessage = FixHTMLString (strMessage);
+      COLORREF colour = m_customtext [m_echo_colour];
+      WriteToLog (CFormat ("<font color=\"#%02X%02X%02X\">",
+                            GetRValue (colour),
+                            GetGValue (colour),
+                            GetBValue (colour)));
+      }  // end of logging commands in a different colour
+    } // end of logging in HTML
 
-      // change to command colour if wanted
-      if (m_bLogInColour && m_echo_colour != SAMECOLOUR)
-        {
-        COLORREF colour = m_customtext [m_echo_colour];
-        WriteToLog (CFormat ("<font color=\"#%02X%02X%02X\">",
-                              GetRValue (colour),
-                              GetGValue (colour),
-                              GetBValue (colour)));
-        }  // end of logging commands in a different colour
-      } // end of logging in HTML
+  WriteToLog (strMessage);
 
-    WriteToLog (strMessage);
+  // cancel command colour
+  if (m_bLogHTML &&  m_bLogInColour &&  m_echo_colour != SAMECOLOUR)
+    WriteToLog ("</font>");
 
-    // cancel command colour
-    if (m_bLogHTML && 
-        m_bLogInColour && 
-        m_echo_colour != SAMECOLOUR)
-        WriteToLog ("</font>");
-
-    // line Postamble
-    WriteToLog (strPostamble); 
-    WriteToLog ("\n", 1);
-    }   // end of logging wanted
+  // line Postamble
+  WriteToLog (strPostamble); 
+  WriteToLog ("\n", 1);
 
   } // end of LogCommand
 

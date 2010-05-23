@@ -59,7 +59,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions="/LTCG"
 				IgnoreAllDefaultLibraries="true"
 			/>
 			<Tool
@@ -121,7 +120,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions="/LTCG"
 				IgnoreAllDefaultLibraries="true"
 			/>
 			<Tool

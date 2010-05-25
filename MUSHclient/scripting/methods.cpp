@@ -437,9 +437,9 @@ long CMUSHclientDoc::DeleteTrigger(LPCTSTR TriggerName)
   CString strTriggerName = TriggerName;
   CTrigger* trigger_item = NULL;
 
-  // trim spaces
+  // trim spaces from name, make lower-case
   CheckObjectName (strTriggerName, false);
-
+ 
   if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
     return eTriggerNotFound;
 
@@ -609,10 +609,9 @@ long CMUSHclientDoc::AddTrigger(LPCTSTR TriggerName,
 long CMUSHclientDoc::EnableTrigger(LPCTSTR TriggerName, BOOL Enabled) 
 {
   CString strTriggerName = TriggerName;
-  // trim spaces, make lowercase
-  CheckObjectName (strTriggerName, false);
-
   CTrigger * trigger_item = NULL;
+  // trim spaces from name, make lower-case
+  CheckObjectName (strTriggerName, false);
 
   if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
     return eTriggerNotFound;
@@ -640,10 +639,10 @@ long CMUSHclientDoc::GetTrigger(LPCTSTR TriggerName,
                                 VARIANT FAR* ScriptName) 
 {
   CString strTriggerName = TriggerName;
-  // trim spaces, make lowercase
-  CheckObjectName (strTriggerName, false);
-
   CTrigger * trigger_item = NULL;
+
+  // trim spaces from name, make lower-case
+  CheckObjectName (strTriggerName, false);
 
   if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
     return eTriggerNotFound;
@@ -674,10 +673,10 @@ long CMUSHclientDoc::GetTrigger(LPCTSTR TriggerName,
 long CMUSHclientDoc::IsTrigger(LPCTSTR TriggerName) 
 {
   CString strTriggerName = TriggerName;
-  // trim spaces, make lowercase
-  CheckObjectName (strTriggerName, false);
-
   CTrigger * trigger_item = NULL;
+  
+  // trim spaces from name, make lower-case
+  CheckObjectName (strTriggerName, false);
 
   if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
     return eTriggerNotFound;
@@ -833,7 +832,7 @@ long CMUSHclientDoc::DeleteAlias(LPCTSTR AliasName)
   CString strAliasName = AliasName;
   CAlias * alias_item = NULL;
 
-  // trim spaces
+  // trim spaces from name, make lower-case
   CheckObjectName (strAliasName, false);
 
   if (!GetAliasMap ().Lookup (strAliasName, alias_item))
@@ -975,7 +974,7 @@ long CMUSHclientDoc::EnableAlias(LPCTSTR AliasName, BOOL Enabled)
   CString strAliasName = AliasName;
   CAlias * alias_item = NULL;
 
-  // strip spaces, make lowercase
+  // trim spaces from name, make lower-case
   CheckObjectName (strAliasName, false);
 
   if (!GetAliasMap ().Lookup (strAliasName, alias_item))
@@ -1005,7 +1004,7 @@ long CMUSHclientDoc::GetAlias(LPCTSTR AliasName,
   CString strAliasName = AliasName;
   CAlias * alias_item = NULL;
 
-  // trim spaces, make lowercase
+  // trim spaces from name, make lower-case
   CheckObjectName (strAliasName, false);
 
   if (!GetAliasMap ().Lookup (strAliasName, alias_item))
@@ -1065,7 +1064,7 @@ long CMUSHclientDoc::IsAlias(LPCTSTR AliasName)
   CString strAliasName = AliasName;
   CAlias * alias_item = NULL;
 
-  // trim spaces, make lowercase
+  // trim spaces from name, make lower-case
   CheckObjectName (strAliasName, false);
 
   if (!GetAliasMap ().Lookup (strAliasName, alias_item))
@@ -1082,7 +1081,7 @@ long CMUSHclientDoc::EnableTimer(LPCTSTR TimerName, BOOL Enabled)
   CString strTimerName = TimerName;
   CTimer * timer_item = NULL;
 
-  // trim spaces, make lowercase
+  // trim spaces from name, make lower-case
   CheckObjectName (strTimerName, false);
 
   if (!GetTimerMap ().Lookup (strTimerName, timer_item))
@@ -1482,7 +1481,7 @@ long CMUSHclientDoc::ResetTimer(LPCTSTR TimerName)
   CString strTimerName = TimerName;
   CTimer * timer_item = NULL;
 
-  // trim spaces
+  // trim spaces from name, make lower-case
   CheckObjectName (strTimerName, false);
 
   if (!GetTimerMap ().Lookup (strTimerName, timer_item))
@@ -1991,7 +1990,7 @@ VARIANT CMUSHclientDoc::GetAliasInfo(LPCTSTR AliasName, short InfoType)
   VARIANT vaResult;
   VariantInit(&vaResult);
 
-  // trim spaces, make lowercase
+  // trim spaces from name, make lower-case
   CheckObjectName (strAliasName, false);
 
   // see if alias exists, if not return EMPTY
@@ -2077,7 +2076,7 @@ VARIANT CMUSHclientDoc::GetTriggerInfo(LPCTSTR TriggerName, short InfoType)
   VARIANT vaResult;
   VariantInit(&vaResult);
   
-  // trim spaces, make lowercase
+  // trim spaces from name, make lower-case
   CheckObjectName (strTriggerName, false);
 
   // see if trigger exists, if not return EMPTY
@@ -2573,7 +2572,7 @@ long CMUSHclientDoc::DeleteTimer(LPCTSTR TimerName)
   CString strTimerName = TimerName;
   CTimer * timer_item = NULL;
 
-  // trim spaces, make lowercase
+  // trim spaces from name, make lower-case
   CheckObjectName (strTimerName, false);
 
   if (!GetTimerMap ().Lookup (strTimerName, timer_item))
@@ -2603,7 +2602,7 @@ long CMUSHclientDoc::IsTimer(LPCTSTR TimerName)
   CString strTimerName = TimerName;
   CTimer * timer_item = NULL;
 
-  // trim spaces
+  // trim spaces from name, make lower-case
   CheckObjectName (strTimerName, false);
 
   if (!GetTimerMap ().Lookup (strTimerName, timer_item))
@@ -2647,7 +2646,7 @@ long CMUSHclientDoc::GetTimer(LPCTSTR TimerName,
   CString strTimerName = TimerName;
   CTimer * timer_item = NULL;
 
-  // trim spaces
+  // trim spaces from name, make lower-case
   CheckObjectName (strTimerName, false);
 
   if (!GetTimerMap ().Lookup (strTimerName, timer_item))
@@ -2689,7 +2688,7 @@ VARIANT CMUSHclientDoc::GetTimerInfo(LPCTSTR TimerName, short InfoType)
   VARIANT vaResult;
   VariantInit(&vaResult);
 
-  // trim spaces, make lowercase
+  // trim spaces from name, make lower-case
   CheckObjectName (strTimerName, false);
 
   // see if timer exists, if not return EMPTY
@@ -4796,7 +4795,7 @@ long CMUSHclientDoc::LoadPlugin(LPCTSTR FileName)
   PluginListChanged ();
   
   return eOK;
-}
+}    // end of LoadPlugin
 
 
 long CMUSHclientDoc::ReloadPlugin(LPCTSTR PluginID) 
@@ -4839,7 +4838,7 @@ long CMUSHclientDoc::ReloadPlugin(LPCTSTR PluginID)
   LoadPlugin(strName);
 
   return eOK;
-}
+}  // end of ReloadPlugin
 
 // helper routine to find a particular plugin
 
@@ -5465,7 +5464,7 @@ long CMUSHclientDoc::DeleteTimerGroup(LPCTSTR GroupName)
 }   // end of DeleteTimerGroup
 
 
-#define TO(arg) offsetof (CTrigger, arg), sizeof (((CTrigger*)NULL)->arg)
+#define TO(arg) offsetof (CTrigger, arg), sizeof (((CTrigger *)NULL)->arg)
 
 //-----config name ----------------  default ---variable name ---- min, max, flags ---
 tConfigurationNumericOption TriggerOptionsTable [] = {
@@ -5529,7 +5528,7 @@ VARIANT CMUSHclientDoc::GetTriggerOption(LPCTSTR TriggerName, LPCTSTR OptionName
   VARIANT vaResult;
   VariantInit(&vaResult);
 
-  // trim spaces
+  // trim spaces from name, make lower-case
   CheckObjectName (strTriggerName, false);
   CheckObjectName (strOptionName,  false);
 
@@ -5583,7 +5582,7 @@ long CMUSHclientDoc::SetTriggerOption(LPCTSTR TriggerName, LPCTSTR OptionName, L
           strValue       = Value;
   CTrigger * trigger_item = NULL;
 
-  // trim spaces
+  // trim spaces from name, make lower-case
   CheckObjectName (strTriggerName, false);
   CheckObjectName (strOptionName,  false);
 
@@ -5703,7 +5702,8 @@ long CMUSHclientDoc::SetTriggerOption(LPCTSTR TriggerName, LPCTSTR OptionName, L
   return eUnknownOption;
 }   // end of SetTriggerOption
 
-#define AO(arg) offsetof (CAlias, arg), sizeof (((CAlias*)NULL)->arg)
+
+#define AO(arg) offsetof (CAlias, arg), sizeof (((CAlias *)NULL)->arg)
 
 //-----config name ----------------  default ---variable name ---- min, max, flags ---
 tConfigurationNumericOption AliasOptionsTable [] = {
@@ -5757,7 +5757,7 @@ VARIANT CMUSHclientDoc::GetAliasOption(LPCTSTR AliasName, LPCTSTR OptionName)
   VARIANT vaResult;
   VariantInit(&vaResult);
 
-  // trim spaces
+  // trim spaces from name, make lower-case
   CheckObjectName (strAliasName,  false);
   CheckObjectName (strOptionName, false);
 
@@ -5811,7 +5811,7 @@ long CMUSHclientDoc::SetAliasOption(LPCTSTR AliasName, LPCTSTR OptionName, LPCTS
           strValue      = Value;
   CAlias * alias_item = NULL;
 
-  // trim spaces
+  // trim spaces from name, make lower-case
   CheckObjectName (strAliasName,  false);
   CheckObjectName (strOptionName, false);
 
@@ -5930,7 +5930,7 @@ long CMUSHclientDoc::SetAliasOption(LPCTSTR AliasName, LPCTSTR OptionName, LPCTS
 }   // end of SetAliasOption
 
 
-#define TMRO(arg) offsetof (CTimer, arg), sizeof (((CTimer*)NULL)->arg)
+#define TMRO(arg) offsetof (CTimer, arg), sizeof (((CTimer *)NULL)->arg)
 
 //-----config name ----------------  default ---variable name ---- min, max, flags ---
 tConfigurationNumericOption TimerOptionsTable [] = {
@@ -5982,7 +5982,7 @@ VARIANT CMUSHclientDoc::GetTimerOption(LPCTSTR TimerName, LPCTSTR OptionName)
   VARIANT vaResult;
   VariantInit(&vaResult);
 
-  // return if bad name, if so return NULL
+  // trim spaces from name, make lower-case
   CheckObjectName (strTimerName,  false);
   CheckObjectName (strOptionName, false);
 
@@ -6048,7 +6048,7 @@ long CMUSHclientDoc::SetTimerOption(LPCTSTR TimerName, LPCTSTR OptionName, LPCTS
           strValue      = Value;
   CTimer * timer_item = NULL;
 
-  // trim spaces
+  // trim spaces from name, make lower-case
   CheckObjectName (strTimerName,  false);
   CheckObjectName (strOptionName, false);
 
@@ -7373,7 +7373,7 @@ BSTR CMUSHclientDoc::StripANSI(LPCTSTR Message)
   return ::StripAnsi (Message).AllocSysString();
 }
 
-#define CHATO(arg) offsetof (CChatSocket, arg), sizeof (((CChatSocket*)NULL)->arg)
+#define CHATO(arg) offsetof (CChatSocket, arg), sizeof (((CChatSocket *)NULL)->arg)
 
 //-----config name ----------------  default ---variable name ---- min, max, flags ---
 tConfigurationNumericOption ChatOptionsTable [] = {
@@ -7981,7 +7981,7 @@ BSTR CMUSHclientDoc::ExportXML(short Type, LPCTSTR Name)
   CString strName = Name;
   CString strResult;
 
-  // trim spaces, make lowercase
+  // trim spaces, force name to lower-case
   CheckObjectName (strName, false);
 
   char* p = NULL;
@@ -8783,7 +8783,7 @@ VARIANT CMUSHclientDoc::GetTriggerWildcard(LPCTSTR TriggerName, LPCTSTR Wildcard
   VARIANT vaResult;
   VariantInit(&vaResult);
 
-  // trim spaces, make lowercase
+  // trim spaces from name, make lower-case
   CheckObjectName (strTriggerName, false);
 
   if (WildcardName [0] != '\0' && GetTriggerMap ().Lookup (strTriggerName, trigger_item) && trigger_item->regexp)
@@ -8800,7 +8800,7 @@ VARIANT CMUSHclientDoc::GetAliasWildcard(LPCTSTR AliasName, LPCTSTR WildcardName
   VARIANT vaResult;
   VariantInit(&vaResult);
 
-  // trim spaces, make lowercase
+  // trim spaces from name, make lower-case
   CheckObjectName (strAliasName, false);
 
   if (WildcardName[0] != '\0' && GetAliasMap ().Lookup (strAliasName, alias_item) && alias_item->regexp)

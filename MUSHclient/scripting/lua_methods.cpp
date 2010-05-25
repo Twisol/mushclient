@@ -57,11 +57,10 @@ LUALIB_API void *isudata (lua_State *L, int ud, const char *tname) {
 
 // checks user data is mushclient.doc, and returns pointer to world
 static CMUSHclientDoc *doc (lua_State *L) 
-  { 
-CMUSHclientDoc **ud = (CMUSHclientDoc **) isudata (L, 1, mushclient_typename);
-
+{ 
+  CMUSHclientDoc * pDoc = NULL;
   // if first argument is a world userdatum, take that as our world
-
+  CMUSHclientDoc **ud = (CMUSHclientDoc **) isudata (L, 1, mushclient_typename);
   if (ud)
     {
     CMUSHclientDoc * pWantedDoc = *ud;
@@ -69,36 +68,35 @@ CMUSHclientDoc **ud = (CMUSHclientDoc **) isudata (L, 1, mushclient_typename);
     lua_remove (L, 1);    // remove the userdata, we don't need it now
 
     // for safety, check that world still exists
-    for (POSITION docPos = App.m_pWorldDocTemplate->GetFirstDocPosition();
-        docPos != NULL; )
+    POSITION docPos = App.m_pWorldDocTemplate->GetFirstDocPosition();
+    while (docPos != NULL)
       {
-      CMUSHclientDoc * pDoc = (CMUSHclientDoc *) App.m_pWorldDocTemplate->GetNextDoc(docPos);
-
+      pDoc = (CMUSHclientDoc *) App.m_pWorldDocTemplate->GetNextDoc(docPos);
       if (pDoc == pWantedDoc)
-        return pDoc;
+        break;
       } // end of doing each document
 
-    luaL_error (L, "world is no longer available");
+    if (pDoc != pWantedDoc)
+      luaL_error (L, "world is no longer available");
+    }
+  else
+    {
+    /* retrieve the document */
+    lua_pushstring(L, DOCUMENT_STATE);  /* push address */
+    lua_gettable(L, LUA_ENVIRONINDEX);  /* retrieve value */
+
+    pDoc = (CMUSHclientDoc *) lua_touserdata(L, -1);  /* convert to data */
+    lua_pop(L, 1);  /* pop result */
     }
 
- // retrieve our state
-  CMUSHclientDoc * pDoc;
-  
-  /* retrieve the document */
-  lua_pushstring(L, DOCUMENT_STATE);  /* push address */
-  lua_gettable(L, LUA_ENVIRONINDEX);  /* retrieve value */
-
-  pDoc = (CMUSHclientDoc *) lua_touserdata(L, -1);  /* convert to data */
-  lua_pop(L, 1);  /* pop result */
-
   return pDoc;
-  }
+}
 
 // helper function for pushing results returned by normal MUSHclient methods
 // (stored in a variant)
 
 int pushVariant (lua_State *L, VARIANT & v)
-  {
+{
   switch (v.vt)
     {
     case VT_BSTR:
@@ -128,35 +126,30 @@ int pushVariant (lua_State *L, VARIANT & v)
 
 //      lua_pushnumber (L, v.date);
 
-      COleDateTime dt (v.date);   // convert to  COleDateTime
+      COleDateTime dt = v.date;   // convert to  COleDateTime
 
       SYSTEMTIME sysTime;
-
       dt.GetAsSystemTime (sysTime);  // now get as SYSTEMTIME
-      CTime tm (sysTime);         // import into CTime
 
-      lua_pushnumber (L, tm.GetTime ());  // return as Lua-style system time
-
+      // return as Lua-style system time
+      lua_pushnumber (L, (lua_Number) CTime(sysTime).GetTime ());
       break;
       }
 
     case (VT_ARRAY + VT_VARIANT): // array of variants
       {
-      lua_newtable(L);                                                            
-
       SAFEARRAY * psa = v.parray;
       long lLBound, lUBound;
-
       SafeArrayGetLBound(psa, 1, &lLBound);
       SafeArrayGetUBound(psa, 1, &lUBound);
 
+      int extra = (lLBound == 0) ? 1 : 0;
+
+      lua_newtable(L);
       VARIANT val;
-      int extra = 0;
-      if (lLBound == 0)
-        extra = 1;
-      for (int i = lLBound; i <= lUBound; i++)
+      long index[2];
+      for (int i = lLBound; i <= lUBound; ++i)
         {
-        long index[2];
         index [0] = i;
         index [1] = 0;
         SafeArrayGetElement(psa, index, &val);
@@ -164,6 +157,7 @@ int pushVariant (lua_State *L, VARIANT & v)
         pushVariant (L, val);   // recurse to push the element value
         lua_rawseti(L, -2, i + extra);  // make 1-relative
         }   // end of doing each row
+
       VariantClear (&v);
       }   // end of VT_ARRAY
       break;
@@ -172,47 +166,51 @@ int pushVariant (lua_State *L, VARIANT & v)
       lua_pushnil (L);
       break;
     }  // end of switch on type
+
   return 1;  // number of result fields
-  } // end of pushVariant
+} // end of pushVariant
 
 // helper function for pushing results returned by normal MUSHclient methods
 // (stored in a BSTR)
 
 int pushBstr (lua_State *L, BSTR & str)
-  {
-  lua_pushstring (L, CString (str));
+{
+  lua_pushstring (L, CString(str));
   SysFreeString (str);
   return 1;  // number of result fields
-  }   // end of pushBstr
+}   // end of pushBstr
 
 // helper function for things like print, note, send etc. to combine all arguments
 // into a string
 
 string concatArgs (lua_State *L, const char * delimiter = "", const int first = 1)
-  {
+{
+  // L: ...
   int n = lua_gettop(L);  /* number of arguments */
-  int i;
-  string sOutput;
-  lua_getglobal(L, "tostring");
-  for (i= first; i<=n; i++) 
+
+  lua_getglobal(L, "tostring"); // L: ... tostring
+  luaL_Buffer buf;
+  luaL_buffinit(L, &buf); // L: ... tostring, <buf> ...
+  for (int i = first; i <= n; ++i)
     {
-    const char *s;
-    lua_pushvalue(L, -1);  /* function to be called */
-    lua_pushvalue(L, i);   /* value to print */
-    lua_call(L, 1, 1);
-    s = lua_tostring(L, -1);  /* get result */
-    if (s == NULL)
+    lua_pushvalue(L, n+1); // L: ... tostring, <buf>, ... tostring
+    lua_pushvalue(L, i);   // L: ... tostring, <buf>, ... tostring, value
+    lua_call(L, 1, 1);     // L: ... tostring, <buf>, ... str
+
+    if (lua_isnoneornil(L, -1))
       luaL_error(L, "'tostring' must return a string to be concatenated");
-        
-    if (i>1)
-      sOutput += delimiter;
-    sOutput += s;
-    lua_pop(L, 1);  /* pop result */
+
+    if (i > first)
+      luaL_addstring(&buf, delimiter);
+    luaL_addvalue(&buf); // L: ... tostring, <buf> ...
     }
+  luaL_pushresult(&buf); // L: ... tostring, result
+
+  string sOutput = lua_tostring(L, -1);
+  lua_pop(L, 2); // L: ...
 
   return sOutput;
-
-  } // end of concatArgs
+} // end of concatArgs
 
 static void GetVariableListHelper (lua_State *L, CMUSHclientDoc *pDoc)
   {

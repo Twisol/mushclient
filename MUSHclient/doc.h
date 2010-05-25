@@ -1245,7 +1245,7 @@ public:
 
   // for DirectSound
   LPDIRECTSOUNDBUFFER m_pDirectSoundSecondaryBuffer [MAX_SOUND_BUFFERS];
-  long PlaySoundHelper(short Buffer, LPCTSTR FileName, BOOL Loop, double Volume, double Pan, LPCTSTR MemoryBuffer, size_t MemLen);
+  long PlaySoundHelper(short Buffer, CString FileName, BOOL Loop, double Volume, double Pan, LPCTSTR MemoryBuffer, size_t MemLen);
 
 
   WORD m_nextAcceleratorCommand;  // next free command
@@ -2237,37 +2237,37 @@ public:
 	afx_msg void Note(LPCTSTR Message);
 	afx_msg long Send(LPCTSTR Message);
 	afx_msg long Sound(LPCTSTR SoundFileName);
-	afx_msg long DeleteTrigger(CString TriggerName);
-	afx_msg long AddTrigger(CString TriggerName, CString MatchText, CString ResponseText, long Flags, short Colour, short Wildcard, CString SoundFileName, CString ScriptName);
-	afx_msg long EnableTrigger(CString TriggerName, BOOL Enabled);
-	afx_msg long GetTrigger(CString TriggerName, VARIANT FAR* MatchText, VARIANT FAR* ResponseText, VARIANT FAR* Flags, VARIANT FAR* Colour, VARIANT FAR* Wildcard, VARIANT FAR* SoundFileName, VARIANT FAR* ScriptName);
-	afx_msg long IsTrigger(CString TriggerName);
+	afx_msg long DeleteTrigger(LPCTSTR TriggerName);
+	afx_msg long AddTrigger(LPCTSTR TriggerName, LPCTSTR MatchText, LPCTSTR ResponseText, long Flags, short Colour, short Wildcard, LPCTSTR SoundFileName, LPCTSTR ScriptName);
+	afx_msg long EnableTrigger(LPCTSTR TriggerName, BOOL Enabled);
+	afx_msg long GetTrigger(LPCTSTR TriggerName, VARIANT FAR* MatchText, VARIANT FAR* ResponseText, VARIANT FAR* Flags, VARIANT FAR* Colour, VARIANT FAR* Wildcard, VARIANT FAR* SoundFileName, VARIANT FAR* ScriptName);
+	afx_msg long IsTrigger(LPCTSTR TriggerName);
 	afx_msg VARIANT GetTriggerList();
-	afx_msg VARIANT GetVariable(CString VariableName);
-	afx_msg long SetVariable(CString VariableName, LPCTSTR Contents);
+	afx_msg VARIANT GetVariable(LPCTSTR VariableName);
+	afx_msg long SetVariable(LPCTSTR VariableName, LPCTSTR Contents);
 	afx_msg VARIANT GetVariableList();
-	afx_msg BOOL Save(CString Name);
+	afx_msg BOOL Save(LPCTSTR Name);
 	afx_msg long Connect();
 	afx_msg long Disconnect();
-	afx_msg long DeleteAlias(CString AliasName);
-	afx_msg long EnableAlias(CString AliasName, BOOL Enabled);
-	afx_msg long GetAlias(CString AliasName, VARIANT FAR* MatchText, VARIANT FAR* ResponseText, VARIANT FAR* Parameter, VARIANT FAR* Flags, VARIANT FAR* ScriptName);
+	afx_msg long DeleteAlias(LPCTSTR AliasName);
+	afx_msg long EnableAlias(LPCTSTR AliasName, BOOL Enabled);
+	afx_msg long GetAlias(LPCTSTR AliasName, VARIANT FAR* MatchText, VARIANT FAR* ResponseText, VARIANT FAR* Parameter, VARIANT FAR* Flags, VARIANT FAR* ScriptName);
 	afx_msg VARIANT GetAliasList();
-	afx_msg long IsAlias(CString AliasName);
+	afx_msg long IsAlias(LPCTSTR AliasName);
 	afx_msg long CloseLog();
 	afx_msg long OpenLog(LPCTSTR LogFileName, BOOL Append);
-	afx_msg long WriteLog(CString Message);
+	afx_msg long WriteLog(LPCTSTR Message);
 	afx_msg BOOL IsLogOpen();
-	afx_msg long EnableTimer(CString TimerName, BOOL Enabled);
-	afx_msg long AddAlias(CString AliasName, CString MatchText, CString ResponseText, long Flags, CString ScriptName);
-	afx_msg long DeleteVariable(CString VariableName);
+	afx_msg long EnableTimer(LPCTSTR TimerName, BOOL Enabled);
+	afx_msg long AddAlias(LPCTSTR AliasName, LPCTSTR MatchText, LPCTSTR ResponseText, long Flags, LPCTSTR ScriptName);
+	afx_msg long DeleteVariable(LPCTSTR VariableName);
 	afx_msg void ResetTimers();
-	afx_msg void SetStatus(CString Message);
-	afx_msg long SetCommand(CString Message);
+	afx_msg void SetStatus(LPCTSTR Message);
+	afx_msg long SetCommand(LPCTSTR Message);
 	afx_msg BSTR GetNotes();
 	afx_msg void SetNotes(LPCTSTR Message);
 	afx_msg void Redraw();
-	afx_msg long ResetTimer(CString TimerName);
+	afx_msg long ResetTimer(LPCTSTR TimerName);
 	afx_msg void SetOutputFont(LPCTSTR FontName, short PointSize);
 	afx_msg void SetInputFont(LPCTSTR FontName, short PointSize, short Weight, BOOL Italic);
 	afx_msg BOOL SendToNotepad(LPCTSTR Title, LPCTSTR Contents);
@@ -2281,7 +2281,7 @@ public:
 	afx_msg BSTR FixupEscapeSequences(LPCTSTR Source);
 	afx_msg BSTR Trim(LPCTSTR Source);
 	afx_msg BOOL ReplaceNotepad(LPCTSTR Title, LPCTSTR Contents);
-	afx_msg VARIANT GetAliasInfo(CString AliasName, short InfoType);
+	afx_msg VARIANT GetAliasInfo(LPCTSTR AliasName, short InfoType);
 	afx_msg VARIANT GetTriggerInfo(LPCTSTR TriggerName, short InfoType);
 	afx_msg BSTR EvaluateSpeedwalk(LPCTSTR SpeedWalkString);
 	afx_msg BSTR ReverseSpeedwalk(LPCTSTR SpeedWalkString);
@@ -2331,7 +2331,7 @@ public:
 	afx_msg BSTR PushCommand();
 	afx_msg void SelectCommand();
 	afx_msg BSTR GetCommand();
-	afx_msg long AddTriggerEx(CString TriggerName, CString MatchText, CString ResponseText, long Flags, short Colour, short Wildcard, CString SoundFileName, CString ScriptName, short SendTo, short Sequence);
+	afx_msg long AddTriggerEx(LPCTSTR TriggerName, LPCTSTR MatchText, LPCTSTR ResponseText, long Flags, short Colour, short Wildcard, LPCTSTR SoundFileName, LPCTSTR ScriptName, short SendTo, short Sequence);
 	afx_msg VARIANT GetQueue();
 	afx_msg long DeleteTemporaryTriggers();
 	afx_msg long DeleteTemporaryAliases();
@@ -2511,7 +2511,7 @@ public:
 	afx_msg long PickColour(long Suggested);
 	afx_msg void TraceOut(LPCTSTR Message);
 	afx_msg BSTR ErrorDesc(long Code);
-	afx_msg BSTR PasteCommand(CString Text);
+	afx_msg BSTR PasteCommand(LPCTSTR Text);
 	afx_msg void Help(LPCTSTR Name);
 	afx_msg void Simulate(LPCTSTR Text);
 	afx_msg void ResetIP();
@@ -2571,7 +2571,7 @@ public:
 	afx_msg VARIANT WindowHotspotList(LPCTSTR Name);
 	afx_msg long WindowDeleteAllHotspots(LPCTSTR Name);
 	afx_msg VARIANT WindowHotspotInfo(LPCTSTR Name, LPCTSTR HotspotId, long InfoType);
-	afx_msg long WindowPolygon(LPCTSTR Name, LPCTSTR Points, long PenColour, long PenStyle, long PenWidth, long BrushColour, long BrushStyle, BOOL Close, BOOL Winding);
+	afx_msg long WindowPolygon(LPCTSTR Name, LPCTSTR Points, long PenColour, short PenStyle, long PenWidth, long BrushColour, long BrushStyle, BOOL Close, BOOL Winding);
 	afx_msg long WindowAddHotspot(LPCTSTR Name, LPCTSTR HotspotId, long Left, long Top, long Right, long Bottom, LPCTSTR MouseOver, LPCTSTR CancelMouseOver, LPCTSTR MouseDown, LPCTSTR CancelMouseDown, LPCTSTR MouseUp, LPCTSTR TooltipText, long Cursor, long Flags);
 	afx_msg long WindowCircleOp(LPCTSTR Name, short Action, long Left, long Top, long Right, long Bottom, long PenColour, long PenStyle, long PenWidth, long BrushColour, long BrushStyle, long Extra1, long Extra2, long Extra3, long Extra4);
 	afx_msg long WindowCreateImage(LPCTSTR Name, LPCTSTR ImageId, long Row1, long Row2, long Row3, long Row4, long Row5, long Row6, long Row7, long Row8);

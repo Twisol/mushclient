@@ -73,7 +73,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions="/LTCG"
 				AdditionalDependencies="dsound.lib"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"

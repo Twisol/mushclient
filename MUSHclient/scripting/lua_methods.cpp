@@ -4339,7 +4339,7 @@ static int L_PlaySoundMemory (lua_State *L)
   sBuffer = luaL_checklstring (L, 2, &iBufferLength);
   lua_pushnumber (L, pDoc->PlaySoundHelper (
                   my_checknumber (L, 1),  // Buffer
-                  NULL,                   // Filename
+                  (LPCTSTR) NULL,         // Filename
                   optboolean (L, 3, 0),   // Repeat
                   my_optnumber (L, 4, 0), // Volume
                   my_optnumber (L, 5, 0), // Pan

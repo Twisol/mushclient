@@ -104,9 +104,9 @@ long CMUSHclientDoc::SendNoEcho(LPCTSTR Message)
 
 
 void CMUSHclientDoc::AddToCommandHistory(LPCTSTR Message)
-  {
-
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
+{
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
     {
     CView* pView = GetNextView(pos);
 
@@ -134,8 +134,7 @@ void CMUSHclientDoc::AddToCommandHistory(LPCTSTR Message)
 
     break;
     }   // end of loop through views
-
-  } // end of CMUSHclientDoc::AddToCommandHistory
+} // end of CMUSHclientDoc::AddToCommandHistory
 
 long CMUSHclientDoc::SendPush(LPCTSTR Message) 
 {
@@ -186,7 +185,7 @@ long CMUSHclientDoc::LogSend(LPCTSTR Message)
 
 long CMUSHclientDoc::GetLineCount() 
 {
-	return m_total_lines;
+  return m_total_lines;
 }
 
 
@@ -194,7 +193,7 @@ long CMUSHclientDoc::GetLineCount()
 
 BOOL CMUSHclientDoc::IsConnected() 
 {
-	return m_iConnectPhase == eConnectConnectedToMud;
+  return m_iConnectPhase == eConnectConnectedToMud;
 }
 
 
@@ -202,7 +201,7 @@ BOOL CMUSHclientDoc::IsConnected()
 
 BSTR CMUSHclientDoc::WorldName() 
 {
-	return m_mush_name.AllocSysString();
+  return m_mush_name.AllocSysString();
 }
 
 
@@ -210,7 +209,7 @@ BSTR CMUSHclientDoc::WorldName()
 
 BSTR CMUSHclientDoc::Version() 
 {
-	return MUSHCLIENT_VERSION.AllocSysString();
+  return MUSHCLIENT_VERSION.AllocSysString();
 }
 
 
@@ -340,10 +339,10 @@ long CMUSHclientDoc::Disconnect()
 
 // world.Save - saves the current world - under a new name if supplied
 //              returns zero if no error
-BOOL CMUSHclientDoc::Save(CString Name) 
+BOOL CMUSHclientDoc::Save(LPCTSTR Name) 
 {
   // if empty, take document default path name [#459]
-  if (Name.IsEmpty ())
+  if (Name[0] == '\0')
     Name = m_strPathName;
 
   return !DoSave (Name, TRUE);
@@ -386,13 +385,11 @@ long CMUSHclientDoc::CloseLog()
   // write log file postamble if wanted
   if (!m_strLogFilePostamble.IsEmpty () && !m_bLogRaw)
     {
-    CTime theTime = CTime::GetCurrentTime();
-
     // allow %n for newline
     CString strPostamble = ::Replace (m_strLogFilePostamble, "%n", "\n");
 
     // allow for time-substitution strings
-    strPostamble = FormatTime (theTime, strPostamble, m_bLogHTML);
+    strPostamble = FormatTime (CTime::GetCurrentTime(), strPostamble, m_bLogHTML);
 
     // this is open in text mode, don't want \r\r\n
     strPostamble.Replace (ENDLINE, "\n");
@@ -407,24 +404,26 @@ long CMUSHclientDoc::CloseLog()
 }
 
 
-long CMUSHclientDoc::WriteLog(CString Message) 
+long CMUSHclientDoc::WriteLog(LPCTSTR Message) 
 {
+  CString strMessage = Message;
+
   if (!m_logfile)
     return eLogFileNotOpen;
 
   // append newline if there isn't one already
-  if (Message.Right (2) != "\n")
-    Message += "\n";
+  if (strMessage.Right (2) != "\n")
+    strMessage += "\n";
 
-  size_t len = Message.GetLength ();
-  size_t count = fwrite (Message, 1, len, m_logfile);
+  size_t len   = strMessage.GetLength ();
+  size_t count = fwrite (strMessage, 1, len, m_logfile);
 
   return (count != len) ? eLogFileBadWrite : eOK;
 }
 
 BOOL CMUSHclientDoc::IsLogOpen() 
 {
-	return m_logfile != NULL;
+  return m_logfile != NULL;
 }
 
 // ******************************************************************************
@@ -433,15 +432,15 @@ BOOL CMUSHclientDoc::IsLogOpen()
 
 // world.DeleteTrigger (trigger_name) - deletes the named trigger
 
-long CMUSHclientDoc::DeleteTrigger(CString TriggerName) 
+long CMUSHclientDoc::DeleteTrigger(LPCTSTR TriggerName) 
 {
+  CString strTriggerName = TriggerName;
   CTrigger* trigger_item = NULL;
 
-  // return if bad name
-  if (CheckObjectName (TriggerName))
-    return eInvalidObjectLabel;
+  // trim spaces
+  CheckObjectName (strTriggerName, false);
 
-  if (!GetTriggerMap ().Lookup (TriggerName, trigger_item))
+  if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
     return eTriggerNotFound;
 
   // can't if executing a script
@@ -455,7 +454,7 @@ long CMUSHclientDoc::DeleteTrigger(CString TriggerName)
   delete trigger_item;
 
   // now delete its entry
-  if (!GetTriggerMap ().RemoveKey (TriggerName))
+  if (!GetTriggerMap ().RemoveKey (strTriggerName))
     return eTriggerNotFound;
 
   SortTriggers ();
@@ -465,36 +464,39 @@ long CMUSHclientDoc::DeleteTrigger(CString TriggerName)
 
 // world.AddTriggerEx (trigger_name, ...) - adds the named trigger
 
-long CMUSHclientDoc::AddTriggerEx(CString TriggerName, 
-                                  CString MatchText, 
-                                  CString ResponseText, 
+long CMUSHclientDoc::AddTriggerEx(LPCTSTR TriggerName, 
+                                  LPCTSTR MatchText, 
+                                  LPCTSTR ResponseText, 
                                   long Flags, 
                                   short Colour, 
                                   short Wildcard, 
-                                  CString SoundFileName, 
-                                  CString ScriptName, 
+                                  LPCTSTR SoundFileName, 
+                                  LPCTSTR ScriptName, 
                                   short SendTo, 
                                   short Sequence) 
 {
+  CString strTriggerName = TriggerName,
+          strMatchText   = MatchText;
+
   CTrigger* trigger_item = NULL;
 
   // allow blank names, assign one :)
-  if (TriggerName.IsEmpty ())
-    TriggerName.Format ("*trigger%s", (LPCTSTR) App.GetUniqueString ());
+  if (strTriggerName.IsEmpty ())
+    strTriggerName.Format ("*trigger%s", (LPCTSTR) App.GetUniqueString ());
   // return if bad name
-  else if (CheckObjectName (TriggerName))
+  else if (CheckObjectName (strTriggerName))
     return eInvalidObjectLabel;
 
   // if it already exists, error
   bool bReplace = false;
-  if (GetTriggerMap ().Lookup (TriggerName, trigger_item))
+  if (GetTriggerMap ().Lookup (strTriggerName, trigger_item))
     if (Flags & eReplace)
       bReplace = true; // replace the existing one
     else
       return eTriggerAlreadyExists;
 
   // cannot have null match text
-  if (MatchText.IsEmpty())
+  if (strMatchText.IsEmpty())
     return eTriggerCannotBeEmpty;
 
   // check sequence
@@ -503,29 +505,26 @@ long CMUSHclientDoc::AddTriggerEx(CString TriggerName,
 
   // check send to
   if (SendTo < 0 || SendTo >= eSendToLast) 
-    return eTriggerSendToInvalid; 
-  // must have a label for 'send to variable'
-  else if (SendTo == eSendToVariable && CheckObjectName(TriggerName))
-    return eTriggerLabelNotSpecified;
+    return eTriggerSendToInvalid;
 
   // get trigger dispatch ID
   DISPID dispid = DISPID_UNKNOWN;
-  if (GetScriptEngine () && !ScriptName.IsEmpty())
+  if (GetScriptEngine () && ScriptName[0] != '\0')
     {
     CString strMessage;
-    dispid = GetProcedureDispid (ScriptName, "trigger", TriggerName, strMessage);
+    dispid = GetProcedureDispid (ScriptName, "trigger", strTriggerName, strMessage);
     if (dispid == DISPID_UNKNOWN)
       return eScriptNameNotLocated;
     }
 
-  if (Flags & eTriggerRegularExpression == 0)
-    MatchText = ConvertToRegularExpression(MatchText);
+  if ((Flags & eTriggerRegularExpression) == 0)
+    strMatchText = ConvertToRegularExpression(strMatchText);
 
   // compile regular expression
   t_regexp * regexp = NULL;
   try 
     {
-    regexp = regcomp (MatchText, (Flags & eIgnoreCase ? PCRE_CASELESS : 0) | (m_bUTF_8 ? PCRE_UTF8 : 0));
+    regexp = regcomp (strMatchText, (Flags & eIgnoreCase ? PCRE_CASELESS : 0) | (m_bUTF_8 ? PCRE_UTF8 : 0));
     }   // end of try
   catch(CException* e)
     {
@@ -538,22 +537,17 @@ long CMUSHclientDoc::AddTriggerEx(CString TriggerName,
     {
     // the trigger seems to exist - delete its pointer
     delete trigger_item;
-
     // now delete its entry
-    GetTriggerMap ().RemoveKey (TriggerName);
+    GetTriggerMap ().RemoveKey (strTriggerName);
     }
 
-  // create new trigger item and insert in trigger map
+  // create new trigger item
   trigger_item = new CTrigger();
-  GetTriggerMap ().SetAt (TriggerName, trigger_item);
-
-  if ((Flags & eTemporary) == 0 && !m_CurrentPlugin) // plugin mods don't really count
-    SetModifiedFlag (TRUE);
 
   trigger_item->nUpdateNumber      = App.GetUniqueNumber ();   // for concurrency checks
-  trigger_item->strInternalName    = TriggerName;    // for deleting one-shot triggers
+  trigger_item->strInternalName    = strTriggerName;    // for deleting one-shot triggers
 
-  trigger_item->trigger            = MatchText;
+  trigger_item->trigger            = strMatchText;
   trigger_item->contents           = ResponseText;
   trigger_item->colour             = (Colour < 0 || Colour >= MAX_CUSTOM) ? SAMECOLOUR : Colour;
   trigger_item->ignore_case        = (Flags & eIgnoreCase) != 0;
@@ -567,14 +561,20 @@ long CMUSHclientDoc::AddTriggerEx(CString TriggerName,
   trigger_item->bLowercaseWildcard = (Flags & eLowercaseWildcard) != 0;
   trigger_item->bOneShot           = (Flags & eTriggerOneShot) != 0;
   trigger_item->strProcedure       = ScriptName;
-  trigger_item->strLabel           = TriggerName;
+  trigger_item->strLabel           = strTriggerName;
   trigger_item->iClipboardArg      = (Wildcard < 0 || Wildcard > 10) ? 0 : Wildcard;
   trigger_item->sound_to_play      = SoundFileName;
   trigger_item->dispid             = dispid;
   trigger_item->regexp             = regexp;
   trigger_item->iSendTo            = SendTo;
   trigger_item->iSequence          = Sequence;
-  trigger_item->strVariable        = TriggerName;   // kludge
+  trigger_item->strVariable        = strTriggerName;   // kludge
+
+  // insert trigger into trigger map
+  GetTriggerMap ().SetAt (strTriggerName, trigger_item);
+
+  if ((Flags & eTemporary) == 0 && !m_CurrentPlugin) // plugin mods don't really count
+    SetModifiedFlag (TRUE);
 
   SortTriggers ();
 
@@ -583,55 +583,54 @@ long CMUSHclientDoc::AddTriggerEx(CString TriggerName,
 
 // world.AddTrigger (trigger_name, ...) - adds the named trigger
 
-long CMUSHclientDoc::AddTrigger(CString TriggerName, 
-                                CString MatchText, 
-                                CString ResponseText, 
+long CMUSHclientDoc::AddTrigger(LPCTSTR TriggerName, 
+                                LPCTSTR MatchText, 
+                                LPCTSTR ResponseText, 
                                 long Flags, 
                                 short Colour, 
                                 short Wildcard, 
-                                CString SoundFileName, 
-                                CString ScriptName) 
+                                LPCTSTR SoundFileName, 
+                                LPCTSTR ScriptName) 
 {
-  
-return AddTriggerEx (TriggerName, 
-                      MatchText, 
-                      ResponseText, 
-                      Flags, 
-                      Colour, 
-                      Wildcard, 
-                      SoundFileName, 
-                      ScriptName, 
-                      eSendToWorld, 
-                      DEFAULT_TRIGGER_SEQUENCE);
+  return AddTriggerEx (TriggerName, 
+      MatchText, 
+      ResponseText, 
+      Flags, 
+      Colour, 
+      Wildcard, 
+      SoundFileName, 
+      ScriptName, 
+      eSendToWorld, 
+      DEFAULT_TRIGGER_SEQUENCE);
 }
 
 // world.EnableTrigger (trigger_name, bEnableFlag) - enables or disables the named trigger
 
-long CMUSHclientDoc::EnableTrigger(CString TriggerName, BOOL Enabled) 
+long CMUSHclientDoc::EnableTrigger(LPCTSTR TriggerName, BOOL Enabled) 
 {
+  CString strTriggerName = TriggerName;
+  // trim spaces, make lowercase
+  CheckObjectName (strTriggerName, false);
+
   CTrigger * trigger_item = NULL;
 
-  // return if bad name
-  if (CheckObjectName (TriggerName, false))
-    return eInvalidObjectLabel;
-
-  if (!GetTriggerMap ().Lookup (TriggerName, trigger_item))
+  if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
     return eTriggerNotFound;
 
-  if (trigger_item->bEnabled == Enabled)
-    return eOK;   // no change
+  if (trigger_item->bEnabled != Enabled)
+    {
+    trigger_item->bEnabled      = (Enabled != 0);           // set enabled flag
+    trigger_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
 
-  trigger_item->bEnabled      = (Enabled != 0);           // set enabled flag
-  trigger_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
-
-  if (!m_CurrentPlugin) // plugin mods don't really count
-    SetModifiedFlag (TRUE);   // document has changed
+    if (!m_CurrentPlugin && !trigger_item->bTemporary) // plugin mods don't really count
+      SetModifiedFlag (TRUE);   // document has changed
+    }
 
   return eOK;
 }
 
 // world.GetTrigger (trigger_name, ...) - gets details about the named trigger
-long CMUSHclientDoc::GetTrigger(CString TriggerName, 
+long CMUSHclientDoc::GetTrigger(LPCTSTR TriggerName, 
                                 VARIANT FAR* MatchText, 
                                 VARIANT FAR* ResponseText, 
                                 VARIANT FAR* Flags, 
@@ -640,21 +639,21 @@ long CMUSHclientDoc::GetTrigger(CString TriggerName,
                                 VARIANT FAR* SoundFileName, 
                                 VARIANT FAR* ScriptName) 
 {
+  CString strTriggerName = TriggerName;
+  // trim spaces, make lowercase
+  CheckObjectName (strTriggerName, false);
+
   CTrigger * trigger_item = NULL;
 
-  // return if bad name
-  if (CheckObjectName (TriggerName, false))
-    return eInvalidObjectLabel;
-
-  if (!GetTriggerMap ().Lookup (TriggerName, trigger_item))
+  if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
     return eTriggerNotFound;
 
-  SetUpVariantString (*MatchText, trigger_item->trigger);
-  SetUpVariantString (*ResponseText, trigger_item->contents);
-  SetUpVariantString (*ScriptName, trigger_item->strProcedure);
+  SetUpVariantString (*MatchText,     trigger_item->trigger);
+  SetUpVariantString (*ResponseText,  trigger_item->contents);
+  SetUpVariantString (*ScriptName,    trigger_item->strProcedure);
   SetUpVariantString (*SoundFileName, trigger_item->sound_to_play);
-  SetUpVariantShort  (*Wildcard, trigger_item->iClipboardArg);
-  SetUpVariantShort  (*Colour, (trigger_item->colour == SAMECOLOUR) ? -1 : trigger_item->colour);
+  SetUpVariantShort  (*Wildcard,      trigger_item->iClipboardArg);
+  SetUpVariantShort  (*Colour,        (trigger_item->colour == SAMECOLOUR) ? -1 : trigger_item->colour);
 
   short iFlags = 0;
   if (trigger_item->ignore_case)        iFlags |= eIgnoreCase;
@@ -672,15 +671,15 @@ long CMUSHclientDoc::GetTrigger(CString TriggerName,
 
 // world.IsTrigger (trigger_name) - returns eOK if the trigger exists
 
-long CMUSHclientDoc::IsTrigger(CString TriggerName) 
+long CMUSHclientDoc::IsTrigger(LPCTSTR TriggerName) 
 {
+  CString strTriggerName = TriggerName;
+  // trim spaces, make lowercase
+  CheckObjectName (strTriggerName, false);
+
   CTrigger * trigger_item = NULL;
 
-  // return if bad name
-  if (CheckObjectName (TriggerName, false))
-    return eInvalidObjectLabel;
-
-  if (!GetTriggerMap ().Lookup (TriggerName, trigger_item))
+  if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
     return eTriggerNotFound;
 
   return eOK;
@@ -692,18 +691,16 @@ VARIANT CMUSHclientDoc::GetTriggerList()
 {
   COleSafeArray sa;   // for wildcard list
 
-  if (GetTriggerMap ().IsEmpty()) // cannot create empty array dimension
+  if (!GetTriggerMap ().IsEmpty()) // cannot create empty array dimension
     {
     sa.CreateOneDim (VT_VARIANT, GetTriggerMap ().GetCount ());
 
-    CString TriggerName;
+    POSITION pos = GetTriggerMap ().GetStartPosition();
     CTrigger * trigger_item = NULL;
-    POSITION pos = NULL;
-    long iCount = 0;
-    for (pos = GetTriggerMap ().GetStartPosition(); pos != NULL; ++iCount)
+    CString TriggerName;
+    for (long iCount = 0; pos != NULL; ++iCount)
       {
       GetTriggerMap ().GetNextAssoc (pos, TriggerName, trigger_item);
-
       // the array must be a bloody array of variants, or VBscript kicks up
       sa.PutElement (&iCount, &((COleVariant)TriggerName));
       }      // end of looping through each trigger
@@ -720,26 +717,27 @@ VARIANT CMUSHclientDoc::GetTriggerList()
 // world.SetVariable (variable_name, new_contents) - sets the named variable's contents
 //                                                 - creating it if necessary
 
-long CMUSHclientDoc::SetVariable(CString VariableName, LPCTSTR Contents) 
+long CMUSHclientDoc::SetVariable(LPCTSTR VariableName, LPCTSTR Contents) 
 {
+  CString strVariableName = VariableName;
   CVariable * variable_item = NULL;
 
   // return if bad name
-  if (CheckObjectName (VariableName))
+  if (CheckObjectName (strVariableName))
     return eInvalidObjectLabel;
 
   // get rid of old variable, if any
-  if (GetVariableMap ().Lookup (VariableName, variable_item))
+  if (GetVariableMap ().Lookup (strVariableName, variable_item))
     delete variable_item;
 
   // create new variable item and insert in variable map
   variable_item = new CVariable();
-  GetVariableMap ().SetAt (VariableName, variable_item);
+  GetVariableMap ().SetAt (strVariableName, variable_item);
 
   m_bVariablesChanged = true;
 
   // set up variable item contents
-  variable_item->strLabel      = VariableName;
+  variable_item->strLabel      = strVariableName;
   variable_item->strContents   = Contents;
   variable_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
 
@@ -750,8 +748,9 @@ long CMUSHclientDoc::SetVariable(CString VariableName, LPCTSTR Contents)
 //                                     returns "EMPTY" variable if not there
 //                                     returns "NULL" variable if a bad name
 
-VARIANT CMUSHclientDoc::GetVariable(CString VariableName) 
+VARIANT CMUSHclientDoc::GetVariable(LPCTSTR VariableName) 
 {
+  CString strVariableName = VariableName;
   CVariable * variable_item = NULL;
 
   VARIANT vaResult;
@@ -759,15 +758,14 @@ VARIANT CMUSHclientDoc::GetVariable(CString VariableName)
 
   // return if bad name, if so return NULL
   vaResult.vt = VT_NULL;
-  if (CheckObjectName (VariableName))
+  if (CheckObjectName (strVariableName))
     return vaResult;
 
   // see if variable exists, if not return EMPTY
   vaResult.vt = VT_EMPTY;
-  if (!GetVariableMap ().Lookup (VariableName, variable_item))
-    return vaResult;
+  if (GetVariableMap ().Lookup (strVariableName, variable_item))
+    SetUpVariantString (vaResult, variable_item->strContents);
 
-  SetUpVariantString (vaResult, variable_item->strContents);
   return vaResult;
 }
 
@@ -782,14 +780,12 @@ VARIANT CMUSHclientDoc::GetVariableList()
     {
     sa.CreateOneDim (VT_VARIANT, GetVariableMap ().GetCount ());
 
-    CString VariableName;
+    POSITION pos = GetVariableMap ().GetStartPosition();
     CVariable * variable_item = NULL;
-    POSITION pos;
-    long iCount = 0;
-    for (pos = GetVariableMap ().GetStartPosition(); pos; ++iCount)
+    CString VariableName;
+    for (long iCount = 0; pos != NULL; ++iCount)
       {
       GetVariableMap ().GetNextAssoc (pos, VariableName, variable_item);
-
       // the array must be a bloody array of variants, or VBscript kicks up
       sa.PutElement (&iCount, &((COleVariant)VariableName));
       }      // end of looping through each Variable
@@ -800,22 +796,23 @@ VARIANT CMUSHclientDoc::GetVariableList()
 
 // world.DeleteVariable (variable_name) - deletes the named variable
 
-long CMUSHclientDoc::DeleteVariable(CString VariableName) 
+long CMUSHclientDoc::DeleteVariable(LPCTSTR VariableName) 
 {
+  CString strVariableName = VariableName;
   CVariable * variable_item = NULL;
 
   // return if bad name
-  if (CheckObjectName (VariableName))
+  if (CheckObjectName (strVariableName))
     return eInvalidObjectLabel;
 
-  if (!GetVariableMap ().Lookup (VariableName, variable_item))
+  if (!GetVariableMap ().Lookup (strVariableName, variable_item))
     return eVariableNotFound;
 
   // the variable seems to exist - delete its pointer
   delete variable_item;
 
   // now delete its entry
-  if (!GetVariableMap ().RemoveKey (VariableName))
+  if (!GetVariableMap ().RemoveKey (strVariableName))
     return eVariableNotFound;
 
   if (!m_CurrentPlugin) // plugin mods don't really count
@@ -831,15 +828,15 @@ long CMUSHclientDoc::DeleteVariable(CString VariableName)
 // world.DeleteAlias (alias_name) - deletes the named alias
 
 
-long CMUSHclientDoc::DeleteAlias(CString AliasName) 
+long CMUSHclientDoc::DeleteAlias(LPCTSTR AliasName) 
 {
-  CAlias * alias_item;
+  CString strAliasName = AliasName;
+  CAlias * alias_item = NULL;
 
-  // return if bad name
-  if (CheckObjectName (AliasName, false))
-    return eInvalidObjectLabel;
+  // trim spaces
+  CheckObjectName (strAliasName, false);
 
-  if (!GetAliasMap ().Lookup (AliasName, alias_item))
+  if (!GetAliasMap ().Lookup (strAliasName, alias_item))
     return eAliasNotFound;
 
   // can't if executing a script
@@ -853,7 +850,7 @@ long CMUSHclientDoc::DeleteAlias(CString AliasName)
   delete alias_item;
 
   // now delete its entry
-  if (!GetAliasMap ().RemoveKey (AliasName))
+  if (!GetAliasMap ().RemoveKey (strAliasName))
     return eAliasNotFound;
 
   SortAliases ();
@@ -863,51 +860,54 @@ long CMUSHclientDoc::DeleteAlias(CString AliasName)
 
 // world.AddAlias (alias_name, ...) - adds the named alias
 
-long CMUSHclientDoc::AddAlias(CString AliasName, 
-                              CString MatchText, 
-                              CString ResponseText, 
+long CMUSHclientDoc::AddAlias(LPCTSTR AliasName, 
+                              LPCTSTR MatchText, 
+                              LPCTSTR ResponseText, 
                               long Flags, 
-                              CString ScriptName) 
+                              LPCTSTR ScriptName) 
 {
-  CAlias * alias_item;
+  CString strAliasName = AliasName,
+          strMatchText = MatchText;
+
+  CAlias * alias_item = NULL;
 
   // allow blank name, allocate one
-  if (AliasName.IsEmpty ())
-    AliasName.Format ("*alias%s", (LPCTSTR) App.GetUniqueString ());
+  if (strAliasName.IsEmpty ())
+    strAliasName.Format ("*alias%s", (LPCTSTR) App.GetUniqueString ());
   // return if bad name
-  else if (CheckObjectName (AliasName, false))
+  else if (CheckObjectName (strAliasName))
     return eInvalidObjectLabel;
 
   // if it already exists, error
   bool bReplace = false;
-  if (GetAliasMap ().Lookup (AliasName, alias_item))
+  if (GetAliasMap ().Lookup (strAliasName, alias_item))
     if (Flags & eReplace)
       bReplace = true; // replace the existing one
     else
       return eAliasAlreadyExists;
 
   // cannot have null match text
-  if (MatchText.IsEmpty())
+  if (strMatchText.IsEmpty())
     return eAliasCannotBeEmpty;
 
   // get alias dispatch ID
   DISPID dispid = DISPID_UNKNOWN;
-  if (GetScriptEngine () && !ScriptName.IsEmpty())
+  if (GetScriptEngine () && ScriptName != '\0')
     {
     CString strMessage;
-    dispid = GetProcedureDispid (ScriptName, "alias", AliasName, strMessage);
+    dispid = GetProcedureDispid (ScriptName, "alias", strAliasName, strMessage);
     if (dispid == DISPID_UNKNOWN)
       return eScriptNameNotLocated;
     }
 
-  if (Flags & eAliasRegularExpression == 0)
-    MatchText = ConvertToRegularExpression (MatchText);
+  if ((Flags & eAliasRegularExpression) == 0)
+    strMatchText = ConvertToRegularExpression (strMatchText);
 
   // compile regular expression
   t_regexp * regexp = NULL;
   try 
     {
-    regexp = regcomp (MatchText, (Flags & eIgnoreAliasCase ? PCRE_CASELESS : 0)
+    regexp = regcomp (strMatchText, (Flags & eIgnoreAliasCase ? PCRE_CASELESS : 0)
 #if ALIASES_USE_UTF8
                                   | (m_bUTF_8 ? PCRE_UTF8 : 0)
 #endif // ALIASES_USE_UTF8
@@ -924,22 +924,17 @@ long CMUSHclientDoc::AddAlias(CString AliasName,
     {
     // the alias seems to exist - delete its pointer
     delete alias_item;
-
     // now delete its entry
-    GetAliasMap ().RemoveKey (AliasName);
+    GetAliasMap ().RemoveKey (strAliasName);
     }
 
-  // create new alias item and insert in alias map
+  // create new alias item
   alias_item = new CAlias();
-  GetAliasMap ().SetAt (AliasName, alias_item);
-
-  if ((Flags & eTemporary == 0) && !m_CurrentPlugin) // plugin mods don't really count
-    SetModifiedFlag (TRUE);
 
   alias_item->nUpdateNumber    = App.GetUniqueNumber ();   // for concurrency checks
-  alias_item->strInternalName  = AliasName;    // for deleting one-shot aliases
+  alias_item->strInternalName  = strAliasName;    // for deleting one-shot aliases
 
-  alias_item->name             = MatchText;
+  alias_item->name             = strMatchText;
   alias_item->contents         = ResponseText;
   alias_item->bIgnoreCase      = (Flags & eIgnoreAliasCase) != 0;
 //  alias_item->bDelayed         = (Flags & eDelayed) != 0;
@@ -952,7 +947,7 @@ long CMUSHclientDoc::AddAlias(CString AliasName,
   alias_item->bTemporary       = (Flags & eTemporary) != 0;
   alias_item->bOneShot         = (Flags & eAliasOneShot) != 0;
   alias_item->strProcedure     = ScriptName;
-  alias_item->strLabel         = AliasName;
+  alias_item->strLabel         = strAliasName;
   alias_item->dispid           = dispid;
   alias_item->regexp           = regexp;
 
@@ -962,6 +957,12 @@ long CMUSHclientDoc::AddAlias(CString AliasName,
   else if (Flags & eAliasQueue)
      alias_item->iSendTo = eSendToCommandQueue;
 
+  // insert alias into alias map
+  GetAliasMap ().SetAt (strAliasName, alias_item);
+
+  if ((Flags & eTemporary) == 0 && !m_CurrentPlugin) // plugin mods don't really count
+    SetModifiedFlag (TRUE);
+
   SortAliases ();
 
   return eOK;
@@ -969,51 +970,51 @@ long CMUSHclientDoc::AddAlias(CString AliasName,
 
 // world.EnableAlias (alias_name, bEnableFlag) - enables or disables the named alias
 
-long CMUSHclientDoc::EnableAlias(CString AliasName, BOOL Enabled) 
+long CMUSHclientDoc::EnableAlias(LPCTSTR AliasName, BOOL Enabled) 
 {
-  CAlias * alias_item;
+  CString strAliasName = AliasName;
+  CAlias * alias_item = NULL;
 
-  // return if bad name
-  if (CheckObjectName (AliasName, false))
-    return eInvalidObjectLabel;
+  // strip spaces, make lowercase
+  CheckObjectName (strAliasName, false);
 
-  if (!GetAliasMap ().Lookup (AliasName, alias_item))
+  if (!GetAliasMap ().Lookup (strAliasName, alias_item))
     return eAliasNotFound;
 
-  if (alias_item->bEnabled == Enabled)
-    return eOK;   // no change
+  if (alias_item->bEnabled != Enabled)
+    {
+    alias_item->bEnabled      = (Enabled != 0);           // set enabled flag
+    alias_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
 
-  alias_item->bEnabled      = (Enabled != 0);           // set enabled flag
-  alias_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
-
-  if (!m_CurrentPlugin && !alias_item->bTemporary) // plugin mods don't really count
-    SetModifiedFlag (TRUE);   // document has changed
+    if (!m_CurrentPlugin && !alias_item->bTemporary) // plugin mods don't really count
+      SetModifiedFlag (TRUE);   // document has changed
+    }
 
   return eOK;
 }
 
 // world.GetAlias (alias_name, ...) - gets details about the named alias
 
-long CMUSHclientDoc::GetAlias(CString AliasName, 
+long CMUSHclientDoc::GetAlias(LPCTSTR AliasName, 
                               VARIANT FAR* MatchText, 
                               VARIANT FAR* ResponseText, 
                               VARIANT FAR* Parameter, 
                               VARIANT FAR* Flags, 
                               VARIANT FAR* ScriptName) 
 {
-  CAlias * alias_item;
+  CString strAliasName = AliasName;
+  CAlias * alias_item = NULL;
 
-  // return if bad name
-  if (CheckObjectName (AliasName, false))
-    return eInvalidObjectLabel;
+  // trim spaces, make lowercase
+  CheckObjectName (strAliasName, false);
 
-  if (!GetAliasMap ().Lookup (AliasName, alias_item))
+  if (!GetAliasMap ().Lookup (strAliasName, alias_item))
     return eAliasNotFound;
 
-  SetUpVariantString (*MatchText, alias_item->name);
+  SetUpVariantString (*MatchText,    alias_item->name);
   SetUpVariantString (*ResponseText, alias_item->contents);
-  SetUpVariantString (*ScriptName, alias_item->strProcedure);
-  SetUpVariantString (*Parameter, "");
+  SetUpVariantString (*ScriptName,   alias_item->strProcedure);
+  SetUpVariantString (*Parameter,    "");
 
   short iFlags = 0;
   if (alias_item->bEnabled)         iFlags |= eEnabled;
@@ -1038,19 +1039,17 @@ VARIANT CMUSHclientDoc::GetAliasList()
 {
   COleSafeArray sa;   // for wildcard list
 
-  if (GetAliasMap ().IsEmpty()) // cannot create empty array dimension
+  if (!GetAliasMap ().IsEmpty()) // cannot create empty array dimension
     {
     sa.CreateOneDim (VT_VARIANT, GetAliasMap ().GetCount ());
 
+    POSITION pos = GetAliasMap ().GetStartPosition();
     CString AliasName;
-    CAlias * alias_item;
-    long iCount = 0;
-    POSITION pos;
+    CAlias * alias_item = NULL;
     // put the named aliases into the array
-    for (pos = GetAliasMap ().GetStartPosition(); pos; ++iCount)
+    for (long iCount = 0; pos != NULL; ++iCount)
       {
       GetAliasMap ().GetNextAssoc (pos, AliasName, alias_item);
-
       // the array must be a bloody array of variants, or VBscript kicks up
       sa.PutElement (&iCount, &((COleVariant)AliasName));
       }      // end of looping through each alias
@@ -1061,43 +1060,42 @@ VARIANT CMUSHclientDoc::GetAliasList()
 
 // world.IsAlias (alias_name) - returns eOK if the alias exists
 
-long CMUSHclientDoc::IsAlias(CString AliasName) 
+long CMUSHclientDoc::IsAlias(LPCTSTR AliasName) 
 {
-  CAlias * alias_item;
+  CString strAliasName = AliasName;
+  CAlias * alias_item = NULL;
 
-  // return if bad name
-  if (CheckObjectName (AliasName, false))
-    return eInvalidObjectLabel;
+  // trim spaces, make lowercase
+  CheckObjectName (strAliasName, false);
 
-  if (!GetAliasMap ().Lookup (AliasName, alias_item))
+  if (!GetAliasMap ().Lookup (strAliasName, alias_item))
     return eAliasNotFound;
 
   return eOK;
 }
 
 
-
 // world.EnableTimer (Timer_name, bEnableFlag) - enables or disables the named timer
 
-long CMUSHclientDoc::EnableTimer(CString TimerName, BOOL Enabled) 
+long CMUSHclientDoc::EnableTimer(LPCTSTR TimerName, BOOL Enabled) 
 {
-  CTimer * timer_item;
+  CString strTimerName = TimerName;
+  CTimer * timer_item = NULL;
 
-  // return if bad name
-  if (CheckObjectName (TimerName, false))
-    return eInvalidObjectLabel;
+  // trim spaces, make lowercase
+  CheckObjectName (strTimerName, false);
 
-  if (!GetTimerMap ().Lookup (TimerName, timer_item))
+  if (!GetTimerMap ().Lookup (strTimerName, timer_item))
     return eTimerNotFound;
 
-  if (timer_item->bEnabled == Enabled)
-    return eOK;   // no change
+  if (timer_item->bEnabled != Enabled)
+    {
+    timer_item->bEnabled      = (Enabled != 0);           // set enabled flag
+    timer_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
 
-  timer_item->bEnabled      = (Enabled != 0);           // set enabled flag
-  timer_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
-
-  if (!m_CurrentPlugin && !timer_item->bTemporary) // plugin mods don't really count
-    SetModifiedFlag (TRUE);   // document has changed
+    if (!m_CurrentPlugin && !timer_item->bTemporary) // plugin mods don't really count
+      SetModifiedFlag (TRUE);   // document has changed
+    }
 
   return eOK;
 }
@@ -1110,13 +1108,13 @@ void CMUSHclientDoc::ResetTimers()
 }
 
 
-void CMUSHclientDoc::SetStatus(CString Message) 
+void CMUSHclientDoc::SetStatus(LPCTSTR Message) 
 {
   m_strStatusMessage = Message;
   ShowStatusLine (true);    // show it now
 }
 
-long CMUSHclientDoc::SetCommand(CString Message)
+long CMUSHclientDoc::SetCommand(LPCTSTR Message)
 {
   POSITION pos = GetFirstViewPosition();
   while (pos != NULL)
@@ -1135,12 +1133,14 @@ long CMUSHclientDoc::SetCommand(CString Message)
 
     pmyView->GetEditCtrl().ReplaceSel (Message, TRUE);
     pmyView->NotifyPluginCommandChanged ();
+
+    break;
     }   // end of loop through views
 
   return eOK;
 }
 
-BSTR CMUSHclientDoc::PasteCommand(CString Text) 
+BSTR CMUSHclientDoc::PasteCommand(LPCTSTR Text) 
 {
   CString strResult;
 
@@ -1223,8 +1223,8 @@ short CMUSHclientDoc::GetNoteColour()
 {
   if (m_bNotesInRGB)
     return -1;
-  else
-    return m_iNoteTextColour == SAMECOLOUR ? 0 : m_iNoteTextColour + 1;
+
+  return m_iNoteTextColour == SAMECOLOUR ? 0 : m_iNoteTextColour + 1;
 }
 
 void CMUSHclientDoc::SetNoteColour(short nNewValue)
@@ -1273,10 +1273,12 @@ void CMUSHclientDoc::SetNoteColourBack(long nNewValue)
 {
   // convert foreground to RGB if necessary
   if (!m_bNotesInRGB)
+  {
     if (m_iNoteTextColour == SAMECOLOUR)
       m_iNoteColourFore = (m_bCustom16isDefaultColour) ? m_customtext [15] : m_normalcolour [WHITE];
     else
   	  m_iNoteColourFore = m_customtext [m_iNoteTextColour];
+  }
 
   m_bNotesInRGB = true;
   m_iNoteColourBack = nNewValue & 0x00FFFFFF;
@@ -1331,49 +1333,65 @@ void CMUSHclientDoc::NoteColourName(LPCTSTR Foreground, LPCTSTR Background)
 
 long CMUSHclientDoc::GetNormalColour(short WhichColour) 
 {
-  return (WhichColour < 1 || WhichColour > 8) ? 0 : m_normalcolour [WhichColour - 1];
+  if (WhichColour < 1 || WhichColour > 8)
+    return 0;
+
+  return m_normalcolour [WhichColour - 1];
 }
 
 void CMUSHclientDoc::SetNormalColour(short WhichColour, long nNewValue) 
 {
   if (WhichColour < 1 || WhichColour > 8)
     return;
+
   m_normalcolour [WhichColour - 1] = nNewValue & 0x00FFFFFF;
 }
 
 long CMUSHclientDoc::GetBoldColour(short WhichColour) 
 {
-  return (WhichColour < 1 || WhichColour > 8) ? 0 : m_boldcolour [WhichColour - 1];
+  if (WhichColour < 1 || WhichColour > 8)
+    return 0;
+
+  return m_boldcolour [WhichColour - 1];
 }
 
 void CMUSHclientDoc::SetBoldColour(short WhichColour, long nNewValue) 
 {
   if (WhichColour < 1 || WhichColour > 8)
     return;
+
   m_boldcolour [WhichColour - 1] = nNewValue & 0x00FFFFFF;
 }
 
 long CMUSHclientDoc::GetCustomColourText(short WhichColour) 
 {
-  return (WhichColour < 1 || WhichColour > MAX_CUSTOM) ? 0 : m_customtext [WhichColour - 1];
+  if (WhichColour < 1 || WhichColour > MAX_CUSTOM)
+    return 0;
+
+  return m_customtext [WhichColour - 1];
 }
 
 void CMUSHclientDoc::SetCustomColourText(short WhichColour, long nNewValue) 
 {
   if (WhichColour < 1 || WhichColour > MAX_CUSTOM)
     return;  
+
   m_customtext [WhichColour - 1] = nNewValue & 0x00FFFFFF;
 }
 
 long CMUSHclientDoc::GetCustomColourBackground(short WhichColour) 
 {
-  return (WhichColour < 1 || WhichColour > MAX_CUSTOM) ? 0 : m_customback [WhichColour - 1];
+  if (WhichColour < 1 || WhichColour > MAX_CUSTOM)
+    return 0;
+
+  return m_customback [WhichColour - 1];
 }
 
 void CMUSHclientDoc::SetCustomColourBackground(short WhichColour, long nNewValue) 
 {
   if (WhichColour < 1 || WhichColour > MAX_CUSTOM)
     return;
+
   m_customback [WhichColour - 1] = nNewValue & 0x00FFFFFF;
 }
 
@@ -1459,15 +1477,15 @@ void CMUSHclientDoc::OnUpdateFileReloaddefaults(CCmdUI* pCmdUI)
   );
 }
 
-long CMUSHclientDoc::ResetTimer(CString TimerName)
+long CMUSHclientDoc::ResetTimer(LPCTSTR TimerName)
 {
-  CTimer * timer_item;
+  CString strTimerName = TimerName;
+  CTimer * timer_item = NULL;
 
-  // return if bad name
-  if (CheckObjectName (TimerName, false))
-    return eInvalidObjectLabel;
+  // trim spaces
+  CheckObjectName (strTimerName, false);
 
-  if (!GetTimerMap ().Lookup (TimerName, timer_item))
+  if (!GetTimerMap ().Lookup (strTimerName, timer_item))
     return eTimerNotFound;
 
   ResetOneTimer (timer_item);
@@ -1496,16 +1514,16 @@ void CMUSHclientDoc::Trace (LPCTSTR lpszFormat, ...)
   // see if a plugin will handle trace message
   CPlugin * pSavedPlugin = m_CurrentPlugin;
   m_CurrentPlugin = NULL;
-
   m_bTrace = false;  // stop infinite loops, where we report that the trace script was called
 
   // tell a plugin the trace message
+  CPlugin * pPlugin = NULL;
   POSITION pluginpos = m_PluginList.GetHeadPosition();
-  while (pluginpos)
+  while (pluginpos != NULL)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+    pPlugin = m_PluginList.GetNext (pluginpos);
 
-    if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+    if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
 
     // see what the plugin makes of this,
@@ -1514,18 +1532,17 @@ void CMUSHclientDoc::Trace (LPCTSTR lpszFormat, ...)
                                   pPlugin->m_dispid_plugin_trace); 
 
     if (pPlugin->m_dispid_plugin_trace != DISPID_UNKNOWN)
-      {
-      m_CurrentPlugin = pSavedPlugin;
-      m_bTrace = true;
-      return;   // sent to plugin? don't display it
-      }
+      break;
     }   // end of doing each plugin
 
   m_CurrentPlugin = pSavedPlugin;
   m_bTrace = true;
 
-  strMsg = "TRACE: " + strMsg + ENDLINE;
-  DisplayMsg (strMsg, strMsg.GetLength (), COMMENT);
+  if (pluginpos == NULL) // not sent to plugin? handle it here
+    {
+    strMsg = "TRACE: " + strMsg + ENDLINE;
+    DisplayMsg (strMsg, strMsg.GetLength (), COMMENT);
+    }
 }
 
 
@@ -1546,6 +1563,7 @@ void CMUSHclientDoc::OnGameTrace()
     // if half-filled line, flush it out
     if (m_pCurrentLine && m_pCurrentLine->len > 0)
       StartNewLine (true, m_pCurrentLine->flags);
+
     m_bTrace = true;
     Trace ("Trace on");
     }
@@ -1628,10 +1646,8 @@ BOOL CMUSHclientDoc::GetTrace()
 
 void CMUSHclientDoc::SetTrace(BOOL bNewValue) 
 {
-  bNewValue = bNewValue != 0;   // make boolean
-
   // if they are changing the value - go ahead and do it
-  if (bNewValue != m_bTrace)
+  if ((bNewValue != 0) != m_bTrace)
     OnGameTrace ();
 }
 
@@ -1650,7 +1666,7 @@ void CMUSHclientDoc::SetOutputFont(LPCTSTR FontName, short PointSize)
 
 void CMUSHclientDoc::SetInputFont(LPCTSTR FontName, short PointSize, short Weight, BOOL Italic) 
 {
-  Italic = Italic != 0; // make boolean
+  Italic = (Italic != 0); // make boolean
 
   ChangeInputFont (PointSize, 
                   FontName, 
@@ -1660,7 +1676,7 @@ void CMUSHclientDoc::SetInputFont(LPCTSTR FontName, short PointSize, short Weigh
 }
 
 
-bool CMUSHclientDoc::SwitchToNotepad (void)
+bool CMUSHclientDoc::SwitchToNotepad ()
   {
   int iCount = 0;
 
@@ -1671,7 +1687,7 @@ bool CMUSHclientDoc::SwitchToNotepad (void)
 
     // ignore unrelated worlds
     if (pTextDoc->m_pRelatedWorld == this &&
-       pTextDoc->m_iUniqueDocumentNumber == m_iUniqueDocumentNumber)
+        pTextDoc->m_iUniqueDocumentNumber == m_iUniqueDocumentNumber)
       iCount++;
     } // end of doing each document
 
@@ -1685,12 +1701,10 @@ bool CMUSHclientDoc::SwitchToNotepad (void)
     else if (dlg.m_pTextDocument)  // they chose an existing one
       {
       // activate the view
-      POSITION pos=dlg.m_pTextDocument->GetFirstViewPosition();
-
+      POSITION pos = dlg.m_pTextDocument->GetFirstViewPosition();
       if (pos)
         {
         CView* pView = dlg.m_pTextDocument->GetNextView(pos);
-
         if (!pView->IsKindOf(RUNTIME_CLASS(CTextView)))
           {
           CTextView* pmyView = (CTextView*)pView;
@@ -1712,19 +1726,16 @@ bool CMUSHclientDoc::AppendToTheNotepad (const CString strTitle,
   {
   CTextDocument * pTextDoc = FindNotepad (strTitle);
 
-  if (pTextDoc)
+  if (pTextDoc != NULL)
     {
     // append to the view
     POSITION pos = pTextDoc->GetFirstViewPosition();
-
-    if (pos)
+    if (pos != NULL)
       {
       CView* pView = pTextDoc->GetNextView(pos);
-
       if (pView->IsKindOf(RUNTIME_CLASS(CTextView)))
         {
         CTextView* pmyView = (CTextView*)pView;
-
         // find actual window length for appending [#422]
         int iLength = pmyView->GetWindowTextLength ();
 
@@ -1799,13 +1810,11 @@ BOOL CMUSHclientDoc::AppendToNotepad(LPCTSTR Title, LPCTSTR Contents)
 BOOL CMUSHclientDoc::ActivateNotepad(LPCTSTR Title) 
 {
   CTextDocument * pTextDoc = FindNotepad (Title);
-
-  if (pTextDoc)
+  if (pTextDoc != NULL)
     {
     // activate the view
-    POSITION pos=pTextDoc->GetFirstViewPosition();
-
-    if (pos)
+    POSITION pos = pTextDoc->GetFirstViewPosition();
+    if (pos != NULL)
       {
       CView* pView = pTextDoc->GetNextView(pos);
 
@@ -1872,24 +1881,22 @@ VARIANT CMUSHclientDoc::GetWorldList()
     ++iCount;
   }
 
-  if (iCount) // cannot create empty array dimension
+  if (iCount > 0) // cannot create empty array dimension
     {
     sa.CreateOneDim (VT_VARIANT, iCount);
   
     // put the worlds into the array
-    iCount = 0;
     pos = App.m_pWorldDocTemplate->GetFirstDocPosition();
-    while (pos != NULL)
+    for (iCount = 0; pos != NULL; ++iCount)
       {
       CMUSHclientDoc * pDoc = (CMUSHclientDoc *) App.m_pWorldDocTemplate->GetNextDoc(pos);
 
       // the array must be a bloody array of variants, or VBscript kicks up
       sa.PutElement (&iCount, &((COleVariant)pDoc->m_mush_name));
-      ++iCount;
       }      // end of looping through each world
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 }
 
 
@@ -1906,24 +1913,22 @@ VARIANT CMUSHclientDoc::GetWorldIdList()
     ++iCount;
     }
 
-  if (iCount) // cannot create empty array dimension
+  if (iCount > 0) // cannot create empty array dimension
     {
     sa.CreateOneDim (VT_VARIANT, iCount);
   
     // put the worlds into the array
-    iCount = 0;
     pos = App.m_pWorldDocTemplate->GetFirstDocPosition();
-    while (pos != NULL)
+    for (iCount = 0; pos != NULL; ++iCount)
       {
       CMUSHclientDoc * pDoc = (CMUSHclientDoc *) App.m_pWorldDocTemplate->GetNextDoc(pos);
 
       // the array must be a bloody array of variants, or VBscript kicks up
       sa.PutElement (&iCount, &((COleVariant)pDoc->m_strWorldID));
-      ++iCount;
       }      // end of looping through each world
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 }
 
 LPDISPATCH CMUSHclientDoc::GetWorldById(LPCTSTR WorldID) 
@@ -1953,8 +1958,7 @@ void CMUSHclientDoc::OnLogOutputChanged()
 
 BSTR CMUSHclientDoc::Replace(LPCTSTR Source, LPCTSTR SearchFor, LPCTSTR ReplaceWith, BOOL Multiple) 
 {
-  CString strResult = ::Replace (Source, SearchFor, ReplaceWith, Multiple != 0);
-  return strResult.AllocSysString();
+  return ::Replace (Source, SearchFor, ReplaceWith, (Multiple != 0)).AllocSysString();
 }
 
 BSTR CMUSHclientDoc::FixupEscapeSequences(LPCTSTR Source)
@@ -1967,7 +1971,6 @@ BSTR CMUSHclientDoc::Trim(LPCTSTR Source)
   CString strSource = Source;
   strSource.TrimLeft ();
   strSource.TrimRight ();
-  
   return strSource.AllocSysString();
 }
 
@@ -1979,23 +1982,20 @@ BOOL CMUSHclientDoc::ReplaceNotepad(LPCTSTR Title, LPCTSTR Contents)
 
 // world.GetAliasInfo (alias_name, info_type) - gets details about the named alias
 //                                     returns "EMPTY" alias if not there
-//                                     returns "NULL" alias if a bad name
 
-VARIANT CMUSHclientDoc::GetAliasInfo(CString AliasName, short InfoType) 
+VARIANT CMUSHclientDoc::GetAliasInfo(LPCTSTR AliasName, short InfoType) 
 {
+  CString strAliasName = AliasName;
   CAlias * alias_item = NULL;
   
   VARIANT vaResult;
   VariantInit(&vaResult);
 
-  // return if bad name, if so return NULL
-  vaResult.vt = VT_NULL;
-  if (CheckObjectName (AliasName, false))
-    return vaResult;
+  // trim spaces, make lowercase
+  CheckObjectName (strAliasName, false);
 
   // see if alias exists, if not return EMPTY
-  vaResult.vt = VT_EMPTY;
-  if (!GetAliasMap ().Lookup (AliasName, alias_item))
+  if (!GetAliasMap ().Lookup (strAliasName, alias_item))
     return vaResult;
 
   switch (InfoType)
@@ -2058,7 +2058,9 @@ VARIANT CMUSHclientDoc::GetAliasInfo(CString AliasName, short InfoType)
     case 109: SetUpVariantString (vaResult, alias_item->wildcards [9].c_str ()); break;
     case 110: SetUpVariantString (vaResult, alias_item->wildcards [0].c_str ()); break;
 
-    default: vaResult.vt = VT_NULL; break;
+    default:
+      vaResult.vt = VT_NULL;
+      break;
     } // end of switch
 
   return vaResult;
@@ -2066,27 +2068,21 @@ VARIANT CMUSHclientDoc::GetAliasInfo(CString AliasName, short InfoType)
 
 // world.GetTriggerInfo (trigger_name, info_type) - gets details about the named trigger
 //                                     returns "EMPTY" trigger if not there
-//                                     returns "NULL" trigger if a bad name
 
 VARIANT CMUSHclientDoc::GetTriggerInfo(LPCTSTR TriggerName, short InfoType) 
 {
-CString strTriggerName = TriggerName;
-CTrigger * trigger_item;
-
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
-  vaResult.vt = VT_NULL;
-
-  // return if bad name, if so return NULL
-  if (CheckObjectName (strTriggerName, false))
-    return vaResult;
-
-  vaResult.vt = VT_EMPTY;
+  CString strTriggerName = TriggerName;
+  CTrigger * trigger_item = NULL;
+  
+  VARIANT vaResult;
+  VariantInit(&vaResult);
+  
+  // trim spaces, make lowercase
+  CheckObjectName (strTriggerName, false);
 
   // see if trigger exists, if not return EMPTY
   if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
-	  return vaResult;
+    return vaResult;
 
   switch (InfoType)
     {
@@ -2113,7 +2109,7 @@ CTrigger * trigger_item;
     case  21: SetUpVariantLong   (vaResult, trigger_item->nMatched); break;
     case  22: 
       if (trigger_item->tWhenMatched.GetTime ())     // only if non-zero, otherwise return empty
-        SetUpVariantDate   (vaResult, COleDateTime (trigger_item->tWhenMatched.GetTime ())); 
+        SetUpVariantDate (vaResult, COleDateTime (trigger_item->tWhenMatched.GetTime ())); 
       break;
     case  23: SetUpVariantBool   (vaResult, trigger_item->bTemporary); break;
     case  24: SetUpVariantBool   (vaResult, trigger_item->bIncluded); break;
@@ -2124,22 +2120,15 @@ CTrigger * trigger_item;
     case  29: SetUpVariantLong   (vaResult, trigger_item->iOtherForeground); break;
     case  30: SetUpVariantLong   (vaResult, trigger_item->iOtherBackground); break;
     case  31: // number of matches to regexp
-      if (trigger_item->regexp)      
-        SetUpVariantLong   (vaResult, trigger_item->regexp->m_iCount);
-      else
-        SetUpVariantLong   (vaResult, 0);
+      SetUpVariantLong (vaResult, (trigger_item->regexp) ? trigger_item->regexp->m_iCount : 0);
       break;
-
     case  32: // last matching string
-      if (trigger_item->regexp)      
-        SetUpVariantString   (vaResult, trigger_item->regexp->m_sTarget.c_str ());
-      else
-        SetUpVariantString   (vaResult, "");
+      SetUpVariantString (vaResult, (trigger_item->regexp) ? trigger_item->regexp->m_sTarget.c_str () : "");
       break;
     case  33: SetUpVariantBool   (vaResult, trigger_item->bExecutingScript); break;
     case  34: SetUpVariantBool   (vaResult, trigger_item->dispid != DISPID_UNKNOWN); break;
     case  35: 
-      if (trigger_item->regexp && trigger_item->regexp->m_program == NULL)      
+      if (trigger_item->regexp && trigger_item->regexp->m_program == NULL)
         SetUpVariantLong   (vaResult, trigger_item->regexp->m_iExecutionError);
       else
         SetUpVariantLong   (vaResult, 0);
@@ -2164,7 +2153,6 @@ CTrigger * trigger_item;
     default:
       vaResult.vt = VT_NULL;
       break;
-
     } // end of switch
 
   return vaResult;
@@ -2173,38 +2161,34 @@ CTrigger * trigger_item;
 // rewritten 17th August 2002 to make it easier to follow and less buggy :)
 //  (and support comments)
 
-CString MakeSpeedWalkErrorString (LPCTSTR sMsg)
-  {
-  CString strResult = "*";
-
-  strResult += sMsg;
-
-  return strResult;
-
-  } // end of MakeSpeedWalkErrorString
+static inline CString MakeSpeedWalkErrorString (CString sMsg)
+{
+  return "*" + sMsg;
+} // end of MakeSpeedWalkErrorString
 
 CString CMUSHclientDoc::DoEvaluateSpeedwalk(LPCTSTR SpeedWalkString) 
 {
-CString strResult,
-        str;    // temporary string
-int count; 
-const char * p = SpeedWalkString;
+  CString strResult;
+  CString str;    // temporary string
 
-  while (*p)  // until string runs out
+  int count;
+  const char * p = SpeedWalkString;
+  while (*p != '\0')  // until string runs out
     {
     // bypass spaces
     while (isspace (*p))
-      p++;
+      ++p;
 
     // bypass comments
     if (*p == '{')
       {
-      while (*p && *p != '}')
-        p++;
+      while (*p != '\0' && *p != '}')
+        ++p;
 
-      if (*p != '}')
+      if (*p == '\0')
         return MakeSpeedWalkErrorString (Translate ("Comment code of \'{\' not terminated by a \'}\'"));
-      p++;  // skip } symbol
+
+      ++p;  // skip } symbol
       continue;  // back to start of loop
       }  // end of comment
 
@@ -2212,9 +2196,10 @@ const char * p = SpeedWalkString;
     count = 0;
     while (isdigit (*p))
       {
-      count = (count * 10) + (*p++ - '0');
+      count = (count * 10) + (*p - '0');
       if (count > 99)
         return MakeSpeedWalkErrorString (Translate ("Speed walk counter exceeds 99"));
+      ++p;
       }   // end of having digit(s)
 
     // no counter, assume do once
@@ -2223,16 +2208,19 @@ const char * p = SpeedWalkString;
 
     // bypass spaces after counter
     while (isspace (*p))
-      p++;
+      ++p;
 
-    if (count > 1 && *p == 0)
-      return MakeSpeedWalkErrorString (Translate ("Speed walk counter not followed by an action"));
-
-    if (count > 1 && *p == '{')
-      return MakeSpeedWalkErrorString (Translate ("Speed walk counter may not be followed by a comment"));
+    if (count > 1)
+      switch (*p)
+      {
+        case '\0':
+          return MakeSpeedWalkErrorString (Translate ("Speed walk counter not followed by an action"));
+        case '{':
+          return MakeSpeedWalkErrorString (Translate ("Speed walk counter may not be followed by a comment"));
+      }
 
     // might have had trailing space
-    if (*p == 0)
+    if (*p == '\0')
       break;
 
     if (strchr ("COLK", toupper (*p)))
@@ -2241,27 +2229,25 @@ const char * p = SpeedWalkString;
         return MakeSpeedWalkErrorString (Translate ("Action code of C, O, L or K must not follow "
                          "a speed walk count (1-99)"));
 
-      switch (toupper (*p++))
+      switch (toupper (*p))
         {
         case 'C': strResult += "close "; break;
         case 'O': strResult += "open "; break;
         case 'L': strResult += "lock "; break;
         case 'K': strResult += "unlock "; break;
         } // end of switch
+      ++p;
 
       // bypass spaces after open/close/lock/unlock
       while (isspace (*p))
-        p++;
+        ++p;
 
-      if (*p == 0 || 
-          toupper (*p) == 'F' || 
-          *p == '{')
+      if (*p == '\0' || *p == '{' || toupper (*p) == 'F')
         return MakeSpeedWalkErrorString (Translate ("Action code of C, O, L or K must be followed "
                          "by a direction"));
-
       } // end of C, O, L, K
-      
-      // work out which direction we are going
+
+    // work out which direction we are going
     switch (toupper (*p))
       {
       case 'N': 
@@ -2274,53 +2260,59 @@ const char * p = SpeedWalkString;
         str = MapDirectionsMap [tolower (string (1, *p))].m_sDirectionToSend.c_str ();
         break;
 
-      case 'F': str = m_strSpeedWalkFiller; break;
+      case 'F':
+        str = m_strSpeedWalkFiller;
+        break;
       case '(':     // special string (eg. (ne/sw) )
-            {
-            str.Empty ();
-            for (p++ ; *p && *p != ')'; )
-              str += *p++;   // add to string
+        {
+        str.Empty ();
+        ++p;
+        while (*p != '\0' && *p != ')')
+        {
+          str += *p;   // add to string
+          ++p;
+        }
 
-            if (*p != ')')
-              return MakeSpeedWalkErrorString (Translate ("Action code of \'(\' not terminated by a \')\'"));
-            int iSlash = str.Find ("/");  // only use up to the slash
-            if (iSlash != -1)
-              str = str.Left (iSlash);
-            }
-            break;    // end of (blahblah/blah blah)
+        if (*p != ')')
+          return MakeSpeedWalkErrorString (Translate ("Action code of \'(\' not terminated by a \')\'"));
+
+        int iSlash = str.Find ("/");  // only use up to the slash
+        if (iSlash != -1)
+          str = str.Left (iSlash);
+        }
+        break;    // end of (blahblah/blah blah)
       default: 
             return MakeSpeedWalkErrorString (TFormat ("*Invalid direction \'%c\' in speed walk, must be "
                              "N, S, E, W, U, D, F, or (something)",
                              *p));
       } // end of switch on character
 
-    p++;  // bypass whatever that character was (or the trailing bracket)
+    ++p;  // bypass whatever that character was (or the trailing bracket)
 
     // output required number of times
-    for (int j = 0; j < count; j++) 
+    for (int j = 0; j < count; ++j)
       strResult += str + ENDLINE;
 
     } // end of processing each character
 
-	return strResult;
+  return strResult;
 }
 
 
 BSTR CMUSHclientDoc::EvaluateSpeedwalk(LPCTSTR SpeedWalkString) 
-  {
-CString strResult = DoEvaluateSpeedwalk (SpeedWalkString);
-	return strResult.AllocSysString();
-  }
+{
+  return DoEvaluateSpeedwalk (SpeedWalkString).AllocSysString ();
+}
 
 CString CMUSHclientDoc::DoReverseSpeedwalk(LPCTSTR SpeedWalkString) 
 {
-CString strResult,  // build result here
-        str,        // temporary string
-        strAction;  // eg. open, close, lock, unlock
-int count; 
-const char * p = SpeedWalkString;
-
-  while (*p)  // until string runs out
+  CString strResult;  // build result here
+  CString str;        // temporary string
+  CString strAction;  // eg. open, close, lock, unlock
+  
+  int count;
+  const char * p = SpeedWalkString;
+  while (*p != '\0')  // until string runs out
     {
     // preserve spaces
     while (isspace (*p))
@@ -2341,15 +2333,17 @@ const char * p = SpeedWalkString;
     if (*p == '{')
       {
       str.Empty ();
-      for (; *p && *p != '}'; )
-        str += *p++;   // add to string
+      while (*p != '\0' && *p != '}')
+        {
+        str += *p;   // add to string
+        ++p;
+        }
 
       if (*p != '}')
         return MakeSpeedWalkErrorString (Translate ("Comment code of \'{\' not terminated by a \'}\'"));
 
-      p++;  // skip } symbol
-
       str += "}";
+      ++p;  // skip } symbol      
 
       strResult = str + strResult;
       continue;  // back to start of loop
@@ -2359,9 +2353,10 @@ const char * p = SpeedWalkString;
     count = 0;
     while (isdigit (*p))
       {
-      count = (count * 10) + (*p++ - '0');
+      count = (count * 10) + (*p - '0');
       if (count > 99)
         return MakeSpeedWalkErrorString (Translate ("Speed walk counter exceeds 99"));
+      ++p;
       }   // end of having digit(s)
 
     // no counter, assume do once
@@ -2370,16 +2365,19 @@ const char * p = SpeedWalkString;
 
     // bypass spaces after counter
     while (isspace (*p))
-      p++;
+      ++p;
 
-    if (count > 1 && *p == 0)
-      return MakeSpeedWalkErrorString (Translate ("Speed walk counter not followed by an action"));
-
-    if (count > 1 && *p == '{')
-      return MakeSpeedWalkErrorString (Translate ("Speed walk counter may not be followed by a comment"));
+    if (count > 1)
+      switch (*p)
+      {
+        case '\0':
+          return MakeSpeedWalkErrorString (Translate ("Speed walk counter not followed by an action"));
+        case '{':
+          return MakeSpeedWalkErrorString (Translate ("Speed walk counter may not be followed by a comment"));
+      }
 
     // might have had trailing space
-    if (*p == 0)
+    if (*p == '\0')
       break;
 
     if (strchr ("COLK", toupper (*p)))
@@ -2388,15 +2386,14 @@ const char * p = SpeedWalkString;
         return MakeSpeedWalkErrorString (Translate ("Action code of C, O, L or K must not follow "
                          "a speed walk count (1-99)"));
 
-      strAction = *p++;   // remember action
+      strAction = *p;   // remember action
+      ++p;
 
       // bypass spaces after open/close/lock/unlock
       while (isspace (*p))
-        p++;
+        ++p;
 
-      if (*p == 0 || 
-          toupper (*p) == 'F' || 
-          *p == '{')
+      if (*p == '\0' || *p == '{' || toupper (*p) == 'F')
         return MakeSpeedWalkErrorString (Translate ("Action code of C, O, L or K must be followed "
                          "by a direction"));
 
@@ -2419,39 +2416,39 @@ const char * p = SpeedWalkString;
         break;
 
       case '(':     // special string (eg. (ne/sw) )
-            {
-            str.Empty ();
-            for (p++ ; *p && *p != ')'; )
-              str += (char) tolower (*p++);   // add to string
+        {
+        str.Empty ();
+        ++p;
+        while (*p != '\0' && *p != ')')
+          {
+          str += (char) tolower (*p);   // add to string
+          ++p;
+          }
 
-            if (*p != ')')
-              return MakeSpeedWalkErrorString (Translate ("Action code of \'(\' not terminated by a \')\'"));
-            int iSlash = str.Find ("/");  // only use up to the slash
-            // if no slash try to convert whole thing (eg. ne becomes sw)
-            if (iSlash == -1)
-              {
-              MapDirectionsIterator i = MapDirectionsMap.find ((LPCTSTR) str);
-              if (i != MapDirectionsMap.end ())
-                str = i->second.m_sReverseDirection.c_str ();
-              }
-            else
-              {
-              CString strLeftPart = str.Left (iSlash);
-              CString strRightPart = str.Mid (iSlash + 1);
-              str = strRightPart + "/" +  strLeftPart; // swap parts
-              }
+        if (*p != ')')
+          return MakeSpeedWalkErrorString (Translate ("Action code of \'(\' not terminated by a \')\'"));
 
-            str = "(" + str;
-            str += ")";
-            }
-            break;    // end of (blahblah/blah blah)
+        int iSlash = str.Find ("/");  // only use up to the slash
+        // if no slash try to convert whole thing (eg. ne becomes sw)
+        if (iSlash == -1)
+          {
+          MapDirectionsIterator i = MapDirectionsMap.find ((LPCTSTR) str);
+          if (i != MapDirectionsMap.end ())
+            str = i->second.m_sReverseDirection.c_str ();
+          }
+        else
+          str = str.Mid (iSlash + 1) + "/" + str.Left (iSlash); // swap parts
+
+        str = "(" + str + ")";
+        }
+        break;    // end of (blahblah/blah blah)
       default: 
-            return MakeSpeedWalkErrorString (TFormat ("Invalid direction \'%c\' in speed walk, must be "
-                             "N, S, E, W, U, D, F, or (something)",
-                             *p));
+        return MakeSpeedWalkErrorString (TFormat ("Invalid direction \'%c\' in speed walk, must be "
+                         "N, S, E, W, U, D, F, or (something)",
+                         *p));
       } // end of switch on character
 
-    p++;  // bypass whatever that character was (or the trailing bracket)
+    ++p;  // bypass whatever that character was (or the trailing bracket)
 
     // output it
     if (count > 1)
@@ -2462,18 +2459,16 @@ const char * p = SpeedWalkString;
                            + strResult;
 
     else
-      strResult =  strAction +  str + strResult;
-
+      strResult =  strAction + str + strResult;
     } // end of processing each character
 
-	return strResult;
+  return strResult;
 }
 
 BSTR CMUSHclientDoc::ReverseSpeedwalk(LPCTSTR SpeedWalkString) 
-  {
-	CString strResult = DoReverseSpeedwalk (SpeedWalkString);
-	return strResult.AllocSysString();
-  }
+{
+  return DoReverseSpeedwalk (SpeedWalkString).AllocSysString ();
+}
 
 long CMUSHclientDoc::AddTimer(LPCTSTR TimerName, 
                               short Hour, 
@@ -2483,47 +2478,38 @@ long CMUSHclientDoc::AddTimer(LPCTSTR TimerName,
                               long Flags, 
                               LPCTSTR ScriptName) 
 {
-CString strTimerName = TimerName;
-CTimer * timer_item;
-DISPID dispid = DISPID_UNKNOWN;
-long nStatus;
-bool bReplace = false;
+  CString strTimerName = TimerName;
+  CTimer * timer_item = NULL;
 
   if (strTimerName.IsEmpty ())
     strTimerName.Format ("*timer%s", (LPCTSTR) App.GetUniqueString ());
-  else
-    // return if bad name
-    if (nStatus = CheckObjectName (strTimerName))
-      return nStatus;
+  // return if bad name
+  else if (CheckObjectName (strTimerName))
+    return eInvalidObjectLabel;
 
   // if it already exists, error
+  bool bReplace = false;
   if (GetTimerMap ().Lookup (strTimerName, timer_item))
     if (Flags & eReplace)
       bReplace = true;
     else
       return eTimerAlreadyExists;
 
-
-  if (Hour < 0 || Hour > 23)
-    return eTimeInvalid;
-
-  if (Minute < 0 || Minute > 59)
-    return eTimeInvalid;
-
-  if (Second < 0.0 || Second > 59.9999)
+  if (Hour < 0     || Hour > 23   ||
+      Minute < 0   || Minute > 59 ||
+      Second < 0.0 || Second > 59.9999)
     return eTimeInvalid;
 
   // can't have a zero time for "every" timers
-  if (((Hour == 0) && (Minute == 0) && (Second == 0.0)) &&
-      !(Flags & eAtTime))
+  if (Hour == 0 && Minute == 0 && Second == 0.0 && (Flags & eAtTime) == 0)
     return eTimeInvalid;
 
-// get timer dispatch ID
-  
-  if (GetScriptEngine () && strlen (ScriptName) != 0)
+  // get timer dispatch ID
+  DISPID dispid = DISPID_UNKNOWN;
+  if (GetScriptEngine () && ScriptName[0] != '\0')
     {
     CString strMessage;
-    dispid = GetProcedureDispid (ScriptName, "timer", TimerName, strMessage);
+    dispid = GetProcedureDispid (ScriptName, "timer", strTimerName, strMessage);
     if (dispid == DISPID_UNKNOWN)
       return eScriptNameNotLocated;
     }
@@ -2533,65 +2519,62 @@ bool bReplace = false;
     {
     // the timer seems to exist - delete its pointer
     delete timer_item;
-
     // now delete its entry
     GetTimerMap ().RemoveKey (strTimerName);
     }
 
-  // create new timer item and insert in timer map
-  GetTimerMap ().SetAt (strTimerName, timer_item = new CTimer);
- 
-  if ((Flags & eTemporary) == 0)
-    if (!m_CurrentPlugin) // plugin mods don't really count
-      SetModifiedFlag (TRUE);
-
-  timer_item->nUpdateNumber    = App.GetUniqueNumber ();   // for concurrency checks
+  // create new timer item
+  timer_item = new CTimer();
 
   if (Flags & eAtTime)
     {
-    timer_item->iAtHour = Hour;
+    timer_item->iType = CTimer::eAtTime;
+    timer_item->iAtHour   = Hour;
     timer_item->iAtMinute = Minute;
     timer_item->fAtSecond = Second;
-    timer_item->iType  = CTimer::eAtTime;
     }
   else
     {
-    timer_item->iEveryHour = Hour;
+    timer_item->iType = CTimer::eInterval;
+    timer_item->iEveryHour   = Hour;
     timer_item->iEveryMinute = Minute;
     timer_item->fEverySecond = Second;
-    timer_item->iType  = CTimer::eInterval;
     }
 
-  timer_item->strContents      = ResponseText;
-  timer_item->bEnabled         = (Flags & eEnabled) != 0;
-  timer_item->bOneShot         = (Flags & eOneShot) != 0;
-  timer_item->bTemporary       = (Flags & eTemporary) != 0;
+  timer_item->strContents       = ResponseText;
+  timer_item->bEnabled          = (Flags & eEnabled) != 0;
+  timer_item->bOneShot          = (Flags & eOneShot) != 0;
+  timer_item->bTemporary        = (Flags & eTemporary) != 0;
   timer_item->bActiveWhenClosed = (Flags & eActiveWhenClosed) != 0;
-  timer_item->strProcedure     = ScriptName;
-  timer_item->strLabel         = TimerName;
-  timer_item->dispid           = dispid;
+  timer_item->strProcedure      = ScriptName;
+  timer_item->strLabel          = strTimerName;
+  timer_item->dispid            = dispid;
+  timer_item->nUpdateNumber     = App.GetUniqueNumber ();   // for concurrency checks
 
   if (Flags & eTimerSpeedWalk)
     timer_item->iSendTo = eSendToSpeedwalk;
   else if (Flags & eTimerNote)
     timer_item->iSendTo = eSendToOutput;
 
-  ResetOneTimer (timer_item);
+  // add the timer to the timer map
+  GetTimerMap ().SetAt (strTimerName, timer_item);
 
+  if ((Flags & eTemporary) == 0 && !m_CurrentPlugin) // plugin mods don't really count
+    SetModifiedFlag (TRUE);
+
+  ResetOneTimer (timer_item);
   SortTimers ();
 
-	return eOK;
+  return eOK;
 }
 
 long CMUSHclientDoc::DeleteTimer(LPCTSTR TimerName) 
 {
-CString strTimerName = TimerName;
-CTimer * timer_item;
-long nStatus;
+  CString strTimerName = TimerName;
+  CTimer * timer_item = NULL;
 
-  // return if bad name
-  if (nStatus = CheckObjectName (strTimerName, false))
-    return nStatus;
+  // trim spaces, make lowercase
+  CheckObjectName (strTimerName, false);
 
   if (!GetTimerMap ().Lookup (strTimerName, timer_item))
     return eTimerNotFound;
@@ -2599,6 +2582,9 @@ long nStatus;
   // can't if executing a script
   if (timer_item->bExecutingScript)
     return eItemInUse;
+
+  if (!m_CurrentPlugin && !timer_item->bTemporary) // plugin mods don't really count
+    SetModifiedFlag (TRUE);   // document has changed
 
   // the timer seems to exist - delete its pointer
   delete timer_item;
@@ -2609,53 +2595,45 @@ long nStatus;
 
   SortTimers ();
 
-  if (!m_CurrentPlugin) // plugin mods don't really count
-    SetModifiedFlag (TRUE);   // document has changed
   return eOK;
 }
 
 long CMUSHclientDoc::IsTimer(LPCTSTR TimerName) 
 {
-CString strTimerName = TimerName;
-CTimer * timer_item;
-long nStatus;
+  CString strTimerName = TimerName;
+  CTimer * timer_item = NULL;
 
-  // return if bad name
-  if (nStatus = CheckObjectName (strTimerName, false))
-    return nStatus;
+  // trim spaces
+  CheckObjectName (strTimerName, false);
 
   if (!GetTimerMap ().Lookup (strTimerName, timer_item))
     return eTimerNotFound;
-
-	return eOK;
+  
+  return eOK;
 }
 
 VARIANT CMUSHclientDoc::GetTimerList() 
 {
   COleSafeArray sa;   // for wildcard list
 
-  CString strTimerName;
-  CTimer * timer_item;
-  long iCount = 0;
-  POSITION pos;
-
-  iCount = GetTimerMap ().GetCount ();
-
-  if (iCount) // cannot create empty array dimension
+  if (!GetAliasMap ().IsEmpty ()) // cannot create empty array dimension
     {
-    sa.CreateOneDim (VT_VARIANT, iCount);
-  
-    for (iCount = 0, pos = GetTimerMap ().GetStartPosition(); pos; iCount++)
+    sa.CreateOneDim (VT_VARIANT, GetTimerMap ().GetCount ());
+
+    CString TimerName;
+    CTimer * timer_item = NULL;
+
+    POSITION pos = GetTimerMap ().GetStartPosition();
+    for (long iCount = 0; pos != NULL; ++iCount)
       {
-      GetTimerMap ().GetNextAssoc (pos, strTimerName, timer_item);
+      GetTimerMap ().GetNextAssoc (pos, TimerName, timer_item);
 
       // the array must be a bloody array of variants, or VBscript kicks up
-      COleVariant v (strTimerName);
-      sa.PutElement (&iCount, &v);
+      sa.PutElement (&iCount, &((COleVariant)TimerName));
       }      // end of looping through each timer
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 }
 
 long CMUSHclientDoc::GetTimer(LPCTSTR TimerName, 
@@ -2666,13 +2644,11 @@ long CMUSHclientDoc::GetTimer(LPCTSTR TimerName,
                               VARIANT FAR* Flags, 
                               VARIANT FAR* ScriptName) 
 {
-CString strTimerName = TimerName;
-CTimer * timer_item;
-long nStatus;
+  CString strTimerName = TimerName;
+  CTimer * timer_item = NULL;
 
-  // return if bad name
-  if (nStatus = CheckObjectName (strTimerName, false))
-    return nStatus;
+  // trim spaces
+  CheckObjectName (strTimerName, false);
 
   if (!GetTimerMap ().Lookup (strTimerName, timer_item))
     return eTimerNotFound;
@@ -2681,31 +2657,25 @@ long nStatus;
     {
     SetUpVariantShort  (*Hour, timer_item->iAtHour);
     SetUpVariantShort  (*Minute, timer_item->iAtMinute);
-    SetUpVariantDouble  (*Second, timer_item->fAtSecond);
+    SetUpVariantDouble (*Second, timer_item->fAtSecond);
     }
   else
     {
     SetUpVariantShort  (*Hour, timer_item->iEveryHour);
     SetUpVariantShort  (*Minute, timer_item->iEveryMinute);
-    SetUpVariantDouble  (*Second, timer_item->fEverySecond);
+    SetUpVariantDouble (*Second, timer_item->fEverySecond);
     }
 
   SetUpVariantString (*ResponseText, timer_item->strContents);
   SetUpVariantString (*ScriptName, timer_item->strProcedure);
 
   short iFlags = 0;
+  if (timer_item->bEnabled)          iFlags |= eEnabled;
+  if (timer_item->bOneShot)          iFlags |= eOneShot;
+  if (timer_item->bActiveWhenClosed) iFlags |= eActiveWhenClosed;
 
-  if (timer_item->bEnabled) 
-    iFlags |= eEnabled;
-  if (timer_item->bOneShot) 
-    iFlags |= eOneShot;
-  if (timer_item->iSendTo == eSendToSpeedwalk) 
-    iFlags |= eTimerSpeedWalk;
-  if (timer_item->iSendTo == eSendToOutput) 
-    iFlags |= eTimerNote;
-  if (timer_item->bActiveWhenClosed) 
-    iFlags |= eActiveWhenClosed;
-  
+  if      (timer_item->iSendTo == eSendToSpeedwalk) iFlags |= eTimerSpeedWalk;
+  else if (timer_item->iSendTo == eSendToOutput)    iFlags |= eTimerNote;
   SetUpVariantShort  (*Flags, iFlags);
 
   return eOK;
@@ -2713,41 +2683,39 @@ long nStatus;
 
 VARIANT CMUSHclientDoc::GetTimerInfo(LPCTSTR TimerName, short InfoType) 
 {
-CString strTimerName = TimerName;
-CTimer * timer_item;
+  CString strTimerName = TimerName;
+  CTimer * timer_item = NULL;
 
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
-  vaResult.vt = VT_NULL;
-
-  // return if bad name, if so return NULL
-  if (CheckObjectName (strTimerName, false))
-    return vaResult;
-
-  vaResult.vt = VT_EMPTY;
+  // trim spaces, make lowercase
+  CheckObjectName (strTimerName, false);
 
   // see if timer exists, if not return EMPTY
   if (!GetTimerMap ().Lookup (strTimerName, timer_item))
-	  return vaResult;
+    return vaResult;
 
   switch (InfoType)
     {
-    case   1: if (timer_item->iType == CTimer::eAtTime)
-                SetUpVariantShort  (vaResult, timer_item->iAtHour); 
-              else
-                SetUpVariantShort  (vaResult, timer_item->iEveryHour); 
-              break;
-    case   2: if (timer_item->iType == CTimer::eAtTime)
-                SetUpVariantShort  (vaResult, timer_item->iAtMinute); 
-              else
-                SetUpVariantShort  (vaResult, timer_item->iEveryMinute); 
-              break;
-    case   3: if (timer_item->iType == CTimer::eAtTime)
-                SetUpVariantDouble  (vaResult, timer_item->fAtSecond); 
-              else
-                SetUpVariantDouble  (vaResult, timer_item->fEverySecond); 
-              break;
+    case 1:
+      if (timer_item->iType == CTimer::eAtTime)
+        SetUpVariantShort (vaResult, timer_item->iAtHour); 
+      else
+        SetUpVariantShort (vaResult, timer_item->iEveryHour); 
+      break;
+    case 2:
+      if (timer_item->iType == CTimer::eAtTime)
+        SetUpVariantShort (vaResult, timer_item->iAtMinute); 
+      else
+        SetUpVariantShort (vaResult, timer_item->iEveryMinute); 
+      break;
+    case 3:
+      if (timer_item->iType == CTimer::eAtTime)
+        SetUpVariantDouble (vaResult, timer_item->fAtSecond); 
+      else
+        SetUpVariantDouble (vaResult, timer_item->fEverySecond); 
+      break;
     case   4: SetUpVariantString (vaResult, timer_item->strContents); break;
     case   5: SetUpVariantString (vaResult, timer_item->strProcedure); break;
     case   6: SetUpVariantBool   (vaResult, timer_item->bEnabled); break;
@@ -2757,18 +2725,18 @@ CTimer * timer_item;
     case  10: SetUpVariantLong   (vaResult, timer_item->nMatched); break;
     case  11: 
       if (timer_item->tWhenFired.GetTime ())     // only if non-zero, otherwise return empty
-        SetUpVariantDate   (vaResult, COleDateTime (timer_item->tWhenFired.GetTime ())); 
+        SetUpVariantDate (vaResult, COleDateTime (timer_item->tWhenFired.GetTime ())); 
       break;
     case  12: 
       if (timer_item->tFireTime.GetTime ())     // only if non-zero, otherwise return empty
-        SetUpVariantDate   (vaResult, COleDateTime (timer_item->tFireTime.GetTime ())); 
+        SetUpVariantDate (vaResult, COleDateTime (timer_item->tFireTime.GetTime ())); 
       break;
     case  13: 
       {
       CmcDateTime tDue = CmcDateTime (timer_item->tFireTime.GetTime ());
       CmcDateTime tNow = CmcDateTime::GetTimeNow ();
       if (tDue < tNow)
-         SetUpVariantDouble   (vaResult, 0);  // due immediately
+        SetUpVariantDouble   (vaResult, 0);  // due immediately
       else
         {
         CmcDateTimeSpan ts = tDue - tNow;
@@ -2793,7 +2761,6 @@ CTimer * timer_item;
     default:
       vaResult.vt = VT_NULL;
       break;
-
     } // end of switch
 
   return vaResult;
@@ -2807,30 +2774,30 @@ long CMUSHclientDoc::GetUniqueNumber()
 
 long CMUSHclientDoc::Queue(LPCTSTR Message, BOOL Echo) 
 {
-  if (m_iConnectPhase != eConnectConnectedToMud)
+  if (!IsConnected())
     return eWorldClosed;             
 
   // cannot change what we are sending in OnPluginSent
   if (m_bPluginProcessingSent)
     return eItemInUse;
 
-  SendMsg (Message, Echo != 0, true, false);
-	return eOK;
+  SendMsg (Message, (Echo != 0), true, false);
+  return eOK;
 }
 
 long CMUSHclientDoc::DiscardQueue() 
 {
-long iCount = m_QueuedCommandsList.GetCount ();
-     
+  long iCount = m_QueuedCommandsList.GetCount ();
+
   m_QueuedCommandsList.RemoveAll ();	
   ShowQueuedCommands ();    // update status line
 
-	return iCount;
+  return iCount;
 }
 
 short CMUSHclientDoc::GetSpeedWalkDelay() 
 {
-	return m_iSpeedWalkDelay;
+  return m_iSpeedWalkDelay;
 }
 
 void CMUSHclientDoc::SetSpeedWalkDelay(short nNewValue) 
@@ -2843,38 +2810,37 @@ void CMUSHclientDoc::SetSpeedWalkDelay(short nNewValue)
 
 VARIANT CMUSHclientDoc::GenerateName() 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-  vaResult.vt = VT_NULL;
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   // if no names file read, return NULL variant
   if (!bNamesRead)
-    return vaResult;
-
-  CString strName = ::GenerateName ();
-
-  SetUpVariantString (vaResult, strName);
+    vaResult.vt = VT_NULL;
+  else
+    {
+    CString strName = ::GenerateName ();
+    SetUpVariantString (vaResult, strName);
+    }
 
   return vaResult;
-
 }
 
 long CMUSHclientDoc::ReadNamesFile(LPCTSTR FileName) 
 {
   if (strlen (FileName) == 0)
     return eNoNameSpecified;
-
-	try
-	  {
+  
+  try
+    {
     ReadNames (FileName, true);
     }
-	catch (CException* e)
-	  {
-		e->Delete();
+  catch (CException* e)
+    {
+    e->Delete();
     return eCouldNotOpenFile;
-	  }
+    }
 
-	return eOK;
+  return eOK;
 }
 
 
@@ -2882,7 +2848,6 @@ void CMUSHclientDoc::OnInputDiscardqueuedcommands()
 {
   m_QueuedCommandsList.RemoveAll ();	
   ShowQueuedCommands ();    // update status line
-	
 }
 
 void CMUSHclientDoc::OnUpdateInputDiscardqueuedcommands(CCmdUI* pCmdUI) 
@@ -2892,14 +2857,11 @@ void CMUSHclientDoc::OnUpdateInputDiscardqueuedcommands(CCmdUI* pCmdUI)
                     PLURAL (m_QueuedCommandsList.GetCount ())));
   	
   pCmdUI->Enable (!m_QueuedCommandsList.IsEmpty ());
-	
 }
 
 
-
-void CMUSHclientDoc::ShowQueuedCommands (void)
-  {
-
+void CMUSHclientDoc::ShowQueuedCommands ()
+{
   // show previous status line
   if (m_QueuedCommandsList.IsEmpty ())
     {
@@ -2915,10 +2877,8 @@ void CMUSHclientDoc::ShowQueuedCommands (void)
   CString strLastDir;
 
   int iCount = 0;
-  POSITION pos;
-
-  for (pos = m_QueuedCommandsList.GetHeadPosition (); 
-      pos && strQueued.GetLength () < MAX_SHOWN; )
+  POSITION pos = m_QueuedCommandsList.GetHeadPosition ();
+  while (pos != NULL && strQueued.GetLength () < MAX_SHOWN)
     {
     // get next direction from list
     str = m_QueuedCommandsList.GetNext (pos).Mid (1);
@@ -2929,74 +2889,66 @@ void CMUSHclientDoc::ShowQueuedCommands (void)
 
     // if same as before, count them
     if (str == strLastDir)
-      iCount++;
+      ++iCount;
     else
       {
       // add to string
       // if direction is not a single char (eg. ne) then we must put it in brackets
       if (strLastDir.GetLength () > 1)
         strLastDir = "(" + strLastDir + ")";
-      if (iCount == 1)
-        strQueued += strLastDir + " ";
-      else if (iCount > 1)
+
+      if (iCount > 1)
         strQueued += CFormat ("%i%s ", iCount, (LPCTSTR) strLastDir);
+      else
+        strQueued += strLastDir + " ";
 
       strLastDir = str;
       iCount = 1;
       }   // end of a direction change                                
-
     }   // end of processing each command
 
   // output final command
   // if direction is not a single char (eg. ne) then we must put it in brackets
   if (strLastDir.GetLength () > 1)
     strLastDir = "(" + strLastDir + ")";
-  if (iCount == 1)
-    strQueued += strLastDir + " ";
-  else if (iCount > 1)
-    strQueued += CFormat ("%i%s ", iCount, (LPCTSTR) strLastDir);
 
-  if (pos)
+  if (iCount > 1)
+    strQueued += CFormat ("%i%s ", iCount, (LPCTSTR) strLastDir);
+  else
+    strQueued += strLastDir + " ";
+
+  // there were more than MAX_SHOWN
+  if (pos != NULL)
     strQueued += " ...";
 
   Frame.SetStatusMessageNow (strQueued);
   m_tStatusDisplayed = CTime::GetCurrentTime ();
-  }
+}
 
 
 void CMUSHclientDoc::OnMappingChanged() 
 {
-	// TODO: Add notification handler code
-
+  // TODO: Add notification handler code
 }
 
 void CMUSHclientDoc::OnRemoveMapReversesChanged() 
 {
-	// TODO: Add notification handler code
-
+  // TODO: Add notification handler code
 }
 
 long CMUSHclientDoc::AddToMapper(LPCTSTR Direction, LPCTSTR Reverse) 
 {
   // look for bad characters
-  if (_tcspbrk (Direction, "{}()/\\"))  
-    return eBadMapItem;
-
-  if (_tcspbrk (Reverse, "{}()/\\"))  
+  if (_tcspbrk (Direction, "{}()/\\") ||
+      _tcspbrk (Reverse, "{}()/\\"))
     return eBadMapItem;
 
   // can't both be empty
-  if (Direction [0] == 0 && Reverse [0] == 0)
+  if (Direction [0] == Reverse [0] == '\0')
     return eBadMapItem;
 
-  CString strDirection;
+  m_strMapList.AddTail (CString(Direction) + "/" + Reverse);
 
-  strDirection = Direction;
-  strDirection += "/";
-  strDirection += Reverse;
-
-  m_strMapList.AddTail (strDirection);
-	
   DrawMappingStatusLine ();    // update status line
 
   return eOK;
@@ -3009,13 +2961,7 @@ long CMUSHclientDoc::AddMapperComment(LPCTSTR Comment)
   if (_tcspbrk (Comment, "{}()/\\"))  
     return eBadMapItem;
 
-  CString strDirection;
-
-  strDirection = "{";
-  strDirection += Comment;
-  strDirection += "}";
-
-  m_strMapList.AddTail (strDirection);
+  m_strMapList.AddTail ("{" + CString(Comment) + "}");
 	
   DrawMappingStatusLine ();    // update status line
 
@@ -3025,55 +2971,44 @@ long CMUSHclientDoc::AddMapperComment(LPCTSTR Comment)
 
 long CMUSHclientDoc::GetMappingCount() 
 {
-	return m_strMapList.GetCount ();
+  return m_strMapList.GetCount ();
 }
 
 VARIANT CMUSHclientDoc::GetMappingItem(long Item) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
+  VARIANT vaResult;
+  VariantInit(&vaResult);
   vaResult.vt = VT_NULL;
 
-  if (Item < 0 || Item >= m_strMapList.GetCount ())
-    return vaResult;
+  if (Item > 0 && Item < m_strMapList.GetCount ())
+    {
+    POSITION pos = m_strMapList.FindIndex (Item);
+    if (pos != NULL)
+      SetUpVariantString (vaResult, m_strMapList.GetAt (pos));
+    }
 
-  POSITION pos = m_strMapList.FindIndex (Item);
-
-  if (pos == NULL)
-    return vaResult;
-
-  CString strItem = m_strMapList.GetAt (pos);
-
-  SetUpVariantString (vaResult, strItem);
-
-	return vaResult;
+  return vaResult;
 }
 
 VARIANT CMUSHclientDoc::GetMappingString() 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
-  CString str = CalculateSpeedWalkString ();
-
-  SetUpVariantString (vaResult, str);
-
-	return vaResult;
+  SetUpVariantString (vaResult, CalculateSpeedWalkString ());
+  return vaResult;
 }
 
 
 long CMUSHclientDoc::DeleteLastMapItem() 
 {
-
   if (m_strMapList.IsEmpty ())
     return eNoMapItems;
 
   m_strMapList.RemoveTail ();
-
   DrawMappingStatusLine ();    // update status line
 
-	return eOK;
+  return eOK;
 }
 
 long CMUSHclientDoc::DeleteAllMapItems() 
@@ -3082,31 +3017,27 @@ long CMUSHclientDoc::DeleteAllMapItems()
     return eNoMapItems;
 
   m_strMapList.RemoveAll ();
-
   DrawMappingStatusLine ();    // update status line
-
-	return eOK;
+  
+  return eOK;
 }
 
 long CMUSHclientDoc::GetSentBytes() 
 {
-	return (long) m_nBytesOut;
+  return (long) m_nBytesOut;
 }
 
 long CMUSHclientDoc::GetReceivedBytes() 
 {
-	return (long) m_nBytesIn;
+  return (long) m_nBytesIn;
 }
 
 long CMUSHclientDoc::GetConnectDuration() 
 {
-
-  if (m_iConnectPhase != eConnectConnectedToMud)
+  if (!IsConnected())
     return 0;
 
-  CTimeSpan ts = CTime::GetCurrentTime() - m_tConnectTime;
-  
-	return ts.GetTotalSeconds ();
+  return (long) (CTime::GetCurrentTime() - m_tConnectTime).GetTotalSeconds ();
 }
 
 double CMUSHclientDoc::GetScriptTime() 
@@ -3115,52 +3046,42 @@ double CMUSHclientDoc::GetScriptTime()
   if (App.m_iCounterFrequency <= 0)
     return 0.0;
 
-  double   elapsed_time;
-  elapsed_time = ((double) m_iScriptTimeTaken) / 
-                 ((double) App.m_iCounterFrequency);
-
-	return elapsed_time;
+  return ((double) m_iScriptTimeTaken) / ((double) App.m_iCounterFrequency);
 }
 
 
 BSTR CMUSHclientDoc::WorldAddress() 
 {
-	CString strResult = m_server;
-
-	return strResult.AllocSysString();
+  return m_server.AllocSysString();
 }
 
 long CMUSHclientDoc::WorldPort() 
 {
-
-	return m_port;
+  return m_port;
 }
 
 
 void CMUSHclientDoc::DeleteCommandHistory() 
 {
-
   for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
+    {
+    CView* pView = GetNextView(pos);
 	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-  	  {
-		  CSendView* pmyView = (CSendView*)pView;
+    if (!pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+      continue;
 
-      // OK, do it ...
-	    pmyView->m_msgList.RemoveAll ();
-      pmyView->m_HistoryPosition = NULL;
-      pmyView->m_inputcount = 0;
-      pmyView->m_HistoryFindInfo.m_pFindPosition = NULL;
-      pmyView->m_HistoryFindInfo.m_nCurrentLine = 0;
-      pmyView->m_HistoryFindInfo.m_bAgain = FALSE;  
-      pmyView->m_strPartialCommand.Empty ();
-      pmyView->m_last_command.Empty ();
+    CSendView* pmyView = (CSendView*)pView;
 
-      }	  // end of being a CSendView
+    // OK, do it ...
+    pmyView->m_msgList.RemoveAll ();
+    pmyView->m_HistoryPosition = NULL;
+    pmyView->m_inputcount = 0;
+    pmyView->m_HistoryFindInfo.m_pFindPosition = NULL;
+    pmyView->m_HistoryFindInfo.m_nCurrentLine = 0;
+    pmyView->m_HistoryFindInfo.m_bAgain = FALSE;  
+    pmyView->m_strPartialCommand.Empty ();
+    pmyView->m_last_command.Empty ();
     }   // end of loop through views
-
 }
 
 
@@ -3173,37 +3094,32 @@ void CMUSHclientDoc::DeleteOutput()
 // reset MXP
 void CMUSHclientDoc::Reset() 
 {
-MXP_Off ();
+  MXP_Off ();
 }
 
 // set pause to true or false for all views
 void CMUSHclientDoc::Pause(BOOL Flag) 
 {
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
+  POSITION pos = GetFirstViewPosition();
+  while(pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
 	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-      pmyView->m_freeze = Flag != 0;
-	    }	  // end of being a CMUSHView
+    if (!pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      continue;
+
+    CMUSHView* pmyView = (CMUSHView*)pView;
+    pmyView->m_freeze = Flag != 0;
     }   // end of loop through views
-
-
 }
 
 
 LPDISPATCH CMUSHclientDoc::Open(LPCTSTR FileName) 
 {
+  //CDocument * pDoc = App.m_pWorldDocTemplate->OpenDocumentFile (FileName);
+  CDocument * pDoc = App.OpenDocumentFile (FileName);
 
-//CDocument * pDoc = App.m_pWorldDocTemplate->OpenDocumentFile (FileName);
-CDocument * pDoc = App.OpenDocumentFile (FileName);
-
-  if (pDoc)
-      return pDoc->GetIDispatch (TRUE);
-
-	return NULL;
+  return (pDoc) ? pDoc->GetIDispatch (TRUE) : NULL;
 }
 
 
@@ -3221,12 +3137,12 @@ CDocument * pDoc = App.OpenDocumentFile (FileName);
 //   9: date/time line arrived
 //  10: actual line number (not line number in buffer)
 //  11: count of style runs
+//  12: ticks - exact value from the high-performance timer
 
 VARIANT CMUSHclientDoc::GetLineInfo(long LineNumber, short InfoType) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
+  VARIANT vaResult;
+  VariantInit(&vaResult);
   vaResult.vt = VT_EMPTY;
 
   // check line exists
@@ -3234,8 +3150,7 @@ VARIANT CMUSHclientDoc::GetLineInfo(long LineNumber, short InfoType)
     return vaResult;
 
   // get pointer to line in question
-
-CLine * pLine = m_LineList.GetAt (GetLinePosition (LineNumber - 1));
+  CLine * pLine = m_LineList.GetAt (GetLinePosition (LineNumber - 1));
 
   switch (InfoType)
     {
@@ -3250,21 +3165,15 @@ CLine * pLine = m_LineList.GetAt (GetLinePosition (LineNumber - 1));
     case   9: SetUpVariantDate   (vaResult, COleDateTime (pLine->m_theTime.GetTime ())); break;
     case  10: SetUpVariantLong   (vaResult, pLine->m_nLineNumber); break;
     case  11: SetUpVariantLong   (vaResult, pLine->styleList.GetCount ()); break;
-    case  12: 
-      {
-      // high-performance timer
-      double ticks = (double) pLine->m_lineHighPerformanceTime.QuadPart / (double) App.m_iCounterFrequency;
-      SetUpVariantDouble (vaResult, ticks);
-      }
+    case  12: // high-performance timer
+      SetUpVariantDouble (vaResult, (double) pLine->m_lineHighPerformanceTime.QuadPart / (double) App.m_iCounterFrequency);
       break;
-
     default:
       vaResult.vt = VT_NULL;
       break;
-
     } // end of switch
 
-	return vaResult;
+  return vaResult;
 } // end of CMUSHclientDoc::GetLineInfo
 
 // world.GetLinesInBufferCount 
@@ -3273,7 +3182,7 @@ CLine * pLine = m_LineList.GetAt (GetLinePosition (LineNumber - 1));
 
 long CMUSHclientDoc::GetLinesInBufferCount() 
 {
-	return m_LineList.GetCount ();
+  return m_LineList.GetCount ();
 }
 
 
@@ -3299,9 +3208,8 @@ long CMUSHclientDoc::GetLinesInBufferCount()
 
 VARIANT CMUSHclientDoc::GetStyleInfo(long LineNumber, long StyleNumber, short InfoType) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
+  VARIANT vaResult;
+  VariantInit(&vaResult);
   vaResult.vt = VT_EMPTY;
 
   // check line exists
@@ -3309,257 +3217,208 @@ VARIANT CMUSHclientDoc::GetStyleInfo(long LineNumber, long StyleNumber, short In
     return vaResult;
 
   // get pointer to line in question
-
-CLine * pLine = m_LineList.GetAt (GetLinePosition (LineNumber - 1));
+  CLine * pLine = m_LineList.GetAt (GetLinePosition (LineNumber - 1));
 
   // check style exists
   if (StyleNumber <= 0 || StyleNumber > pLine->styleList.GetCount ())
     return vaResult;
-
-CStyle * pStyle;
-POSITION pos;
-int iCol = 0;
-int iCount = 1;
+  
+  CStyle * pStyle = NULL;
 
   // search for it sequentially so we know the column number, 
   // so we can get its text
-  for (pos = pLine->styleList.GetHeadPosition(); pos; iCount++)
+  POSITION pos = pLine->styleList.GetHeadPosition();
+  int iCol = 0, iCount = 1;
+  while (pos != NULL)
     {
     pStyle = pLine->styleList.GetNext (pos);
     if (iCount == StyleNumber)
       break;  // found right one
-    
-    if (!pos)
-      return vaResult;
 
     iCol += pStyle->iLength; // new column
-
+    ++iCount;
     } // end of looping looking for it
 
-CString strAction, strHint, strVariable;
-CAction * pAction = pStyle->pAction;
-
-COLORREF colour1,
-         colour2;
+  if (pos == NULL && iCount != StyleNumber)
+    return vaResult;
 
   switch (InfoType)
     {
-    case   1: 
+    case 1: 
       {
       CString strText = CString (pLine->text, pLine->len);
       SetUpVariantString (vaResult, strText.Mid (iCol, pStyle->iLength)); 
       }
       break;
-    case   2: SetUpVariantShort  (vaResult, pStyle->iLength); 
-      break;
-    case   3: SetUpVariantShort  (vaResult, iCol + 1); 
-      break;
-    case   4: 
-      {
-      int iAction = 0;
+    case 2: SetUpVariantShort (vaResult, pStyle->iLength); break;
+    case 3: SetUpVariantShort (vaResult, iCol + 1);        break;
+    case 4: 
       switch (pStyle->iFlags & ACTIONTYPE)
         {
-        case ACTION_NONE:       iAction = 0; break;
-        case ACTION_SEND:       iAction = 1; break;
-        case ACTION_HYPERLINK:  iAction = 2; break;
-        case ACTION_PROMPT:     iAction = 3; break;
+        case ACTION_NONE:      SetUpVariantShort(vaResult, 0); break;
+        case ACTION_SEND:      SetUpVariantShort(vaResult, 1); break;
+        case ACTION_HYPERLINK: SetUpVariantShort(vaResult, 2); break;
+        case ACTION_PROMPT:    SetUpVariantShort(vaResult, 3); break;
         } // end of switch
-
-      SetUpVariantShort  (vaResult, iAction);
+      break;
+    case 5:
+      SetUpVariantString (vaResult, (pStyle->pAction) ? pStyle->pAction->m_strAction : "");
+      break;
+    case 6:
+      SetUpVariantString (vaResult, (pStyle->pAction) ? pStyle->pAction->m_strHint : "");
+      break;
+    case 7:
+      SetUpVariantString (vaResult, (pStyle->pAction) ? pStyle->pAction->m_strVariable : "");
+      break;
+    case  8: SetUpVariantBool (vaResult, (pStyle->iFlags & HILITE) != 0);    break;
+    case  9: SetUpVariantBool (vaResult, (pStyle->iFlags & UNDERLINE) != 0); break;
+    case 10: SetUpVariantBool (vaResult, (pStyle->iFlags & BLINK) != 0);     break;
+    case 11: SetUpVariantBool (vaResult, (pStyle->iFlags & INVERSE) != 0);   break;
+    case 12: SetUpVariantBool (vaResult, (pStyle->iFlags & CHANGED) != 0);   break;
+    case 13: SetUpVariantBool (vaResult, (pStyle->iFlags & START_TAG) != 0); break;
+    case 14:
+      {
+      COLORREF colour1, colour2;
+      GetStyleRGB (pStyle, colour1, colour2);
+      SetUpVariantLong  (vaResult, colour1);
       }
       break;
-
-    case 5:
-      if (pAction)
-        SetUpVariantString (vaResult,  pAction->m_strAction);
-       else
-        SetUpVariantString (vaResult,  "");
-      break;
-
-    case 6:
-      if (pAction)
-        SetUpVariantString (vaResult,  pAction->m_strHint);
-       else
-        SetUpVariantString (vaResult,  "");
-      break;
-
-    case 7:
-      if (pAction)
-        SetUpVariantString (vaResult,  pAction->m_strVariable);
-       else
-        SetUpVariantString (vaResult,  "");
-      break;
-
-    case  8: SetUpVariantBool   (vaResult, (pStyle->iFlags & HILITE) != 0); 
-      break;
-    case  9: SetUpVariantBool   (vaResult, (pStyle->iFlags & UNDERLINE) != 0); 
-      break;
-    case 10: SetUpVariantBool   (vaResult, (pStyle->iFlags & BLINK) != 0); 
-      break;
-    case 11: SetUpVariantBool   (vaResult, (pStyle->iFlags & INVERSE) != 0); 
-      break;
-    case 12: SetUpVariantBool   (vaResult, (pStyle->iFlags & CHANGED) != 0); 
-      break;
-    case 13: SetUpVariantBool   (vaResult, (pStyle->iFlags & START_TAG) != 0); 
-      break;
-
-    case 14:
-          GetStyleRGB (pStyle, colour1, colour2);
-          SetUpVariantLong  (vaResult, colour1); 
-          break;
-
     case 15:
-          GetStyleRGB (pStyle, colour1, colour2);
-          SetUpVariantLong  (vaResult, colour2); 
-          break;
-
+      {
+      COLORREF colour1, colour2;
+      GetStyleRGB (pStyle, colour1, colour2);
+      SetUpVariantLong  (vaResult, colour2); 
+      }
+      break;
     default:
       vaResult.vt = VT_NULL;
       break;
 
     } // end of switch
-
-
-	return vaResult;
+  
+  return vaResult;
 }
 
 
 long CMUSHclientDoc::GetSelectionStartLine() 
 {
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-      long startcol,
-           endcol;
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    
+    if (!pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      continue;
 
-      CLine * pStartLine,
-            * pEndLine;
+    CMUSHView* pmyView = (CMUSHView*)pView;
 
-      pStartLine = m_LineList.GetAt (GetLinePosition (pmyView->m_selstart_line));
-      pEndLine   = m_LineList.GetAt (GetLinePosition (pmyView->m_selend_line));
+    CLine* pStartLine = m_LineList.GetAt (GetLinePosition (pmyView->m_selstart_line));
+    CLine* pEndLine   = m_LineList.GetAt (GetLinePosition (pmyView->m_selend_line));
 
-      startcol  = MIN (pmyView->m_selstart_col, pStartLine->len);
-      endcol    = MIN (pmyView->m_selend_col, pEndLine->len);
+    long startcol  = MIN (pmyView->m_selstart_col, pStartLine->len);
+    long endcol    = MIN (pmyView->m_selend_col, pEndLine->len);
 
-      // return 0 if no selection
-      if (!(pmyView->m_selend_line > pmyView->m_selstart_line || 
-                  (pmyView->m_selend_line == pmyView->m_selstart_line && 
-                   endcol > startcol)))
-        return 0;
-      return pmyView->m_selstart_line + 1;
-	    }	  // end of being a CMUSHView
+    // return 0 if no selection
+    if (!(pmyView->m_selend_line > pmyView->m_selstart_line || 
+          (pmyView->m_selend_line == pmyView->m_selstart_line && 
+           endcol > startcol)))
+      return 0;
+    
+    return pmyView->m_selstart_line + 1;
     }   // end of loop through views
-
-
-	return 0;
+  
+  return 0;
 }
 
 long CMUSHclientDoc::GetSelectionEndLine() 
 {
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-      long startcol,
-           endcol;
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
 
-      CLine * pStartLine,
-            * pEndLine;
+    if (!pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+  	  continue;
 
-      pStartLine = m_LineList.GetAt (GetLinePosition (pmyView->m_selstart_line));
-      pEndLine   = m_LineList.GetAt (GetLinePosition (pmyView->m_selend_line));
+    CMUSHView* pmyView = (CMUSHView*)pView;
 
-      startcol  = MIN (pmyView->m_selstart_col, pStartLine->len);
-      endcol    = MIN (pmyView->m_selend_col, pEndLine->len);
+    CLine* pStartLine = m_LineList.GetAt (GetLinePosition (pmyView->m_selstart_line));
+    CLine* pEndLine   = m_LineList.GetAt (GetLinePosition (pmyView->m_selend_line));;
 
-      // return 0 if no selection
-      if (!(pmyView->m_selend_line > pmyView->m_selstart_line || 
-                  (pmyView->m_selend_line == pmyView->m_selstart_line && 
-                   endcol > startcol)))
-        return 0;
+    long startcol  = MIN (pmyView->m_selstart_col, pStartLine->len);
+    long endcol    = MIN (pmyView->m_selend_col, pEndLine->len);
 
-      return pmyView->m_selend_line + 1;
-	    }	  // end of being a CMUSHView
+    // return 0 if no selection
+    if (!(pmyView->m_selend_line > pmyView->m_selstart_line || 
+          (pmyView->m_selend_line == pmyView->m_selstart_line && 
+           endcol > startcol)))
+      return 0;
+    
+    return pmyView->m_selend_line + 1;
     }   // end of loop through views
 
-	return 0;
+  return 0;
 }
-
 
 
 long CMUSHclientDoc::GetSelectionStartColumn() 
 {
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-      long startcol,
-           endcol;
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    
+    if (!pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      continue;
 
-      CLine * pStartLine,
-            * pEndLine;
+    CMUSHView* pmyView = (CMUSHView*)pView;
 
-      pStartLine = m_LineList.GetAt (GetLinePosition (pmyView->m_selstart_line));
-      pEndLine   = m_LineList.GetAt (GetLinePosition (pmyView->m_selend_line));
+    CLine *pStartLine = m_LineList.GetAt (GetLinePosition (pmyView->m_selstart_line));
+    CLine *pEndLine   = m_LineList.GetAt (GetLinePosition (pmyView->m_selend_line));
 
-      startcol  = MIN (pmyView->m_selstart_col, pStartLine->len);
-      endcol    = MIN (pmyView->m_selend_col, pEndLine->len);
+    long startcol  = MIN (pmyView->m_selstart_col, pStartLine->len);
+    long endcol    = MIN (pmyView->m_selend_col, pEndLine->len);
 
-      // return 0 if no selection
-      if (!(pmyView->m_selend_line > pmyView->m_selstart_line || 
-                  (pmyView->m_selend_line == pmyView->m_selstart_line && 
-                   endcol > startcol)))
-        return 0;
-
-      return startcol + 1;
-	    }	  // end of being a CMUSHView
+    // return 0 if no selection
+    if (!(pmyView->m_selend_line > pmyView->m_selstart_line || 
+          (pmyView->m_selend_line == pmyView->m_selstart_line && 
+           endcol > startcol)))
+      return 0;
+    
+    return startcol + 1;
     }   // end of loop through views
 
-	return 0;
+  return 0;
 }
 
 long CMUSHclientDoc::GetSelectionEndColumn() 
 {
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-      long startcol,
-           endcol;
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    
+    if (!pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      continue;
+    
+    CMUSHView* pmyView = (CMUSHView*)pView;
 
-      CLine * pStartLine,
-            * pEndLine;
+    CLine *pStartLine = m_LineList.GetAt (GetLinePosition (pmyView->m_selstart_line));
+    CLine *pEndLine   = m_LineList.GetAt (GetLinePosition (pmyView->m_selend_line));
 
-      pStartLine = m_LineList.GetAt (GetLinePosition (pmyView->m_selstart_line));
-      pEndLine   = m_LineList.GetAt (GetLinePosition (pmyView->m_selend_line));
+    long startcol  = MIN (pmyView->m_selstart_col, pStartLine->len);
+    long endcol    = MIN (pmyView->m_selend_col, pEndLine->len);
 
-      startcol  = MIN (pmyView->m_selstart_col, pStartLine->len);
-      endcol    = MIN (pmyView->m_selend_col, pEndLine->len);
+    // return 0 if no selection
+    if (!(pmyView->m_selend_line > pmyView->m_selstart_line || 
+          (pmyView->m_selend_line == pmyView->m_selstart_line && 
+           endcol > startcol)))
+      return 0;
 
-      // return 0 if no selection
-      if (!(pmyView->m_selend_line > pmyView->m_selstart_line || 
-                  (pmyView->m_selend_line == pmyView->m_selstart_line && 
-                   endcol > startcol)))
-        return 0;
-
-      return endcol + 1;
-	    }	  // end of being a CMUSHView
+    return endcol + 1;
     }   // end of loop through views
 
-	return 0;
+  return 0;
 }
 
 // world.GetCommandList - returns a variant array which is a list of "count" recent commands
@@ -3568,44 +3427,38 @@ VARIANT CMUSHclientDoc::GetCommandList(long Count)
 {
   COleSafeArray sa;   // for command list
 
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-  	  {
-		  CSendView* pmyView = (CSendView*)pView;
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
 
-      POSITION pos;
-      long iCount;
-  
-      // put the commands into the array
-      if (!pmyView->m_msgList.IsEmpty ())    // cannot create empty dimension
+    if (!pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+      continue;
+
+    CSendView* pmyView = (CSendView*)pView;
+
+    // put the commands into the array
+    if (!pmyView->m_msgList.IsEmpty ())    // cannot create empty dimension
+      {
+      if (Count <= 0)
+        Count = pmyView->m_msgList.GetCount ();    // zero means all
+      else
+        Count = MIN (Count, pmyView->m_msgList.GetCount ());  // don't exceed what we have
+
+      sa.CreateOneDim (VT_VARIANT, Count);
+
+      POSITION pos = pmyView->m_msgList.GetTailPosition();
+      for (long iCount = 0; pos != NULL && iCount < Count; ++iCount)
         {
-        if (Count <= 0)
-          Count = pmyView->m_msgList.GetCount ();    // zero means all
-        else
-          Count = MIN (Count, pmyView->m_msgList.GetCount ());  // don't exceed what we have
+        CString strLine = pmyView->m_msgList.GetPrev (pos);
 
-        sa.CreateOneDim (VT_VARIANT, Count);
-
-        for (iCount = 0, pos = pmyView->m_msgList.GetTailPosition(); 
-            pos && iCount < Count; 
-            )
-          {
-          CString strLine = pmyView->m_msgList.GetPrev (pos);
-
-          // the array must be a bloody array of variants, or VBscript kicks up
-          COleVariant v (strLine);
-          sa.PutElement (&iCount, &v);
-          iCount++;
-          }      // end of looping through each command
-        } // end of having at least one
-
-	    }	  // end of being a CSendView
+        // the array must be a bloody array of variants, or VBscript kicks up
+        sa.PutElement (&iCount, &((COleVariant)strLine));
+        }      // end of looping through each command
+      } // end of having at least one
     }   // end of loop through views
-
-	return sa.Detach ();
+  
+  return sa.Detach ();
 }
 
 // world.PushCommand - pushes the command in the command window onto the command
@@ -3614,80 +3467,77 @@ VARIANT CMUSHclientDoc::GetCommandList(long Count)
 
 BSTR CMUSHclientDoc::PushCommand() 
 {
-	CString strCommand;
+  CString strCommand;
 
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-  	  {
-		  CSendView* pmyView = (CSendView*)pView;
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
 
-      // find what the command is
-      pmyView->GetEditCtrl().GetWindowText (strCommand);
+    if (!pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+  	  continue;
 
-      // save the echo flag
-      bool bSaveNoEcho = m_bNoEcho;
-      m_bNoEcho = false;  // make sure we save it
+    CSendView* pmyView = (CSendView*)pView;
 
-      // remember it
-      pmyView->AddToCommandHistory (strCommand);
+    // find what the command is
+    pmyView->GetEditCtrl().GetWindowText (strCommand);
 
-      // restore the command
-      m_bNoEcho = bSaveNoEcho;
+    // save the echo flag
+    bool bSaveNoEcho = m_bNoEcho;
+    m_bNoEcho = false;  // make sure we save it
 
-      pmyView->GetEditCtrl().SetSel (0, -1);   // select all
-      pmyView->GetEditCtrl().ReplaceSel ("", TRUE);   // blank it out
-      pmyView->NotifyPluginCommandChanged ();
+    // remember it
+    pmyView->AddToCommandHistory (strCommand);
 
-      }	  // end of being a CSendView
+    // restore the command
+    m_bNoEcho = bSaveNoEcho;
+
+    pmyView->GetEditCtrl().SetSel (0, -1);   // select all
+    pmyView->GetEditCtrl().ReplaceSel ("", TRUE);   // blank it out
+    pmyView->NotifyPluginCommandChanged ();
     }   // end of loop through views
 
-	return strCommand.AllocSysString();
+  return strCommand.AllocSysString();
 }
 
 // world.SelectCommand - selects the command in the command window
 
 void CMUSHclientDoc::SelectCommand() 
 {
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-  	  {
-		  CSendView* pmyView = (CSendView*)pView;
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
 
-      pmyView->GetEditCtrl().SetSel (0, -1);   // select all
+    if (!pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+      continue;
 
-      }	  // end of being a CSendView
+    CSendView* pmyView = (CSendView*)pView;
+    pmyView->GetEditCtrl().SetSel (0, -1);   // select all
     }   // end of loop through views
-
 }
 
 // world.GetCommand - gets the command in the command window
 
 BSTR CMUSHclientDoc::GetCommand() 
 {
-	CString strCommand;
+  CString strCommand;
 
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-  	  {
-		  CSendView* pmyView = (CSendView*)pView;
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    
+    if (!pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+      continue;
+    
+    CSendView* pmyView = (CSendView*)pView;
 
-      // find what the command is
-      pmyView->GetEditCtrl().GetWindowText (strCommand);
-
-      }	  // end of being a CSendView
+    // find what the command is
+    pmyView->GetEditCtrl().GetWindowText (strCommand);
     }   // end of loop through views
-
-
-	return strCommand.AllocSysString();
+  
+  return strCommand.AllocSysString();
 }
 
 // world.DoAfter - does a command after n seconds
@@ -3721,108 +3571,90 @@ VARIANT CMUSHclientDoc::GetQueue()
 {
   COleSafeArray sa;   // for command list
 
-POSITION pos;
-long iCount;
-
   // put the queued commands into the array
   if (!m_QueuedCommandsList.IsEmpty ())    // cannot create empty dimension
     {
-
     sa.CreateOneDim (VT_VARIANT, m_QueuedCommandsList.GetCount ());
 
-    for (iCount = 0, pos = m_QueuedCommandsList.GetHeadPosition(); 
-        pos; 
-        )
+    POSITION pos = m_QueuedCommandsList.GetHeadPosition();
+    for (long iCount = 0; pos != NULL; ++iCount)
       {
       CString strLine = m_QueuedCommandsList.GetNext (pos);
 
       // the array must be a bloody array of variants, or VBscript kicks up
-      COleVariant v (strLine.Mid (1));  // drop echo flag
-      sa.PutElement (&iCount, &v);
-      iCount++;
+      sa.PutElement (&iCount, &((COleVariant)strLine.Mid (1)));
       }      // end of looping through each command
     } // end of having at least one
-
-	return sa.Detach ();
+  
+  return sa.Detach ();
 }
 
 
 long CMUSHclientDoc::DeleteTemporaryTriggers() 
 {
-long iCount = 0;
-POSITION pos;
-CString strTriggerName;
-CTrigger * trigger_item;
+  CString strTriggerName;
+  CTrigger * trigger_item = NULL;
 
-  for (pos = GetTriggerMap ().GetStartPosition(); pos; )
+  POSITION pos = GetTriggerMap ().GetStartPosition();
+  long iCount;
+  for (iCount = 0; pos != NULL; ++iCount)
     {
     GetTriggerMap ().GetNextAssoc (pos, strTriggerName, trigger_item);
     if (trigger_item->bTemporary)
       {
       delete trigger_item;
       GetTriggerMap ().RemoveKey (strTriggerName);
-      iCount++;
       }
     }   // end of deleting triggers
 
   SortTriggers ();
-
-	return iCount;
+  return iCount;
 }
 
 long CMUSHclientDoc::DeleteTemporaryAliases() 
 {
-long iCount = 0;
-POSITION pos;
-CString strAliasName;
-CAlias * alias_item;
+  CString strAliasName;
+  CAlias * alias_item = NULL;
 
-  for (pos = GetAliasMap ().GetStartPosition(); pos; )
+  POSITION pos = GetAliasMap ().GetStartPosition();;
+  long iCount;
+  for (iCount = 0; pos != NULL; ++iCount)
     {
     GetAliasMap ().GetNextAssoc (pos, strAliasName, alias_item);
     if (alias_item->bTemporary)
       {
       delete alias_item;
       GetAliasMap ().RemoveKey (strAliasName);
-      iCount++;
       }
     }   // end of deleting aliases
 
   SortAliases ();
-
-	return iCount;
+  return iCount;
 }
 
 long CMUSHclientDoc::DeleteTemporaryTimers() 
 {
-long iCount = 0;
-POSITION pos;
-CString strTimerName;
-CTimer * timer_item;
+  CString strTimerName;
+  CTimer * timer_item = NULL;
 
-  for (pos = GetTimerMap ().GetStartPosition(); pos; )
+  POSITION pos = GetTimerMap ().GetStartPosition();;
+  long iCount;
+  for (iCount = 0; pos != NULL; ++iCount)
     {
     GetTimerMap ().GetNextAssoc (pos, strTimerName, timer_item);
     if (timer_item->bTemporary)
       {
       delete timer_item;
       GetTimerMap ().RemoveKey (strTimerName);
-      iCount++;
       }
     }   // end of deleting timers
 
-  if (iCount)
-    SortTimers ();
-
-	return iCount;
+  SortTimers ();
+  return iCount;
 }
 
-tInfoTypeMapping InfoTypes [] =
- 
-   {
-
-//   (strings - configuration)
-
+tInfoTypeMapping InfoTypes [] = {
+  // (strings - configuration)
   { 1, "Server name" },
   { 2, "World name" },
   { 3, "Character name" },
@@ -3874,8 +3706,7 @@ tInfoTypeMapping InfoTypes [] =
  { 49, "Script function for MXP variable set" },
  { 50, "Sound to play for beeps" },
 
-// (strings - calculated at runtime)
- 
+  // (strings - calculated at runtime)
  { 51, "Current log file name" },
  { 52, "Last \"immediate\" script expression" },
  { 53, "Current status line message" },
@@ -3911,10 +3742,7 @@ tInfoTypeMapping InfoTypes [] =
  { 83, "SQLite3 version" },
  { 84, "File browsing directory" },
 
-
- 
-// (booleans - calculated at runtime)
- 
+  // (booleans - calculated at runtime)
 { 101, "No Echo" },
 { 102, "Debug incoming packets" },
 { 103, "Decompressing" },
@@ -3932,9 +3760,7 @@ tInfoTypeMapping InfoTypes [] =
 { 115, "Localization active" },
 { 118, "Variables have changed" },
 
-
-// (numbers (longs) - calculated at runtime)
-
+  // (numbers (longs) - calculated at runtime)
 { 201, "Total lines received" },
 { 202, "Lines received but not yet seen (new lines)" },
 { 203, "Total lines sent" },
@@ -4028,22 +3854,19 @@ tInfoTypeMapping InfoTypes [] =
 { 291, "Actual text rectangle - top" },
 { 292, "Actual text rectangle - right" },
 { 293, "Actual text rectangle - bottom" },
-   
 
-// (dates - calculated at runtime)
-
+  // (dates - calculated at runtime)
 { 301, "Time connected" },
 { 302, "Time log file was last flushed to disk" },
 { 303, "When script file was last modified" },
 { 304, "Time now" },
 
-
- { 0, "" }, // end of table marker
-
- };
+  // end of table marker
+  { 0, "" },
+};
 
 static void GetWindowWidth (CWnd * pWnd, VARIANT & vaResult, const bool client = false )
-  {
+{
   RECT rect;
   if (pWnd->m_hWnd)
     {
@@ -4052,18 +3875,19 @@ static void GetWindowWidth (CWnd * pWnd, VARIANT & vaResult, const bool client =
     else
       {
       pWnd->GetWindowRect(&rect);
-      pWnd->ScreenToClient (&rect);
+      pWnd->ScreenToClient(&rect);
       }
     }
   else
     rect.right = -1;
+
   VariantClear (&vaResult);
   vaResult.vt = VT_I4;
   vaResult.lVal = rect.right; 
-  } // end of GetWindowWidth
+} // end of GetWindowWidth
 
 static void GetWindowHeight (CWnd * pWnd, VARIANT & vaResult, const bool client = false )
-  {
+{
   RECT rect;
   if (pWnd->m_hWnd)
     {
@@ -4072,50 +3896,57 @@ static void GetWindowHeight (CWnd * pWnd, VARIANT & vaResult, const bool client 
     else
       {
       pWnd->GetWindowRect(&rect);
-      pWnd->ScreenToClient (&rect);
+      pWnd->ScreenToClient(&rect);
       }
     }
   else
     rect.right = -1;
+  
   VariantClear (&vaResult);
   vaResult.vt = VT_I4;
   vaResult.lVal = rect.bottom; 
-  }   // end of GetWindowHeight
+} // end of GetWindowHeight
 
-OSVERSIONINFO ver;
 
-static void GetOSVersion (void)
+static OSVERSIONINFO* GetOSVersion (void)
+{
+  static OSVERSIONINFO ver;
+  static bool loaded = false;
+
+  if (!loaded)
   {
-  // see which OS we are using
-  memset(&ver, 0, sizeof(ver));
-  ver.dwOSVersionInfoSize = sizeof(ver);
-  ::GetVersionEx (&ver);
-  } // GetOSVersion
+    // see which OS we are using
+    memset(&ver, 0, sizeof(OSVERSIONINFO));
+    ver.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+    ::GetVersionEx(&ver);
+    loaded = true;
+  }
+  return &ver;
+} // GetOSVersion
 
 // helper function
 CMUSHView * CMUSHclientDoc::GetFirstOutputWindow ()
-  {
+{
   for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-      return  (CMUSHView*)pView;
+    {
+    CView* pView = GetNextView(pos);
+    
+    if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      return (CMUSHView*)pView;
     }   // end of loop through views
-
+  
   return NULL;      // not found
-  }
+}
 
 VARIANT CMUSHclientDoc::GetInfo(long InfoType) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
-
+  VARIANT vaResult;
+  VariantInit(&vaResult);
   vaResult.vt = VT_EMPTY;   // in case dates are zero
 
   switch (InfoType)
     {
+      // (strings - configuration)
     case    1: SetUpVariantString (vaResult, m_server); break;
     case    2: SetUpVariantString (vaResult, m_mush_name); break;
     case    3: SetUpVariantString (vaResult, m_name); break;
@@ -4171,6 +4002,7 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case   49: SetUpVariantString (vaResult, m_strOnMXP_SetVariable); break;
     case   50: SetUpVariantString (vaResult, m_strBeepSound); break;
 
+      // (strings - calculated at runtime)
     case   51: SetUpVariantString (vaResult, m_logfile_name); break;
     case   52: SetUpVariantString (vaResult, m_strLastImmediateExpression); break;
     case   53: SetUpVariantString (vaResult, m_strStatusMessage); break;
@@ -4181,45 +4013,40 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case   57: SetUpVariantString (vaResult, App.m_strDefaultWorldFileDirectory); break;
     case   58: SetUpVariantString (vaResult, App.m_strDefaultLogFileDirectory); break;
     case   59:   // scripts are in the execution directory at present
-              {
-              char fullfilename[MAX_PATH];
-              char * p;
-              GetModuleFileName (NULL, fullfilename, sizeof (fullfilename));
-              p = strrchr (fullfilename, '\\');
-              if (p)
-                *p = 0;
-
-              SetUpVariantString (vaResult, fullfilename); 
-              break;
-              }
+      {
+      char fullfilename[MAX_PATH];
+      GetModuleFileName (NULL, fullfilename, sizeof (fullfilename));
+      char* p = strrchr (fullfilename, '\\');
+      if (p != '\0')
+        *p = '\0';
+      SetUpVariantString (vaResult, fullfilename); 
+      break;
+      }
 
     case   60: SetUpVariantString (vaResult, App.m_strPluginsDirectory); break;
     case   61: SetUpVariantString (vaResult, inet_ntoa (m_sockAddr.sin_addr)); break;
     case   62: SetUpVariantString (vaResult, inet_ntoa (m_ProxyAddr.sin_addr)); break;
     case   63:
-              {
-               char szHostName[256];
-
-                if( gethostname(szHostName, sizeof szHostName) == 0 )
-                   SetUpVariantString (vaResult, szHostName);
-
-              }
-              break;
+      {
+      char szHostName[256];
+      if (gethostname(szHostName, sizeof szHostName) == 0 )
+        SetUpVariantString (vaResult, szHostName);
+      break;
+      }
 
     case   64:      // current directory
-              {
-               char * p = _getcwd (NULL, 1024);
-               if (p)
-                 {
-                 CString strPath (p);
-                 free (p);
-                 if (strPath.Right (1) != "\\")
-                   strPath += "\\"; // append trailing backslash
-                 SetUpVariantString (vaResult, strPath);
-                 }
-
-              }
-              break;
+      {
+      char * p = _getcwd (NULL, 1024);
+      if (p != NULL)
+        {
+        CString strPath = p;
+        free (p);
+        if (strPath.Right (1) != "\\")
+          strPath += "\\"; // append trailing backslash
+        SetUpVariantString (vaResult, strPath);
+        }
+      break;
+      }
 
     case   65: SetUpVariantString (vaResult, m_strWorldSave); break;
     case   66: SetUpVariantString (vaResult, ExtractDirectory (App.m_strMUSHclientFileName)); break;
@@ -4233,14 +4060,7 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case   74: SetUpVariantString (vaResult, ExtractDirectory (App.m_strMUSHclientFileName) + "sounds\\"); break;
     case   75: SetUpVariantString (vaResult, m_IAC_subnegotiation_data.c_str ()); break;
     case   76: SetUpVariantString (vaResult, m_strSpecialFontName); break;
-
-    case 77:
-      {
-      GetOSVersion ();
-      SetUpVariantString (vaResult, ver.szCSDVersion);  
-      break;
-      }
-
+    case   77: SetUpVariantString (vaResult, GetOSVersion()->szCSDVersion); break;
     case   78: SetUpVariantString (vaResult, m_strForegroundImageName); break;
     case   79: SetUpVariantString (vaResult, m_strBackgroundImageName); break;
     case   80: SetUpVariantString (vaResult, PNG_LIBPNG_VER_STRING); break;
@@ -4249,6 +4069,7 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case   83: SetUpVariantString (vaResult, sqlite3_libversion ()); break;
     case   84: SetUpVariantString (vaResult, file_browsing_dir); break;
 
+      // (booleans - calculated at runtime)
     case  101: SetUpVariantBool (vaResult, m_bNoEcho); break;
     case  102: SetUpVariantBool (vaResult, m_bDebugIncomingPackets); break;
     case  103: SetUpVariantBool (vaResult, m_bCompress); break;
@@ -4262,22 +4083,21 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case  110: SetUpVariantBool (vaResult, m_bInScriptFileChanged); break;
     case  111: SetUpVariantBool (vaResult, IsModified ()); break;
     case  112: SetUpVariantBool (vaResult, m_bMapping); break;
-    case  113: SetUpVariantBool (vaResult, m_pActiveCommandView || m_pActiveOutputView); 
-               break;
+    case  113: SetUpVariantBool (vaResult, m_pActiveCommandView || m_pActiveOutputView); break;
       
     case  114:   // current view frozen
-               if (!(m_pActiveOutputView || m_pActiveCommandView)) 
-                 SetUpVariantBool (vaResult, FALSE);
-               else if (m_pActiveOutputView)
-                 SetUpVariantBool (vaResult, m_pActiveOutputView->m_freeze);
-               else 
-                 SetUpVariantBool (vaResult, m_pActiveCommandView->m_topview->m_freeze);
-               break;
+      if (!(m_pActiveOutputView || m_pActiveCommandView)) 
+        SetUpVariantBool (vaResult, FALSE);
+      else if (m_pActiveOutputView)
+        SetUpVariantBool (vaResult, m_pActiveOutputView->m_freeze);
+      else 
+        SetUpVariantBool (vaResult, m_pActiveCommandView->m_topview->m_freeze);
+      break;
 
     case  115: SetUpVariantBool (vaResult, App.m_Translator_Lua != NULL); break;
     case  118: SetUpVariantBool (vaResult, m_bVariablesChanged); break;
 
-
+      // (numbers (longs) - calculated at runtime)
     case  201: SetUpVariantLong (vaResult, m_total_lines); break;
     case  202: SetUpVariantLong (vaResult, m_new_lines); break;
     case  203: SetUpVariantLong (vaResult, m_nTotalLinesSent); break;
@@ -4311,15 +4131,10 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case  230: SetUpVariantLong (vaResult, m_iExecutionDepth); break;
     case  231:  // log file size
       {
-      if (m_logfile == NULL)
-         SetUpVariantLong (vaResult, 0);  // no log file
-      else
-        {
-        fpos_t pos;
+      fpos_t pos = 0;
+      if (m_logfile != NULL)
         fgetpos (m_logfile, &pos);
-        SetUpVariantLong (vaResult, pos);  // log file size
-        } // end of log file
-
+      SetUpVariantLong (vaResult, (long)pos);
       }
       break;
 
@@ -4336,14 +4151,13 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case 233:     // time taken doing triggers
       if (App.m_iCounterFrequency)
         {
-        LONGLONG iTimeTaken = 0;
-        CTrigger * pTrigger;
-        POSITION pos;
-        double   elapsed_time;
+        CTrigger * pTrigger = NULL;
         CString strName;
 
         // count number of triggers matched
-        for (pos = GetTriggerMap ().GetStartPosition(); pos; )
+        POSITION pos = GetTriggerMap ().GetStartPosition();
+        LONGLONG iTimeTaken = 0;
+        while (pos != NULL)
           {
           GetTriggerMap ().GetNextAssoc (pos, strName, pTrigger);
           // calculate time taken to execute triggers
@@ -4351,9 +4165,7 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
             iTimeTaken += pTrigger->regexp->iTimeTaken;
           }
 
-        elapsed_time = ((double) iTimeTaken) / 
-                        ((double) App.m_iCounterFrequency);
-
+        double elapsed_time = ((double) iTimeTaken) / ((double) App.m_iCounterFrequency);
         SetUpVariantDouble (vaResult, elapsed_time);
         }
       break;
@@ -4361,14 +4173,13 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case 234:     // time taken doing aliases
       if (App.m_iCounterFrequency)
         {
-        LONGLONG iTimeTaken = 0;
-        CAlias * pAlias;
-        POSITION pos;
-        double   elapsed_time;
+        CAlias * pAlias = NULL;
         CString strName;
 
         // count number of triggers matched
-        for (pos = GetAliasMap ().GetStartPosition(); pos; )
+        POSITION pos = GetAliasMap ().GetStartPosition();
+        LONGLONG iTimeTaken = 0;
+        while (pos != NULL)
           {
           GetAliasMap ().GetNextAssoc (pos, strName, pAlias);
           // calculate time taken to execute triggers
@@ -4376,157 +4187,116 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
             iTimeTaken += pAlias->regexp->iTimeTaken;
           }
 
-        elapsed_time = ((double) iTimeTaken) / 
-                        ((double) App.m_iCounterFrequency);
-
+        double elapsed_time = ((double) iTimeTaken) / ((double) App.m_iCounterFrequency);
         SetUpVariantDouble (vaResult, elapsed_time);
         }
       break;
 
     case 235:
       {
+      POSITION pos = GetFirstViewPosition();
       long count = 0;
-
-      for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
-        {
-        CView* pView = GetNextView(pos);
-
-        if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-          count++;
-        }   // end of loop
+      while (pos != NULL)
+        if (GetNextView(pos)->IsKindOf(RUNTIME_CLASS(CSendView)))
+          ++count;
 
       SetUpVariantLong (vaResult, count);  // number of world windows open
-
       }   // end of 235
       break;
 
     case 236:   // command selection start column
       {
-        for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	        {
-	        CView* pView = GetNextView(pos);
-	        
-	        if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-  	        {
-		        CSendView* pmyView = (CSendView*)pView;
-            int nStartChar;
-            int nEndChar;
-
-              // find where cursor is
-  
-            pmyView->GetEditCtrl().GetSel(nStartChar, nEndChar);	
-            SetUpVariantLong (vaResult, nStartChar + 1);  // start column
-            break;
-  
-	          }	  // end of being a CSendView
-          }   // end of loop through views
+      POSITION pos = GetFirstViewPosition();
+      while (pos != NULL)
+        {
+        CView* pView = GetNextView(pos);
+        
+        if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+          {
+          CSendView* pmyView = (CSendView*)pView;
+          int nStartChar, nEndChar;
+          
+          // find where cursor is
+          pmyView->GetEditCtrl().GetSel(nStartChar, nEndChar);	
+          SetUpVariantLong (vaResult, nStartChar + 1);  // start column
+          break;
+          }	  // end of being a CSendView
+        }   // end of loop through views
       }
       break;
 
     case 237:   // command selection end column
       {
-        for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	        {
-	        CView* pView = GetNextView(pos);
-	        
-	        if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-  	        {
-		        CSendView* pmyView = (CSendView*)pView;
-            int nStartChar;
-            int nEndChar;
-
-              // find where cursor is
-  
-            pmyView->GetEditCtrl().GetSel(nStartChar, nEndChar);
-            if (nEndChar <= nStartChar)
-              nEndChar = 0;  // zero indicates no text selected
-            SetUpVariantLong (vaResult, nEndChar);  // end column
-            break;
-  
-	          }	  // end of being a CSendView
-          }   // end of loop through views
-      }
-      break;
-
-    case 238:
-      {
-      WINDOWPLACEMENT wp;
-
-      for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
+      POSITION pos = GetFirstViewPosition();
+      while (pos != NULL)
         {
         CView* pView = GetNextView(pos);
 
         if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
           {
           CSendView* pmyView = (CSendView*)pView;
-
-          pmyView->GetParentFrame ()->GetWindowPlacement(&wp); 
-          SetUpVariantLong (vaResult, wp.showCmd);  // window placement flags
+          int nStartChar, nEndChar;
+            
+          // find where cursor is
+          pmyView->GetEditCtrl().GetSel(nStartChar, nEndChar);
+          if (nEndChar <= nStartChar)
+            nEndChar = 0;  // zero indicates no text selected
+          SetUpVariantLong (vaResult, nEndChar);  // end column
           break;
-
-          }	
-        }
-
-
+          }	  // end of being a CSendView
+        }   // end of loop through views
       }
       break;
 
-    case 239:
-          SetUpVariantShort (vaResult, m_iCurrentActionSource);  // see enum
+    case 238:
+      {
+      POSITION pos=GetFirstViewPosition();
+      WINDOWPLACEMENT wp;
+      while (pos != NULL)
+        {
+        CView* pView = GetNextView(pos);
+        
+        if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+          {
+          CSendView* pmyView = (CSendView*)pView;
+          pmyView->GetParentFrame ()->GetWindowPlacement(&wp); 
+          SetUpVariantLong (vaResult, wp.showCmd);  // window placement flags
           break;
+          }	
+        }
+      }
+      break;
 
-    case 240:
-
-        SetUpVariantLong (vaResult, m_FontWidth);  // average character width
-        break;
-
-    case 241:
-        SetUpVariantLong (vaResult, m_FontHeight);  // character height
-        break;
-
-    case 242:
-        SetUpVariantLong (vaResult, m_iUTF8ErrorCount);  // errors in UTF-8
-        break;
-
-    case 243:
-        SetUpVariantLong (vaResult, App.m_iFixedPitchFontSize);  
-        break;
-
-    case 244:
-        SetUpVariantLong (vaResult, m_iTriggersEvaluatedCount);  
-        break;
-
-    case 245:
-        SetUpVariantLong (vaResult, m_iTriggersMatchedCount);  
-        break;
-
-    case 246:
-        SetUpVariantLong (vaResult, m_iAliasesEvaluatedCount);  
-        break;
-
-    case 247:
-        SetUpVariantLong (vaResult, m_iAliasesMatchedCount);  
-        break;
-
-    case 248:
-        SetUpVariantLong (vaResult, m_iTimersFiredCount);  
-        break;
+    case 239: // source of current action
+      SetUpVariantShort (vaResult, m_iCurrentActionSource); break;
+    case 240: // average character width
+      SetUpVariantLong (vaResult, m_FontWidth); break;
+    case 241: // character height
+      SetUpVariantLong (vaResult, m_FontHeight); break;
+    case 242: // errors in UTF-8
+      SetUpVariantLong (vaResult, m_iUTF8ErrorCount); break;
+    case 243: SetUpVariantLong (vaResult, App.m_iFixedPitchFontSize); break;
+    case 244: SetUpVariantLong (vaResult, m_iTriggersEvaluatedCount); break;
+    case 245: SetUpVariantLong (vaResult, m_iTriggersMatchedCount); break;
+    case 246: SetUpVariantLong (vaResult, m_iAliasesEvaluatedCount); break;
+    case 247: SetUpVariantLong (vaResult, m_iAliasesMatchedCount); break;
+    case 248: SetUpVariantLong (vaResult, m_iTimersFiredCount); break;
 
     case 249:
       {
       RECT rect;
       Frame.GetClientRect(&rect);
       SetUpVariantLong (vaResult, rect.bottom);  
-      }
       break;
+      }
 
     case 250:
       {
       RECT rect;
       Frame.GetClientRect(&rect);
       SetUpVariantLong (vaResult, rect.right);  
-      }
       break;
+      }
 
     case 251: GetWindowHeight (&Frame.m_wndToolBar, vaResult); break;
     case 252: GetWindowWidth  (&Frame.m_wndToolBar, vaResult); break;
@@ -4538,65 +4308,43 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case 258: GetWindowWidth  (&Frame.m_wndInfoBar, vaResult); break;
     case 259: GetWindowHeight (&Frame.m_wndStatusBar, vaResult); break;
     case 260: GetWindowWidth  (&Frame.m_wndStatusBar, vaResult); break;
-    case 261: 
-            {
-            CChildFrame * pFrame = GetChildFrame ();
-            if (pFrame)
-              GetWindowHeight (pFrame, vaResult); break;  // non-client height
-            break;
-            }
 
-    case 262: 
-            {
-            CChildFrame * pFrame = GetChildFrame ();
-            if (pFrame)
-              GetWindowWidth  (pFrame, vaResult);   // non-client width
-            break;
-            }
+    case 261: // non-client height
+      {
+      CChildFrame * pFrame = GetChildFrame ();
+      if (pFrame != NULL)
+        GetWindowHeight (pFrame, vaResult);
+      break;
+      }
 
-    case 263: 
-            {
-            CChildFrame * pFrame = GetChildFrame ();
-            if (pFrame)
-              GetWindowHeight (pFrame, vaResult, true); break;  // client height
-            break;
-            }
+    case 262: // non-client width
+      {
+      CChildFrame * pFrame = GetChildFrame ();
+      if (pFrame != NULL)
+        GetWindowWidth  (pFrame, vaResult);
+      break;
+      }
+
+    case 263: // client height
+      {
+      CChildFrame * pFrame = GetChildFrame ();
+      if (pFrame != NULL)
+        GetWindowHeight (pFrame, vaResult, true);
+      break;
+      }
 
     case 264: 
-            {
-            CChildFrame * pFrame = GetChildFrame ();
-            if (pFrame)
-              GetWindowWidth  (pFrame, vaResult, true);   // client width
-            break;
-            }
-
-    case 265:
       {
-      GetOSVersion ();
-      SetUpVariantLong (vaResult, ver.dwMajorVersion);  
+      CChildFrame * pFrame = GetChildFrame ();
+      if (pFrame != NULL)
+        GetWindowWidth  (pFrame, vaResult, true);   // client width
       break;
       }
 
-    case 266:
-      {
-      GetOSVersion ();
-      SetUpVariantLong (vaResult, ver.dwMinorVersion);  
-      break;
-      }
-
-    case 267:
-      {
-      GetOSVersion ();
-      SetUpVariantLong (vaResult, ver.dwBuildNumber);  
-      break;
-      }
-
-    case 268:
-      {
-      GetOSVersion ();
-      SetUpVariantLong (vaResult, ver.dwPlatformId);  
-      break;
-      }
+    case 265: SetUpVariantLong (vaResult, GetOSVersion ()->dwMajorVersion); break;
+    case 266: SetUpVariantLong (vaResult, GetOSVersion ()->dwMinorVersion); break;
+    case 267: SetUpVariantLong (vaResult, GetOSVersion ()->dwBuildNumber); break;
+    case 268: SetUpVariantLong (vaResult, GetOSVersion ()->dwPlatformId); break;
 
     case 269: SetUpVariantLong (vaResult, m_iForegroundMode);  break;
     case 270: SetUpVariantLong (vaResult, m_iBackgroundMode);  break;
@@ -4614,34 +4362,32 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case 280:
       {
       CMUSHView* pmyView = GetFirstOutputWindow ();
-      if (pmyView) 
+      if (pmyView != NULL) 
         {
         RECT rect;
         pmyView->GetClientRect(&rect);
         SetUpVariantLong (vaResult, rect.bottom);
-        break;
         }
-      }
       break;
+      }
 
     case 281:
       {
       CMUSHView* pmyView = GetFirstOutputWindow ();
-      if (pmyView) 
+      if (pmyView != NULL) 
         {
         RECT rect;
         pmyView->GetClientRect(&rect);
         SetUpVariantLong (vaResult, rect.right);
-        break;
         }
-      }
       break;
+      }
 
     case 282: SetUpVariantLong (vaResult, m_TextRectangleBorderColour);  break;
 
-    case 283: SetUpVariantLong (vaResult, m_lastMousePosition.x);  break; //  last mouse x position
-    case 284: SetUpVariantLong (vaResult, m_lastMousePosition.y);  break; //  last mouse y position
-    case 285: SetUpVariantBool (vaResult, m_pCurrentLine != NULL); break; //  is output window available?
+    case 283: SetUpVariantLong (vaResult, m_lastMousePosition.x);    break; //  last mouse x position
+    case 284: SetUpVariantLong (vaResult, m_lastMousePosition.y);    break; //  last mouse y position
+    case 285: SetUpVariantBool (vaResult, (m_pCurrentLine != NULL)); break; //  is output window available?
 
     case 286: SetUpVariantLong (vaResult, m_iTriggersMatchedThisSessionCount);  break; // Triggers matched this session
     case 287: SetUpVariantLong (vaResult, m_iAliasesMatchedThisSessionCount);   break; // Aliases matched this session   
@@ -4651,323 +4397,265 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case 290:
       {
       CMUSHView* pmyView = GetFirstOutputWindow ();
-      if (pmyView) 
-        {
-        RECT rect = pmyView->GetTextRectangle ();
-        SetUpVariantLong (vaResult, rect.left);
-        break;
-        }
-      }
+      if (pmyView != NULL)
+        SetUpVariantLong (vaResult, pmyView->GetTextRectangle ().left);
       break;
+      }
 
     case 291:
       {
       CMUSHView* pmyView = GetFirstOutputWindow ();
-      if (pmyView) 
-        {
-        RECT rect = pmyView->GetTextRectangle ();
-        SetUpVariantLong (vaResult, rect.top);
-        break;
-        }
-      }
+      if (pmyView != NULL) 
+        SetUpVariantLong (vaResult, pmyView->GetTextRectangle ().top);
       break;
+      }
 
     case 292:
       {
       CMUSHView* pmyView = GetFirstOutputWindow ();
-      if (pmyView) 
-        {
-        RECT rect = pmyView->GetTextRectangle ();
-        SetUpVariantLong (vaResult, rect.right);
-        break;
-        }
-      }
+      if (pmyView != NULL) 
+        SetUpVariantLong (vaResult, pmyView->GetTextRectangle ().right);
       break;
+      }
 
     case 293:
       {
       CMUSHView* pmyView = GetFirstOutputWindow ();
-      if (pmyView) 
-        {
-        RECT rect = pmyView->GetTextRectangle ();
-        SetUpVariantLong (vaResult, rect.bottom);
-        break;
-        }
+      if (pmyView != NULL) 
+        SetUpVariantLong (vaResult, pmyView->GetTextRectangle ().bottom);
+      break;
       }
-      break;
 
-    case  301: 
-      if (m_tConnectTime.GetTime ())     // only if non-zero, otherwise return empty
-        SetUpVariantDate (vaResult, COleDateTime (m_tConnectTime.GetTime ())); 
-      break;
-    case  302: 
-      if (m_LastFlushTime.GetTime ())     // only if non-zero, otherwise return empty      
-        SetUpVariantDate (vaResult, COleDateTime (m_LastFlushTime.GetTime ())); 
-      break;
-    case  303: 
-      if (m_timeScriptFileMod.GetTime ())     // only if non-zero, otherwise return empty      
-        SetUpVariantDate (vaResult, COleDateTime (m_timeScriptFileMod.GetTime ())); 
-      break;      
 
-    case  304: 
+      // (dates - calculated at runtime)
+    case 301:
+      {
+      __time64_t time = m_tConnectTime.GetTime ();
+      if (time > 0)     // only if non-zero, otherwise return empty
+        SetUpVariantDate (vaResult, COleDateTime (time)); 
+      break;
+      }
+
+    case 302:
+      {
+      __time64_t time = m_LastFlushTime.GetTime ();
+      if (time > 0)     // only if non-zero, otherwise return empty      
+        SetUpVariantDate (vaResult, COleDateTime (time)); 
+      break;
+      }
+
+    case 303:
+      {
+      __time64_t time = m_timeScriptFileMod.GetTime ();
+      if (time > 0)     // only if non-zero, otherwise return empty      
+        SetUpVariantDate (vaResult, COleDateTime (time)); 
+      break;
+      }
+
+    case 304: 
       SetUpVariantDate (vaResult, COleDateTime (CTime::GetCurrentTime().GetTime ())); 
-      break;      
+      break;
 
     default:
       vaResult.vt = VT_NULL;
       break;
-
     } // end of switch
 
-	return vaResult;
+  return vaResult;
 }  // GetInfo
 
 
 BOOL CMUSHclientDoc::GetEchoInput() 
 {
-	return m_display_my_input != 0;
+  return (m_display_my_input != 0);
 }
 
 void CMUSHclientDoc::SetEchoInput(BOOL bNewValue) 
 {
-  m_display_my_input = bNewValue != 0;
+  m_display_my_input = (bNewValue != 0);
 }
 
 
 long CMUSHclientDoc::ColourNameToRGB(LPCTSTR Name) 
 {
-COLORREF cValue;
-
+  COLORREF cValue;
   if (SetColour (Name, cValue)) 
     return -1;
 
-	return cValue;
+  return cValue;
 }
 
 BSTR CMUSHclientDoc::RGBColourToName(long Colour) 
 {
-	CString strResult = ColourToName (Colour);
-
-	return strResult.AllocSysString();
+  return ColourToName (Colour).AllocSysString();
 }
 
 VARIANT CMUSHclientDoc::Base64Decode(LPCTSTR Text) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-  CString strResult;
+  VARIANT vaResult;
+  VariantInit(&vaResult);
+  vaResult.vt = VT_NULL;
 
   try 
     {
-    strResult = decodeBase64 (Text);
+    SetUpVariantString (vaResult, decodeBase64 (Text));
     }   // end of try
-
   catch(CException* e)
     {
     e->Delete ();
-    vaResult.vt = VT_NULL;
-  	return vaResult;
     } // end of catch
 
-  SetUpVariantString (vaResult, strResult);
-
-	return vaResult;
+  return vaResult;
 }
 
 VARIANT CMUSHclientDoc::Base64Encode(LPCTSTR Text, BOOL MultiLine) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-  CString strResult;
+  VARIANT vaResult;
+  VariantInit(&vaResult);
+  vaResult.vt = VT_NULL;
 
   try 
     {
-    strResult = encodeBase64 (Text, MultiLine);
+    SetUpVariantString (vaResult, encodeBase64 (Text, MultiLine));
     }   // end of try
-
   catch(CException* e)
     {
     e->Delete ();
-    vaResult.vt = VT_NULL;
-  	return vaResult;
     } // end of catch
 
-  SetUpVariantString (vaResult, strResult);
-	return vaResult;
+  return vaResult;
 }
 
 
 VARIANT CMUSHclientDoc::GetLoadedValue(LPCTSTR OptionName) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
+  VARIANT vaResult;
+  VariantInit(&vaResult);
   vaResult.vt = VT_NULL;    // default if not found
-
-int i = GetOptionIndex (OptionName);
-
-  if (i != -1)
-    {
-    if (m_CurrentPlugin &&
-        (OptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	return vaResult;  // not available to plugin
+  
+  int i = GetOptionIndex (OptionName);
+  if (i != -1 &&
+      (!m_CurrentPlugin || (OptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ) == 0))
     SetUpVariantLong (vaResult, m_NumericConfiguration [i]->iValue);
-    }  // end of found
   else
     {
     i = GetAlphaOptionIndex (OptionName);
-    if (i != -1)
-      {
-      if (m_CurrentPlugin &&
-          (AlphaOptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	  return vaResult;  // not available to plugin
+    if (i != -1 &&
+        (!m_CurrentPlugin || (AlphaOptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ) == 0))
       SetUpVariantString (vaResult, m_AlphaConfiguration [i]->sValue);
-      }    // end of found
     }
-	
-	return vaResult;
+  
+  return vaResult;
 }
 
 VARIANT CMUSHclientDoc::GetDefaultValue(LPCTSTR OptionName) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
+  VARIANT vaResult;
+  VariantInit(&vaResult);
   vaResult.vt = VT_NULL;    // default if not found
 
-int i = GetOptionIndex (OptionName);
-
-  if (i != -1)
-    {
-    if (m_CurrentPlugin &&
-        (OptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	return vaResult;  // not available to plugin
-    SetUpVariantLong (vaResult, OptionsTable [i].iDefault);
-    }  // end of found
+  int i = GetOptionIndex (OptionName);
+  if (i != -1 &&
+      (!m_CurrentPlugin || (OptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ) == 0))
+    SetUpVariantLong (vaResult, (long) OptionsTable [i].iDefault);
   else
     {
     i = GetAlphaOptionIndex (OptionName);
-    if (i != -1)
-      {
-      if (m_CurrentPlugin &&
-          (AlphaOptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	  return vaResult;  // not available to plugin
+    if (i != -1 &&
+        (!m_CurrentPlugin || (AlphaOptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ) == 0))
       SetUpVariantString (vaResult, AlphaOptionsTable [i].sDefault);
-      }  // end of found
     }
-
-	return vaResult;
+  
+  return vaResult;
 }
 
 VARIANT CMUSHclientDoc::GetCurrentValue(LPCTSTR OptionName) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
+  VARIANT vaResult;
+  VariantInit(&vaResult);
   vaResult.vt = VT_NULL;    // default if not found
-
-int i = GetOptionIndex (OptionName);
-
-  if (i != -1)
-    {
-    if (m_CurrentPlugin &&
-        (OptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	return vaResult;  // not available to plugin
+  
+  int i = GetOptionIndex (OptionName);
+  if (i != -1 &&
+      (!m_CurrentPlugin || (OptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ) == 0))
     SetUpVariantLong (vaResult, GetOptionItem (i));
-    }  // end of found
   else
     {
     i = GetAlphaOptionIndex (OptionName);
-    if (i != -1)
-      {
-      if (m_CurrentPlugin &&
-          (AlphaOptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	  return vaResult;  // not available to plugin
+    if (i != -1 &&
+        (!m_CurrentPlugin || (AlphaOptionsTable [i].iFlags & OPT_PLUGIN_CANNOT_READ) == 0))
       SetUpVariantString (vaResult, GetAlphaOptionItem (i));
-      }  // end of found
     }
-
-	return vaResult;
+  
+  return vaResult;
 }
 
 
-void CMUSHclientDoc::ColourNote(LPCTSTR TextColour, 
-                                LPCTSTR BackgroundColour, 
-                                LPCTSTR Text) 
+void CMUSHclientDoc::ColourNote(LPCTSTR TextColour, LPCTSTR BackgroundColour, LPCTSTR Text) 
 {
-  CString strMsg = Text;
+  CString strText = Text;
+  if (strText.Right (2) != ENDLINE)
+    strText += ENDLINE;      // add a new line if necessary
 
-  if (strMsg.Right (2) != ENDLINE)
-    strMsg += ENDLINE;      // add a new line if necessary
-
-  ColourTell (TextColour, BackgroundColour, strMsg);
-
+  ColourTell (TextColour, BackgroundColour, strText);
 }
 
 void CMUSHclientDoc::ColourTell(LPCTSTR TextColour, LPCTSTR BackgroundColour, LPCTSTR Text) 
 {
+  // save old colours
+  bool bOldNotesInRGB = m_bNotesInRGB;
+  COLORREF iOldNoteColourFore = m_iNoteColourFore;
+  COLORREF iOldNoteColourBack = m_iNoteColourBack;
 
-// save old colours
-bool bOldNotesInRGB = m_bNotesInRGB;
-COLORREF iOldNoteColourFore = m_iNoteColourFore;
-COLORREF iOldNoteColourBack = m_iNoteColourBack;
-
-// change colours
+  // change colours
   NoteColourName(TextColour, BackgroundColour);
 
-// do the tell
+  // do the tell
   Tell (Text);
 
-// put the colours back
-if (bOldNotesInRGB)
+  // put the colours back
+  if (bOldNotesInRGB)
   {
-  m_iNoteColourFore = iOldNoteColourFore;
-  m_iNoteColourBack = iOldNoteColourBack;
+    m_iNoteColourFore = iOldNoteColourFore;
+    m_iNoteColourBack = iOldNoteColourBack;
   }
-else  
-  m_bNotesInRGB = false;
-
+  else  
+    m_bNotesInRGB = false;
 }
 
 
 BSTR CMUSHclientDoc::CreateGUID() 
 {
-	CString strResult = GetGUID ();
-
-	return strResult.AllocSysString();
+  return GetGUID ().AllocSysString ();
 }
-
 
 BSTR CMUSHclientDoc::Hash(LPCTSTR Text) 
 {
-	CString strResult;
-
+  CString strResult;
+  
   SHS_INFO shsInfo;
   shsInit   (&shsInfo);
-  shsUpdate (&shsInfo, (unsigned char *) (const char *) Text, 
-              strlen (Text));
+  shsUpdate (&shsInfo, (unsigned char *) Text, strlen (Text));
   shsFinal  (&shsInfo);
 
-  for (int i = 0; i < NUMITEMS (shsInfo.digest); i++)
+  for (int i = 0; i < NUMITEMS (shsInfo.digest); ++i)
     strResult += CFormat ("%08x", shsInfo.digest [i]);
-
-	return strResult.AllocSysString();
+  
+  return strResult.AllocSysString();
 }
 
 
 
 BSTR CMUSHclientDoc::GetUniqueID() 
 {
-CString strResult = ::GetUniqueID ();
-
-	return strResult.AllocSysString();
+  return ::GetUniqueID ().AllocSysString ();
 }
 
 // gets our own plugin id
 
 BSTR CMUSHclientDoc::GetPluginID() 
 {
-	CString strResult;
+  CString strResult;
 
   if (m_CurrentPlugin)
     strResult = m_CurrentPlugin->m_strID;
@@ -4979,12 +4667,12 @@ BSTR CMUSHclientDoc::GetPluginID()
 
 BSTR CMUSHclientDoc::GetPluginName() 
 {
-	CString strResult;
+  CString strResult;
 
   if (m_CurrentPlugin)
     strResult = m_CurrentPlugin->m_strName;
 
-	return strResult.AllocSysString();
+  return strResult.AllocSysString();
 }
 
 // get list of plugins
@@ -4993,43 +4681,35 @@ VARIANT CMUSHclientDoc::GetPluginList()
 {
   COleSafeArray sa;   // for variable list
 
-  CString strVariableName;
-
-  POSITION pos;
-  long iCount;
-  
   // put the plugins into the array
   if (!m_PluginList.IsEmpty ())    // cannot create empty dimension
     {
     sa.CreateOneDim (VT_VARIANT, m_PluginList.GetCount ());
 
-    for (iCount = 0, pos = m_PluginList.GetHeadPosition(); pos; )
+    POSITION pos = m_PluginList.GetHeadPosition();
+    for (long iCount = 0; pos != NULL; ++iCount)
       {
       CPlugin * p = m_PluginList.GetNext (pos);
 
       // the array must be a bloody array of variants, or VBscript kicks up
-      COleVariant v (p->m_strID);
-      sa.PutElement (&iCount, &v);
-      iCount++;
+      sa.PutElement (&iCount, &((COleVariant)p->m_strID));
       }      // end of looping through each plugin
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 }
 
 // get info about a plugin
 
 VARIANT CMUSHclientDoc::GetPluginInfo(LPCTSTR PluginID, short InfoType) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
+  VARIANT vaResult;
+  VariantInit(&vaResult);
   vaResult.vt = VT_NULL;
 
   CPlugin * pPlugin = GetPlugin (PluginID);
-
   if (!pPlugin)
-	  return vaResult;     // plugin not found
+    return vaResult;     // plugin not found
 
   switch (InfoType)
     {
@@ -5063,20 +4743,20 @@ VARIANT CMUSHclientDoc::GetPluginInfo(LPCTSTR PluginID, short InfoType)
     case 21:
       {
       int iCount = 0;
-
+      POSITION pos = m_PluginList.GetHeadPosition();
       // first work out what order each plugin is in *now*
-      for (POSITION pos = m_PluginList.GetHeadPosition(); pos; )
+      for (int iCount = 1; pos != NULL; ++iCount)
         {
         CPlugin * p = m_PluginList.GetNext (pos);
-        p->m_iLoadOrder = ++iCount;
+        p->m_iLoadOrder = iCount;
         }      // end of looping through each plugin
 
       // now return the order of *this* one
       SetUpVariantLong   (vaResult, pPlugin->m_iLoadOrder); 
-      }
       break;
+      }
 
-    case  22: SetUpVariantDate   (vaResult, COleDateTime (pPlugin->m_tDateInstalled.GetTime ()));  break;
+    case 22: SetUpVariantDate (vaResult, COleDateTime (pPlugin->m_tDateInstalled.GetTime ()));  break;
 
     default:
       vaResult.vt = VT_NULL;
@@ -5091,28 +4771,20 @@ VARIANT CMUSHclientDoc::GetPluginInfo(LPCTSTR PluginID, short InfoType)
 
 long CMUSHclientDoc::LoadPlugin(LPCTSTR FileName) 
 {
-
-  bool bChanged = false;
-
   CPlugin * pCurrentPlugin = m_CurrentPlugin;
   m_CurrentPlugin = NULL;   // otherwise plugin won't load if done from another one
 
   try
     {
-    bChanged = true;
-
     // load it
     InternalLoadPlugin (FileName);
-
     } // end of try block
-
   catch (CFileException * e)
     {
     e->Delete ();
     m_CurrentPlugin = pCurrentPlugin;
     return ePluginFileNotFound;
     } // end of catching a file exception
-
   catch (CArchiveException* e) 
     {
     e->Delete ();
@@ -5121,101 +4793,71 @@ long CMUSHclientDoc::LoadPlugin(LPCTSTR FileName)
     }
 
   m_CurrentPlugin = pCurrentPlugin;
-
-  if (bChanged)
-    PluginListChanged ();
-
-	return eOK;
+  PluginListChanged ();
+  
+  return eOK;
 }
 
 
 long CMUSHclientDoc::ReloadPlugin(LPCTSTR PluginID) 
 {
-bool bChanged = false;
-
-// first, find plugin by ID
-CPlugin * pPlugin = GetPlugin (PluginID);
+  // first, find plugin by ID
+  CPlugin * pPlugin = GetPlugin (PluginID);
 
   // if not found, try to find by name
-  if (pPlugin == NULL && strlen (PluginID) > 0)
+  if (pPlugin == NULL && PluginID[0] != '\0')
     {
     // see if plugin exists in list of plugins for this document
-    for (POSITION pos = m_PluginList.GetHeadPosition(); pos; )
+    POSITION pos = m_PluginList.GetHeadPosition();
+    while (pos != NULL && pPlugin == NULL)
       {
       pPlugin = m_PluginList.GetNext (pos);
-      if (pPlugin->m_strName.CompareNoCase (PluginID) == 0)
-        break;
-      pPlugin = NULL;
+      if (pPlugin->m_strName.CompareNoCase (PluginID) != 0)
+        pPlugin = NULL;
       }      // end of looping through each plugins
-    }    
 
-  if (pPlugin == NULL)
-    return eNoSuchPlugin;
+    // if we still haven't found the plugin, give up
+    if (pPlugin == NULL)
+      return eNoSuchPlugin;
+    }
 
-  // cannot reload  ourselves
+  // cannot reload ourselves
   if (pPlugin == m_CurrentPlugin)
     return eBadParameter;
 
   POSITION pos = m_PluginList.Find (pPlugin);
-
   if (!pos)
     return eNoSuchPlugin;
 
+  // get the source filename
   CString strName = pPlugin->m_strSource;
+
   m_PluginList.RemoveAt (pos);  // remove from list
   delete pPlugin;   // delete the plugin
 
-  CPlugin * pCurrentPlugin = m_CurrentPlugin;
-  m_CurrentPlugin = NULL;   // otherwise plugin won't load if done from another one
+  // load it again
+  LoadPlugin(strName);
 
-  try
-    {
-    bChanged = true;
-    // now reload it
-    InternalLoadPlugin (strName);
-
-    } // end of try block
-
-  catch (CFileException * e)
-    {
-    e->Delete ();
-    m_CurrentPlugin = pCurrentPlugin;
-    return ePluginFileNotFound;
-    } // end of catching a file exception
-
-  catch (CArchiveException* e) 
-    {
-    e->Delete ();
-    m_CurrentPlugin = pCurrentPlugin;
-    return eProblemsLoadingPlugin;
-    }
-
-  m_CurrentPlugin = pCurrentPlugin;
-
-  if (bChanged)
-    PluginListChanged ();
-
-	return eOK;
+  return eOK;
 }
 
 // helper routine to find a particular plugin
 
 CPlugin * CMUSHclientDoc::GetPlugin (LPCTSTR PluginID)
-  {
-
+{
   // return if id wrong length
   if (strlen (PluginID) != PLUGIN_UNIQUE_ID_LENGTH)
     return NULL;
 
   // cater for obscure case where plugin isn't in list
   // (eg. we are closing it)
-
-  if (m_CurrentPlugin && 
+  if (m_CurrentPlugin != NULL && 
       m_CurrentPlugin->m_strID.CompareNoCase (PluginID) == 0)
     return m_CurrentPlugin;
 
   // see if plugin exists in list of plugins for this document
-  for (POSITION pos = m_PluginList.GetHeadPosition(); pos; )
+  POSITION pos = m_PluginList.GetHeadPosition();
+  while (pos != NULL)
     {
     CPlugin * pPlugin = m_PluginList.GetNext (pos);
     if (pPlugin->m_strID.CompareNoCase (PluginID) == 0)
@@ -5223,109 +4865,105 @@ CPlugin * CMUSHclientDoc::GetPlugin (LPCTSTR PluginID)
     }      // end of looping through each plugins
 
   return NULL;  // not found
-
-  } // end of CMUSHclientDoc::GetPlugin
+} // end of CMUSHclientDoc::GetPlugin
 
 // Helper routine for getting stuff for other plugins.
 //  NB - if PluginID is the null string, use global things
 
-#define GET_PLUGIN_STUFF(what_to_do)  \
-	VARIANT vaResult;           \
-	VariantInit(&vaResult);     \
-  vaResult.vt = VT_NULL;      \
-  CPlugin * pPlugin = NULL;   \
-  if (strlen (PluginID) > 0)  \
-    {                         \
-    pPlugin = GetPlugin (PluginID); \
-    if (!pPlugin)             \
-	    return vaResult;        \
-    }                         \
-  CPlugin * pOldPlugin = m_CurrentPlugin;  \
-  m_CurrentPlugin = pPlugin;               \
-  vaResult = what_to_do;                   \
-  m_CurrentPlugin = pOldPlugin;            \
-	return vaResult;                       
+#define GET_PLUGIN_STUFF(what_to_do) \
+  VARIANT vaResult; \
+  VariantInit(&vaResult); \
+  vaResult.vt = VT_NULL; \
+\
+  CPlugin * pPlugin = GetPlugin (PluginID); \
+\
+  if (!pPlugin) \
+    return vaResult; \
+\
+  CPlugin * pOldPlugin = m_CurrentPlugin; \
+  m_CurrentPlugin = pPlugin; \
+  vaResult = (what_to_do); \
+  m_CurrentPlugin = pOldPlugin; \
+\
+  return vaResult
+// no semicolon
 
 
 // get variable for a particular plugin
 
 VARIANT CMUSHclientDoc::GetPluginVariable(LPCTSTR PluginID, LPCTSTR VariableName) 
 {
-GET_PLUGIN_STUFF (GetVariable (VariableName))
+  GET_PLUGIN_STUFF (GetVariable (VariableName));
 }
 
 // get variable list for a particular plugin
 
 VARIANT CMUSHclientDoc::GetPluginVariableList(LPCTSTR PluginID) 
 {
-GET_PLUGIN_STUFF (GetVariableList ())
+  GET_PLUGIN_STUFF (GetVariableList ());
 }
 
 // get trigger list for a particular plugin
 
 VARIANT CMUSHclientDoc::GetPluginTriggerList(LPCTSTR PluginID) 
 {
-GET_PLUGIN_STUFF (GetTriggerList ())
+  GET_PLUGIN_STUFF (GetTriggerList ());
 }
 
 // get alias list for a particular plugin
 
 VARIANT CMUSHclientDoc::GetPluginAliasList(LPCTSTR PluginID) 
 {
-GET_PLUGIN_STUFF (GetAliasList ())
+  GET_PLUGIN_STUFF (GetAliasList ());
 }
 
 // get timer list for a particular plugin
 
 VARIANT CMUSHclientDoc::GetPluginTimerList(LPCTSTR PluginID) 
 {
-GET_PLUGIN_STUFF (GetTimerList ())
+  GET_PLUGIN_STUFF (GetTimerList ());
 }
 
 // get trigger info for a particular plugin
 
 VARIANT CMUSHclientDoc::GetPluginTriggerInfo(LPCTSTR PluginID, LPCTSTR TriggerName, short InfoType) 
 {
-GET_PLUGIN_STUFF (GetTriggerInfo (TriggerName, InfoType))
+  GET_PLUGIN_STUFF (GetTriggerInfo (TriggerName, InfoType));
 }
 
 // get alias info for a particular plugin
 
 VARIANT CMUSHclientDoc::GetPluginAliasInfo(LPCTSTR PluginID, LPCTSTR AliasName, short InfoType) 
 {
-GET_PLUGIN_STUFF (GetAliasInfo (AliasName, InfoType))
+  GET_PLUGIN_STUFF (GetAliasInfo (AliasName, InfoType));
 }
 
 // get timer info for a particular plugin
 
 VARIANT CMUSHclientDoc::GetPluginTimerInfo(LPCTSTR PluginID, LPCTSTR TimerName, short InfoType) 
 {
-GET_PLUGIN_STUFF (GetTimerInfo (TimerName, InfoType))
+  GET_PLUGIN_STUFF (GetTimerInfo (TimerName, InfoType));
 }
 
 // call a routine in a plugin, eg.
 //    world.CallPlugin "982581e59ab42844527eec80", "Log_And_Send", "blah"
 
 long CMUSHclientDoc::CallPlugin(LPCTSTR PluginID, LPCTSTR Routine, LPCTSTR Argument) 
-  {
+{
+  CPlugin * pPlugin = GetPlugin (PluginID); 
 
-CPlugin * pPlugin = GetPlugin (PluginID); 
+  if (!pPlugin)
+    return eNoSuchPlugin;
 
-  if (!pPlugin)                            
-	  return eNoSuchPlugin;                       
-
-  if (strlen (Routine) == 0)
+  if (Routine[0] == '\0')
     return eNoSuchRoutine;
 
   if (!pPlugin->m_bEnabled)
     return ePluginDisabled;
 
-DISPID iDispid = pPlugin->m_ScriptEngine->GetDispid (Routine);
-
+  DISPID iDispid = pPlugin->m_ScriptEngine->GetDispid (Routine);
   if (iDispid == DISPID_UNKNOWN)
     return eNoSuchRoutine;
-
-long nInvocationCount = 0;
 
   // do this so plugin can find its own state (eg. with GetPluginID)
   CPlugin * pSavedPlugin = m_CurrentPlugin; 
@@ -5335,7 +4973,8 @@ long nInvocationCount = 0;
   CString strReason = TFormat ("Executing plugin %s sub %s", 
                                (LPCTSTR) pPlugin->m_strName,
                                Routine ); 
-      
+
+  long nInvocationCount = 0;
   if (pPlugin->m_ScriptEngine && pPlugin->m_ScriptEngine->IsLua ())
     {
     list<double> nparams;
@@ -5352,8 +4991,7 @@ long nInvocationCount = 0;
     }   // end of Lua
   else
     {
-  // WARNING - arguments should appear in REVERSE order to what the sub expects them!
-
+    // WARNING - arguments should appear in REVERSE order to what the sub expects them!
     enum
       {
       eArgument,
@@ -5361,11 +4999,9 @@ long nInvocationCount = 0;
       };    
 
     COleVariant args [eArgCount];
-    DISPPARAMS params = { args, NULL, eArgCount, 0 };
-
     args [eArgument] = Argument;
 
-
+    DISPPARAMS params = { args, NULL, eArgCount, 0 };
     pPlugin->m_ScriptEngine->Execute (iDispid, 
                              Routine, 
                              eDontChangeAction,
@@ -5380,8 +5016,8 @@ long nInvocationCount = 0;
 
   if (iDispid == DISPID_UNKNOWN)
     return eErrorCallingPluginRoutine;
-
-	return eOK;
+  
+  return eOK;
 }
 
 // does a plugin support a routine, eg.
@@ -5389,20 +5025,18 @@ long nInvocationCount = 0;
 
 long CMUSHclientDoc::PluginSupports(LPCTSTR PluginID, LPCTSTR Routine) 
 {
-CPlugin * pPlugin = GetPlugin (PluginID); 
-
+  CPlugin * pPlugin = GetPlugin (PluginID); 
   if (!pPlugin)                            
 	  return eNoSuchPlugin;                       
 
-  if (strlen (Routine) == 0)
+  if (Routine[0] == '\0')
     return eNoSuchRoutine;
 
-DISPID iDispid = pPlugin->m_ScriptEngine->GetDispid (Routine);
-
+  DISPID iDispid = pPlugin->m_ScriptEngine->GetDispid (Routine);
   if (iDispid == DISPID_UNKNOWN)
     return eNoSuchRoutine;
-
-	return eOK;
+  
+  return eOK;
 }
 
 // is a plugin installed? eg
@@ -5410,16 +5044,15 @@ DISPID iDispid = pPlugin->m_ScriptEngine->GetDispid (Routine);
 
 BOOL CMUSHclientDoc::IsPluginInstalled(LPCTSTR PluginID) 
 {
-return GetPlugin (PluginID) != NULL;
+  return (GetPlugin (PluginID) != NULL);
 }
 
 // if I am a plugin, save my state
 
 long CMUSHclientDoc::SaveState() 
 {
-
-  if (!m_CurrentPlugin)                            
-	  return eNotAPlugin;                       
+  if (!m_CurrentPlugin)
+    return eNotAPlugin;                       
 
   if (!m_CurrentPlugin->m_bSaveState)
     return ePluginDoesNotSaveState;
@@ -5433,15 +5066,15 @@ long CMUSHclientDoc::SaveState()
 
 long CMUSHclientDoc::EnablePlugin(LPCTSTR PluginID, BOOL Enabled) 
 {
-CPlugin * pPlugin = GetPlugin (PluginID); 
-
-  if (!pPlugin)                            
-	  return eNoSuchPlugin;                       
+  CPlugin * pPlugin = GetPlugin (PluginID); 
+  
+  if (!pPlugin)
+    return eNoSuchPlugin;                       
 
   if (pPlugin->m_bEnabled == (Enabled != 0))
     return eOK;   // already same state
 
-  pPlugin->m_bEnabled = Enabled != 0;
+  pPlugin->m_bEnabled = (Enabled != 0);
 
   if (pPlugin->m_bEnabled)
     pPlugin->ExecutePluginScript (ON_PLUGIN_ENABLE, pPlugin->m_dispid_plugin_enable); 
@@ -5456,111 +5089,102 @@ CPlugin * pPlugin = GetPlugin (PluginID);
 
 long CMUSHclientDoc::EnableGroup(LPCTSTR GroupName, BOOL Enabled) 
 {
-
   long iCount = 0;
-
   iCount += EnableTriggerGroup (GroupName, Enabled);
   iCount += EnableAliasGroup   (GroupName, Enabled);
   iCount += EnableTimerGroup   (GroupName, Enabled);
-
-	return iCount;
+  return iCount;
 }   // end of EnableGroup
 
 
 long CMUSHclientDoc::EnableTriggerGroup(LPCTSTR GroupName, BOOL Enabled) 
 {
-  CString strTriggerName;
-  CTrigger * trigger_item;
-  long iCount = 0;
-  POSITION pos;
-  
   // no group name, affect nothing
-  if (strlen (GroupName) == 0)
+  if (GroupName[0] == '\0')
     return 0;
 
   // do triggers
-  for (pos = GetTriggerMap ().GetStartPosition(); pos; )
+  POSITION pos = GetTriggerMap ().GetStartPosition();
+  CString strTriggerName;
+  CTrigger * trigger_item = NULL;
+  long iCount = 0;
+  while (pos != NULL)
     {
     GetTriggerMap ().GetNextAssoc (pos, strTriggerName, trigger_item);
     if (trigger_item->strGroup == GroupName)
       {
-      trigger_item->bEnabled = Enabled != 0;
-      iCount++;
+      trigger_item->bEnabled = (Enabled != 0);
+      ++iCount;
       }
     }   // end of triggers
 
-  if (iCount)
-    if (!m_CurrentPlugin) // plugin mods don't really count
-      SetModifiedFlag (TRUE);   // document has changed
+  if (iCount > 0 && !m_CurrentPlugin) // plugin mods don't really count
+    SetModifiedFlag (TRUE);   // document has changed
 
   return iCount;
 }   // end of EnableTriggerGroup
 
 long CMUSHclientDoc::EnableAliasGroup(LPCTSTR GroupName, BOOL Enabled) 
 {
-  CString strAliasName;
-  CAlias * alias_item;
-  long iCount = 0;
-  POSITION pos;
-
   // no group name, affect nothing
-  if (strlen (GroupName) == 0)
+  if (GroupName[0] == '\0')
     return 0;
 
+  long iCount = 0;
+
   // do aliases
-  for (pos = GetAliasMap ().GetStartPosition(); pos; )
+  POSITION pos = GetAliasMap ().GetStartPosition();
+  CString strAliasName;
+  CAlias * alias_item = NULL;
+  while (pos != NULL)
     {
     GetAliasMap ().GetNextAssoc (pos, strAliasName, alias_item);
     if (alias_item->strGroup == GroupName)
       {
-      alias_item->bEnabled = Enabled != 0;
-      iCount++;
+      alias_item->bEnabled = (Enabled != 0);
+      ++iCount;
       }
     }   // end of aliases
 
-  if (iCount)
-    if (!m_CurrentPlugin) // plugin mods don't really count
-      SetModifiedFlag (TRUE);   // document has changed
-
+  if (iCount > 0 && !m_CurrentPlugin) // plugin mods don't really count
+    SetModifiedFlag (TRUE);   // document has changed
+  
   return iCount;
-
 }   // end of EnableAliasGroup
 
 long CMUSHclientDoc::EnableTimerGroup(LPCTSTR GroupName, BOOL Enabled) 
 {
-  CString strTimerName;
-  CTimer * timer_item;
-  long iCount = 0;
-  POSITION pos;
-
   // no group name, affect nothing
-  if (strlen (GroupName) == 0)
+  if (GroupName[0] == '\0')
     return 0;
 
+  long iCount = 0;
+
   // count timers
-  for (pos = GetTimerMap ().GetStartPosition(); pos; )
+  POSITION pos = GetTimerMap ().GetStartPosition();
+  CString strTimerName;
+  CTimer * timer_item = NULL;
+  while (pos != NULL)
     {
     GetTimerMap ().GetNextAssoc (pos, strTimerName, timer_item);
     if (timer_item->strGroup == GroupName)
       {
-      timer_item->bEnabled = Enabled != 0;
-      iCount++;
+      timer_item->bEnabled = (Enabled != 0);
+      ++iCount;
       }
     }   // end of timers
 
-  if (iCount)
-    if (!m_CurrentPlugin) // plugin mods don't really count
-      SetModifiedFlag (TRUE);   // document has changed
+  if (iCount > 0 && !m_CurrentPlugin) // plugin mods don't really count
+    SetModifiedFlag (TRUE);   // document has changed
 
   return iCount;
-
 }   // end of EnableTimerGroup
 
 
 void CMUSHclientDoc::ShowInfoBar(BOOL Visible) 
 {
   if (Frame.m_wndInfoBar.m_hWnd)
-  	Frame.ShowControlBar(&Frame.m_wndInfoBar, Visible != 0, FALSE);
+    Frame.ShowControlBar(&Frame.m_wndInfoBar, (Visible != 0), FALSE);
 } // end of ShowInfoBar
 
 
@@ -5579,8 +5203,6 @@ void CMUSHclientDoc::InfoClear()
 
   // delete everything
   pRichEdit->ReplaceSel ("");
-
-
 } // end of InfoClear
 
 
@@ -5592,7 +5214,6 @@ void CMUSHclientDoc::Info(LPCTSTR Message)
   CRichEditCtrl * pRichEdit = (CRichEditCtrl *) Frame.m_wndInfoBar.GetDlgItem (IDC_INFOTEXT);
 
   pRichEdit->ReplaceSel (Message);
-
 }   // end of Info
 
 /*
@@ -5612,55 +5233,41 @@ void CMUSHclientDoc::InfoFont(LPCTSTR FontName, short Size, short Style)
   if (!Frame.m_wndInfoBar.m_hWnd)
     return;
 
+  CHARFORMAT cf;
+  memset (&cf, 0, sizeof (cf));
+  cf.cbSize = sizeof (cf);
 
-CHARFORMAT cf;
+  // font name provided?
+  if (FontName[0] != '\0')
+    {
+    cf.dwMask = CFM_FACE;
+    strncpy (cf.szFaceName, FontName, sizeof (cf.szFaceName) - 1);
 
- CRichEditCtrl * pRichEdit = (CRichEditCtrl *) Frame.m_wndInfoBar.GetDlgItem (IDC_INFOTEXT);
+    // do this so fonts like webdings, marlett and so on work properly.
+    // without it, such fonts would take (say) "g" and substitute a "g" from
+    // the default font, not show the "g" equivalent in the selected font
+    cf.dwMask |= CFM_CHARSET;
+    cf.bCharSet = SYMBOL_CHARSET;
+    }
 
- memset (&cf, 0, sizeof (cf));
- cf.cbSize = sizeof (cf);
+  // size provided?
+  if (Size > 0)
+    {
+    cf.dwMask |= CFM_SIZE;
+    cf.yHeight = Size * 20; // points
+    }
 
- // font name provided?
- if (strlen (FontName) > 0)
-   {
-   cf.dwMask = CFM_FACE;
-   strncpy (cf.szFaceName, FontName, sizeof (cf.szFaceName) - 1);
+  // style
+  cf.dwMask |= CFM_BOLD | CFM_ITALIC | CFM_STRIKEOUT | CFM_UNDERLINE;
 
-   // do this so fonts like webdings, marlett and so on work properly
-   // without it, such fonts would take (say) "g" and substitute a "g" from
-   // the default font, not show the "g" equivalent in the selected font
+  if (Style & 1) cf.dwEffects |= CFE_BOLD;
+  if (Style & 2) cf.dwEffects |= CFE_ITALIC;
+  if (Style & 4) cf.dwEffects |= CFE_UNDERLINE;
+  if (Style & 8) cf.dwEffects |= CFE_STRIKEOUT;
 
-   cf.dwMask |= CFM_CHARSET;
-   cf.bCharSet = SYMBOL_CHARSET;
+  CRichEditCtrl * pRichEdit = (CRichEditCtrl *) Frame.m_wndInfoBar.GetDlgItem (IDC_INFOTEXT);
 
-   }
-
- // size provided?
- if (Size > 0)
-   {
-   cf.dwMask |= CFM_SIZE;
-   cf.yHeight  = Size * 20; // points
-   }
-
- // style
-
- cf.dwMask |= CFM_BOLD | CFM_ITALIC | CFM_STRIKEOUT | CFM_UNDERLINE;
-
- if (Style & 1)   // bold
-  cf.dwEffects |= CFE_BOLD;
-
- if (Style & 2)   // italic
-  cf.dwEffects |= CFE_ITALIC;
-
- if (Style & 4)   // underline
-  cf.dwEffects |= CFE_UNDERLINE;
-
- if (Style & 8)   // strikeout
-  cf.dwEffects |= CFE_STRIKEOUT;
-
- pRichEdit->SetSelectionCharFormat (cf);
-
-
+  pRichEdit->SetSelectionCharFormat (cf);
 }   // end of InfoFont
 
 
@@ -5669,22 +5276,20 @@ void CMUSHclientDoc::InfoColour(LPCTSTR Name)
   if (!Frame.m_wndInfoBar.m_hWnd)
     return;
 
-COLORREF cValue;
+  COLORREF cValue;
+  // do foreground colour if possible
+  if (SetColour (Name, cValue)) 
+    return;
 
-CHARFORMAT cf;
+  CHARFORMAT cf;
+  memset (&cf, 0, sizeof (cf));
+  cf.cbSize      = sizeof (cf);
+  cf.dwMask      = CFM_COLOR;
+  cf.crTextColor = cValue;
 
- CRichEditCtrl * pRichEdit = (CRichEditCtrl *) Frame.m_wndInfoBar.GetDlgItem (IDC_INFOTEXT);
+  CRichEditCtrl * pRichEdit = (CRichEditCtrl *) Frame.m_wndInfoBar.GetDlgItem (IDC_INFOTEXT);
 
- // do foreground colour if possible
- if (SetColour (Name, cValue)) 
-   return;
-
- memset (&cf, 0, sizeof (cf));
- cf.cbSize = sizeof (cf);
- cf.dwMask = CFM_COLOR;
- cf.crTextColor = cValue;
- pRichEdit->SetSelectionCharFormat (cf);
-
+  pRichEdit->SetSelectionCharFormat (cf);
 } // end of InfoColour
 
 void CMUSHclientDoc::InfoBackground(LPCTSTR Name) 
@@ -5693,15 +5298,12 @@ void CMUSHclientDoc::InfoBackground(LPCTSTR Name)
     return;
 
   COLORREF cValue;
+  // do background colour if possible
+  if (SetColour (Name, cValue)) 
+    return;
 
- CRichEditCtrl * pRichEdit = (CRichEditCtrl *) Frame.m_wndInfoBar.GetDlgItem (IDC_INFOTEXT);
-
- // do background colour if possible
- if (SetColour (Name, cValue)) 
-   return;
-
- pRichEdit->SetBackgroundColor (FALSE, cValue);
-
+  CRichEditCtrl * pRichEdit = (CRichEditCtrl *) Frame.m_wndInfoBar.GetDlgItem (IDC_INFOTEXT);
+  pRichEdit->SetBackgroundColor (FALSE, cValue);
 } // end of InfoBackground
 
 /*  DIDN'T WORK PROPERLY
@@ -5726,51 +5328,45 @@ void CMUSHclientDoc::InfoHeight(long Pixels)
 long CMUSHclientDoc::DeleteGroup(LPCTSTR GroupName) 
 {
   long iCount = 0;
-
   iCount += DeleteTriggerGroup (GroupName);
   iCount += DeleteAliasGroup   (GroupName);
   iCount += DeleteTimerGroup   (GroupName);
-
-	return iCount;
+  return iCount;
 }   // end of DeleteGroup
 
 long CMUSHclientDoc::DeleteTriggerGroup(LPCTSTR GroupName) 
 {
-  CString strTriggerName;
-  CTrigger * trigger_item;
-  POSITION pos;
-  
   // no group name, affect nothing
-  if (strlen (GroupName) == 0)
+  if (GroupName[0] == '\0')
     return 0;
 
-  vector<string> vToDelete;
+  vector<LPCTSTR> vToDelete;
 
   // do triggers
-  for (pos = GetTriggerMap ().GetStartPosition(); pos; )
+  POSITION pos = GetTriggerMap ().GetStartPosition();
+  CString strTriggerName;
+  CTrigger * trigger_item = NULL;
+  while (pos != NULL)
     {
     GetTriggerMap ().GetNextAssoc (pos, strTriggerName, trigger_item);
     if (trigger_item->strGroup == GroupName)
       {
-
       // can't if executing a script
       if (trigger_item->bExecutingScript)
         continue;
 
       // delete its pointer
       delete trigger_item;
-
       // remember to delete from trigger map
       vToDelete.push_back ((LPCTSTR) strTriggerName);
-
       }
     }   // end of triggers
 
   // now delete from map, do it this way in case deleting whilst looping throws things out
-  for (vector<string>::const_iterator it = vToDelete.begin (); 
+  for (vector<LPCTSTR>::const_iterator it = vToDelete.begin (); 
        it != vToDelete.end ();
-       it++)
-      GetTriggerMap ().RemoveKey (it->c_str ());
+       ++it)
+    GetTriggerMap ().RemoveKey (*it);
  
   if (!vToDelete.empty ())
     {
@@ -5784,40 +5380,36 @@ long CMUSHclientDoc::DeleteTriggerGroup(LPCTSTR GroupName)
 
 long CMUSHclientDoc::DeleteAliasGroup(LPCTSTR GroupName) 
 {
-  CString strAliasName;
-  CAlias * alias_item;
-  POSITION pos;
-
   // no group name, affect nothing
-  if (strlen (GroupName) == 0)
+  if (GroupName[0] == '\0')
     return 0;
 
-  vector<string> vToDelete;
+  vector<LPCTSTR> vToDelete;
 
   // do aliases
-  for (pos = GetAliasMap ().GetStartPosition(); pos; )
+  POSITION pos = GetAliasMap ().GetStartPosition();
+  CString strAliasName;
+  CAlias * alias_item = NULL;
+  while (pos != NULL)
     {
     GetAliasMap ().GetNextAssoc (pos, strAliasName, alias_item);
     if (alias_item->strGroup == GroupName)
       {
-
       // can't if executing a script
       if (alias_item->bExecutingScript)
         continue;
 
       delete alias_item;
-
       // remember to delete from alias map
-      vToDelete.push_back ((LPCTSTR) strAliasName);
-
+      vToDelete.push_back (strAliasName);
       }
     }   // end of aliases
 
   // now delete from map, do it this way in case deleting whilst looping throws things out
-  for (vector<string>::const_iterator it = vToDelete.begin (); 
+  for (vector<LPCTSTR>::const_iterator it = vToDelete.begin (); 
        it != vToDelete.end ();
-       it++)
-      GetAliasMap ().RemoveKey (it->c_str ());
+       ++it)
+    GetAliasMap ().RemoveKey (*it);
 
   if (!vToDelete.empty ())
     {
@@ -5827,44 +5419,40 @@ long CMUSHclientDoc::DeleteAliasGroup(LPCTSTR GroupName)
     }
 
   return vToDelete.size ();
-
 }   // end of DeleteAliasGroup
 
 long CMUSHclientDoc::DeleteTimerGroup(LPCTSTR GroupName) 
 {
-  CString strTimerName;
-  CTimer * timer_item;
-  POSITION pos;
-
   // no group name, affect nothing
-  if (strlen (GroupName) == 0)
+  if (GroupName[0] == '\0')
     return 0;
 
-  vector<string> vToDelete;
+  vector<LPCTSTR> vToDelete;
 
   // count timers
-  for (pos = GetTimerMap ().GetStartPosition(); pos; )
+  POSITION pos = GetTimerMap ().GetStartPosition();
+  CString strTimerName;
+  CTimer * timer_item = NULL;
+  while (pos != NULL)
     {
     GetTimerMap ().GetNextAssoc (pos, strTimerName, timer_item);
     if (timer_item->strGroup == GroupName)
       {
-
       // can't if executing a script
       if (timer_item->bExecutingScript)
         continue;
 
       delete timer_item;
-
       // remember to delete from timer map
-      vToDelete.push_back ((LPCTSTR) strTimerName);
+      vToDelete.push_back (strTimerName);
       }
     }   // end of timers
 
   // now delete from map, do it this way in case deleting whilst looping throws things out
-  for (vector<string>::const_iterator it = vToDelete.begin (); 
+  for (vector<LPCTSTR>::const_iterator it = vToDelete.begin (); 
        it != vToDelete.end ();
-       it++)
-      GetTimerMap ().RemoveKey (it->c_str ());
+       ++it)
+    GetTimerMap ().RemoveKey (*it);
 
   if (!vToDelete.empty ())
     {
@@ -5877,15 +5465,11 @@ long CMUSHclientDoc::DeleteTimerGroup(LPCTSTR GroupName)
 }   // end of DeleteTimerGroup
 
 
-static CTrigger * pTrigger = NULL;  // purely for #define below
-
-#define TO(arg) offsetof (CTrigger, arg), sizeof (pTrigger->arg)
+#define TO(arg) offsetof (CTrigger, arg), sizeof (((CTrigger*)NULL)->arg)
 
 //-----config name ----------------  default ---variable name ---- min, max, flags ---
 tConfigurationNumericOption TriggerOptionsTable [] = {
-
-// numbers
-  
+  // numbers
 {"clipboard_arg",        0,             TO(iClipboardArg), 0, 10},       
 {"colour_change_type",   0,             TO(iColourChangeType), TRIGGER_COLOUR_CHANGE_BOTH, TRIGGER_COLOUR_CHANGE_BACKGROUND},               
 // MAX_CUSTOM + 1 to allow for "other" colour        
@@ -5899,8 +5483,7 @@ tConfigurationNumericOption TriggerOptionsTable [] = {
 {"sequence",             0,             TO(iSequence), 0, 10000},               
 {"user",                 0,             TO(iUserOption), LONG_MIN, LONG_MAX},               
 
-// boolean
-
+  // boolean
 {"enabled",              false, TO(bEnabled)},               
 {"expand_variables",     false, TO(bExpandVariables)},               
 {"ignore_case",          false, TO(ignore_case), 0, 0, OPT_CANNOT_WRITE},               
@@ -5914,14 +5497,12 @@ tConfigurationNumericOption TriggerOptionsTable [] = {
 {"lowercase_wildcard",   false, TO(bLowercaseWildcard)},
 {"temporary",            false, TO(bTemporary)},
 {"one_shot",             false, TO(bOneShot)},               
-               
 
 {NULL}   // end of table marker            
-
-  };  // end of TriggerOptionsTable 
+};  // end of TriggerOptionsTable
 
 #define TA(arg) offsetof (CTrigger, arg)
-                    
+
 // first  optional argument: multiline flag
 // second optional argument: preserve spaces flag (defaults to true for multiline)
 
@@ -5941,176 +5522,142 @@ tConfigurationAlphaOption TriggerAlphaOptionsTable  [] =
 
 VARIANT CMUSHclientDoc::GetTriggerOption(LPCTSTR TriggerName, LPCTSTR OptionName) 
 {
-CString strTriggerName = TriggerName;
-CTrigger * trigger_item;
+  CString strTriggerName = TriggerName,
+          strOptionName  = OptionName;
+  CTrigger * trigger_item = NULL;
 
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
-  vaResult.vt = VT_NULL;
-
-  // return if bad name, if so return NULL
-  if (CheckObjectName (strTriggerName, false))
-    return vaResult;
-
-  vaResult.vt = VT_EMPTY;
+  // trim spaces
+  CheckObjectName (strTriggerName, false);
+  CheckObjectName (strOptionName,  false);
 
   // see if trigger exists, if not return EMPTY
   if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
-	  return vaResult;
+    return vaResult;
 
-int iItem;
-int iResult = FindBaseOption (OptionName, TriggerOptionsTable, iItem);
-
-  
+  int iItem;
+  int iResult = FindBaseOption (strOptionName, TriggerOptionsTable, iItem);
   if (iResult == eOK)
     {
-
     // numeric option
-
-    if (m_CurrentPlugin &&
-        (TriggerOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	return vaResult;  // not available to plugin
-
-    long Value =  GetBaseOptionItem (iItem, 
-                              TriggerOptionsTable, 
-                              NUMITEMS (TriggerOptionsTable),
-                              (char *) trigger_item);  
-
-    SetUpVariantLong (vaResult, Value);
+    if (!m_CurrentPlugin || (TriggerOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ) == 0)
+      {
+      long Value = (long) GetBaseOptionItem (iItem, 
+                                TriggerOptionsTable, 
+                                NUMITEMS (TriggerOptionsTable),
+                                (char *) trigger_item);
+      SetUpVariantLong (vaResult, Value);
+      }
     }  // end of found numeric option
   else
     { // not numeric option, try alpha
-    int iResult = FindBaseAlphaOption (OptionName, TriggerAlphaOptionsTable, iItem);
+    iResult = FindBaseAlphaOption (strOptionName, TriggerAlphaOptionsTable, iItem);
     if (iResult == eOK)
       {
-
       // alpha option
-
-      if (m_CurrentPlugin &&
-          (TriggerAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	  return vaResult;  // not available to plugin
-
-      CString strValue =  GetBaseAlphaOptionItem (iItem, 
+      if (!m_CurrentPlugin || (TriggerAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ) == 0)
+        {
+        CString strValue =  GetBaseAlphaOptionItem (iItem, 
                                                  TriggerAlphaOptionsTable,
                                                  NUMITEMS (TriggerAlphaOptionsTable),
                                                  (char *) trigger_item);
-
-      SetUpVariantString (vaResult, strValue);
+        SetUpVariantString (vaResult, strValue);
+        }
       }  // end of found
     }
 
-	return vaResult;
+  return vaResult;
 } // end of GetTriggerOption
 
 VARIANT CMUSHclientDoc::GetPluginTriggerOption(LPCTSTR PluginID, LPCTSTR TriggerName, LPCTSTR OptionName) 
 {
-GET_PLUGIN_STUFF (GetTriggerOption (TriggerName, OptionName))
+  GET_PLUGIN_STUFF (GetTriggerOption (TriggerName, OptionName));
 }
 
 long CMUSHclientDoc::SetTriggerOption(LPCTSTR TriggerName, LPCTSTR OptionName, LPCTSTR Value) 
 {
-CString strTriggerName = TriggerName;
-CString strValue = Value;
-CTrigger * trigger_item;
+  CString strTriggerName = TriggerName,
+          strOptionName  = OptionName,
+          strValue       = Value;
+  CTrigger * trigger_item = NULL;
 
-long nStatus;
-
-  // return if bad name
-  if (nStatus = CheckObjectName (strTriggerName, false))
-    return nStatus;
+  // trim spaces
+  CheckObjectName (strTriggerName, false);
+  CheckObjectName (strOptionName,  false);
 
   if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
     return eTriggerNotFound;
 
-CString strOptionName = OptionName;
+  int iItem;
+  bool bChanged;
 
-  strOptionName.MakeLower();
-  strOptionName.TrimLeft ();
-  strOptionName.TrimRight ();
-
-int iItem;
-int iResult = FindBaseOption (strOptionName, TriggerOptionsTable, iItem);
-
-bool bChanged;
-
+  int iResult = FindBaseOption (strOptionName, TriggerOptionsTable, iItem);
   if (iResult == eOK)
     {
     // this is a numeric option
     
-    if (!IsNumber (Value, true))
-       return eOptionOutOfRange;
-
-    long iValue = atol (Value);
+    if (!IsNumber (strValue, true))
+      return eOptionOutOfRange;
 
     if (m_CurrentPlugin &&
         (TriggerOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
-    	return ePluginCannotSetOption;  // not available to plugin
+      return ePluginCannotSetOption;  // not available to plugin
 
     if (TriggerOptionsTable [iItem].iFlags & OPT_CANNOT_WRITE)
-    	return ePluginCannotSetOption;  // not available for writing at all    
+      return ePluginCannotSetOption;  // not available for writing at all    
 
     iResult = SetBaseOptionItem (iItem,
                         TriggerOptionsTable,
                         NUMITEMS (TriggerOptionsTable),
                         (char *) trigger_item, 
-                        iValue,
+                        atol (strValue),
                         bChanged);
 
     if (bChanged)
       {
       if (!m_CurrentPlugin) // plugin mods don't really count
         SetModifiedFlag (TRUE);   // document has changed
-      trigger_item->nUpdateNumber    = App.GetUniqueNumber ();   // for concurrency checks
+      trigger_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
       }
 
     if (strOptionName == "sequence")
       SortTriggers ();
 
     return iResult;
-
     }  // end of found
   else
     { // not numeric option, try alpha
     int iResult = FindBaseAlphaOption (strOptionName, TriggerAlphaOptionsTable, iItem);
     if (iResult == eOK)
       {
-
       // alpha option
-
       if (m_CurrentPlugin &&
           (TriggerAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
-    	  return ePluginCannotSetOption;  // not available to plugin
-
+        return ePluginCannotSetOption;  // not available to plugin
       if (TriggerAlphaOptionsTable [iItem].iFlags & OPT_CANNOT_WRITE)
-    	  return ePluginCannotSetOption;  // not available for writing at all    
+        return ePluginCannotSetOption;  // not available for writing at all    
 
       // ------ preliminary validation before setting the option
-
       // cannot have null match text
-      if (strOptionName == "match" || 
+      if (strOptionName == "match"       || 
           strOptionName == "ignore_case" ||
           strOptionName == "multi_line")
         {
         if (strValue.IsEmpty ())
           return eTriggerCannotBeEmpty;
 
+        if (!trigger_item->bRegexp)
+          strValue = ConvertToRegularExpression (strValue);
+
         t_regexp * regexp = NULL;
-
-        CString strRegexp; 
-
-        if (trigger_item->bRegexp)
-          strRegexp = strValue;
-        else
-          strRegexp = ConvertToRegularExpression (strValue);
-
         // compile regular expression
         try 
           {
-          regexp = regcomp (strRegexp, (trigger_item->ignore_case ? PCRE_CASELESS : 0) |
-                                       (trigger_item->bMultiLine  ? PCRE_MULTILINE : 0) |
-                                       (m_bUTF_8 ? PCRE_UTF8 : 0)
-                                       );
+          regexp = regcomp (strValue, (trigger_item->ignore_case ? PCRE_CASELESS : 0) |
+              (trigger_item->bMultiLine  ? PCRE_MULTILINE : 0) |
+              (m_bUTF_8 ? PCRE_UTF8 : 0));
           }   // end of try
         catch(CException* e)
           {
@@ -6120,27 +5667,21 @@ bool bChanged;
       
         delete trigger_item->regexp;    // get rid of old one
         trigger_item->regexp = regexp;
-
         } // end of option "match"  
-      else if (strOptionName == "script")
+      else if (OptionName == "script")
         {
-  
         // get trigger dispatch ID
-
         if (GetScriptEngine () && !strValue.IsEmpty ())
           {
-          DISPID dispid = DISPID_UNKNOWN;
           CString strMessage;
-          dispid = GetProcedureDispid (strValue, "trigger", TriggerName, strMessage);
+          DISPID dispid = GetProcedureDispid (strValue, "trigger", strTriggerName, strMessage);
           if (dispid == DISPID_UNKNOWN)
             return eScriptNameNotLocated;
           trigger_item->dispid  = dispid;   // update dispatch ID
           }
         } // end of option "script"
 
-
       // set the option now
-
       iResult = SetBaseAlphaOptionItem (iItem,
                         TriggerAlphaOptionsTable,
                         NUMITEMS (TriggerAlphaOptionsTable),
@@ -6152,32 +5693,27 @@ bool bChanged;
         {
         if (!m_CurrentPlugin) // plugin mods don't really count
           SetModifiedFlag (TRUE);   // document has changed
-        trigger_item->nUpdateNumber    = App.GetUniqueNumber ();   // for concurrency checks
+        trigger_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
         }
 
       return iResult;
       }  // end of found alpha option
     }  // end of not numeric option
 
- return eUnknownOption;
+  return eUnknownOption;
 }   // end of SetTriggerOption
 
-
-static CAlias * pAlias = NULL;  // purely for #define below
-
-#define AO(arg) offsetof (CAlias, arg), sizeof (pAlias->arg)
+#define AO(arg) offsetof (CAlias, arg), sizeof (((CAlias*)NULL)->arg)
 
 //-----config name ----------------  default ---variable name ---- min, max, flags ---
 tConfigurationNumericOption AliasOptionsTable [] = {
 
-// numbers
-
+  // numbers
 {"send_to",              eSendToWorld, AO(iSendTo), 0, eSendToLast - 1},               
 {"sequence",             0,            AO(iSequence), 0, 10000},               
 {"user",                 0,            AO(iUserOption), LONG_MIN, LONG_MAX},               
 
-// boolean
-
+  // boolean
 {"enabled",              false, AO(bEnabled)},               
 {"expand_variables",     false, AO(bExpandVariables)},               
 {"ignore_case",          false, AO(bIgnoreCase), 0, 0, OPT_CANNOT_WRITE}, 
@@ -6191,9 +5727,8 @@ tConfigurationNumericOption AliasOptionsTable [] = {
 {"temporary",            false, AO(bTemporary)},
 {"one_shot",             false, AO(bOneShot)},               
 
-{NULL}   // end of table marker            
-
-  };  // end of AliasOptionsTable 
+{NULL}   // end of table marker
+};  // end of AliasOptionsTable 
 
 #define AA(arg) offsetof (CAlias, arg)
                     
@@ -6215,171 +5750,136 @@ tConfigurationAlphaOption AliasAlphaOptionsTable  [] =
 
 VARIANT CMUSHclientDoc::GetAliasOption(LPCTSTR AliasName, LPCTSTR OptionName) 
 {
-CString strAliasName = AliasName;
-CAlias * Alias_item;
+  CString strAliasName  = AliasName,
+          strOptionName = OptionName;
+  CAlias * alias_item = NULL;
 
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
-  vaResult.vt = VT_NULL;
-
-  // return if bad name, if so return NULL
-  if (CheckObjectName (strAliasName, false))
-    return vaResult;
-
-  vaResult.vt = VT_EMPTY;
+  // trim spaces
+  CheckObjectName (strAliasName,  false);
+  CheckObjectName (strOptionName, false);
 
   // see if Alias exists, if not return EMPTY
-  if (!GetAliasMap ().Lookup (strAliasName, Alias_item))
-	  return vaResult;
+  if (!GetAliasMap ().Lookup (strAliasName, alias_item))
+    return vaResult;
 
-int iItem;
-int iResult = FindBaseOption (OptionName, AliasOptionsTable, iItem);
-
-  
+  int iItem;
+  int iResult = FindBaseOption (strOptionName, AliasOptionsTable, iItem);
   if (iResult == eOK)
     {
-
     // numeric option
-
-    if (m_CurrentPlugin &&
-        (AliasOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	return vaResult;  // not available to plugin
-
-    long Value =  GetBaseOptionItem (iItem, 
-                              AliasOptionsTable, 
-                              NUMITEMS (AliasOptionsTable),
-                              (char *) Alias_item);  
-
-    SetUpVariantLong (vaResult, Value);
+    if (!m_CurrentPlugin || (AliasOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ) == 0)
+      {
+      long Value = (long) GetBaseOptionItem (iItem, 
+                                AliasOptionsTable, 
+                                NUMITEMS (AliasOptionsTable),
+                                (char *) alias_item);
+      SetUpVariantLong (vaResult, Value);
+      }
     }  // end of found numeric option
   else
     { // not numeric option, try alpha
-    int iResult = FindBaseAlphaOption (OptionName, AliasAlphaOptionsTable, iItem);
+    int iResult = FindBaseAlphaOption (strOptionName, AliasAlphaOptionsTable, iItem);
     if (iResult == eOK)
       {
-
       // alpha option
-
-      if (m_CurrentPlugin &&
-          (AliasAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	  return vaResult;  // not available to plugin
-
-      CString strValue =  GetBaseAlphaOptionItem (iItem, 
-                                                 AliasAlphaOptionsTable,
-                                                 NUMITEMS (AliasAlphaOptionsTable),
-                                                 (char *) Alias_item);
-
-      SetUpVariantString (vaResult, strValue);
+      if (!m_CurrentPlugin || (AliasAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ) == 0)
+        {
+        CString strValue =  GetBaseAlphaOptionItem (iItem, 
+                                                   AliasAlphaOptionsTable,
+                                                   NUMITEMS (AliasAlphaOptionsTable),
+                                                   (char *) alias_item);
+        SetUpVariantString (vaResult, strValue);
+        }
       }  // end of found
     }
 
-	return vaResult;
+  return vaResult;
 }   // end of GetAliasOption
 
 VARIANT CMUSHclientDoc::GetPluginAliasOption(LPCTSTR PluginID, LPCTSTR AliasName, LPCTSTR OptionName) 
 {
-GET_PLUGIN_STUFF (GetAliasOption (AliasName, OptionName))
+  GET_PLUGIN_STUFF (GetAliasOption (AliasName, OptionName));
 }
 
 long CMUSHclientDoc::SetAliasOption(LPCTSTR AliasName, LPCTSTR OptionName, LPCTSTR Value) 
 {
-CString strAliasName = AliasName;
-CString strValue = Value;
-CAlias * Alias_item;
+  CString strAliasName  = AliasName,
+          strOptionName = OptionName,
+          strValue      = Value;
+  CAlias * alias_item = NULL;
 
-long nStatus;
+  // trim spaces
+  CheckObjectName (strAliasName,  false);
+  CheckObjectName (strOptionName, false);
 
-  // return if bad name
-  if (nStatus = CheckObjectName (strAliasName, false))
-    return nStatus;
-
-  if (!GetAliasMap ().Lookup (strAliasName, Alias_item))
+  if (!GetAliasMap ().Lookup (strAliasName, alias_item))
     return eAliasNotFound;
 
-CString strOptionName = OptionName;
+  int iItem;
+  bool bChanged;
 
-  strOptionName.MakeLower();
-  strOptionName.TrimLeft ();
-  strOptionName.TrimRight ();
-
-int iItem;
-int iResult = FindBaseOption (strOptionName, AliasOptionsTable, iItem);
-
-bool bChanged;
-
+  int iResult = FindBaseOption (strOptionName, AliasOptionsTable, iItem);
   if (iResult == eOK)
     {
     // this is a numeric option
-    
-    if (!IsNumber (Value, true))
-       return eOptionOutOfRange;
-
-    long iValue = atol (Value);
+    if (!IsNumber (strValue, true))
+      return eOptionOutOfRange;
 
     if (m_CurrentPlugin &&
         (AliasOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
-    	return ePluginCannotSetOption;  // not available to plugin
-
+      return ePluginCannotSetOption;  // not available to plugin
     if (AliasOptionsTable [iItem].iFlags & OPT_CANNOT_WRITE)
-    	return ePluginCannotSetOption;  // not available for writing at all    
+      return ePluginCannotSetOption;  // not available for writing at all    
 
     iResult = SetBaseOptionItem (iItem,
                         AliasOptionsTable,
                         NUMITEMS (AliasOptionsTable),
-                        (char *) Alias_item, 
-                        iValue,
+                        (char *) alias_item, 
+                        atol (strValue),
                         bChanged);
 
     if (bChanged)
       {
       if (!m_CurrentPlugin) // plugin mods don't really count
         SetModifiedFlag (TRUE);   // document has changed
-      Alias_item->nUpdateNumber    = App.GetUniqueNumber ();   // for concurrency checks
+      alias_item->nUpdateNumber    = App.GetUniqueNumber ();   // for concurrency checks
       }
 
     if (strOptionName == "sequence")
       SortAliases ();
 
     return iResult;
-
     }  // end of found
   else
     { // not numeric option, try alpha
-    int iResult = FindBaseAlphaOption (strOptionName, AliasAlphaOptionsTable, iItem);
+    iResult = FindBaseAlphaOption (strOptionName, AliasAlphaOptionsTable, iItem);
     if (iResult == eOK)
       {
-
       // alpha option
-
       if (m_CurrentPlugin &&
           (AliasAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
-    	  return ePluginCannotSetOption;  // not available to plugin
-
+        return ePluginCannotSetOption;  // not available to plugin
       if (AliasAlphaOptionsTable [iItem].iFlags & OPT_CANNOT_WRITE)
-    	  return ePluginCannotSetOption;  // not available for writing at all    
+        return ePluginCannotSetOption;  // not available for writing at all    
 
       // ------ preliminary validation before setting the option
-
       // cannot have null match text
       if (strOptionName == "match")
         {
         if (strValue.IsEmpty ())
           return eAliasCannotBeEmpty;
 
-        t_regexp * regexp = NULL;
-
-        CString strRegexp; 
-
-        if (Alias_item->bRegexp)
-          strRegexp = strValue;
-        else
-          strRegexp = ConvertToRegularExpression (strValue);
+        if (!alias_item->bRegexp)
+          strValue = ConvertToRegularExpression (strValue);
 
         // compile regular expression
+        t_regexp * regexp = NULL;
         try 
           {
-          regexp = regcomp (strRegexp, (Alias_item->bIgnoreCase ? PCRE_CASELESS : 0)
+          regexp = regcomp (strValue, (alias_item->bIgnoreCase ? PCRE_CASELESS : 0)
 #if ALIASES_USE_UTF8
                              | (m_bUTF_8 ? PCRE_UTF8 : 0)
 #endif // ALIASES_USE_UTF8
@@ -6390,34 +5890,28 @@ bool bChanged;
           e->Delete ();
           return eBadRegularExpression;
           } // end of catch
-      
-        delete Alias_item->regexp;    // get rid of old one
-        Alias_item->regexp = regexp;
 
+        delete alias_item->regexp;    // get rid of old one
+        alias_item->regexp = regexp;
         } // end of option "match"  
       else if (strOptionName == "script")
         {
-  
         // get Alias dispatch ID
-
         if (GetScriptEngine () && !strValue.IsEmpty ())
           {
-          DISPID dispid = DISPID_UNKNOWN;
           CString strMessage;
-          dispid = GetProcedureDispid (strValue, "Alias", AliasName, strMessage);
+          DISPID dispid = GetProcedureDispid (strValue, "Alias", strAliasName, strMessage);
           if (dispid == DISPID_UNKNOWN)
             return eScriptNameNotLocated;
-          Alias_item->dispid  = dispid;   // update dispatch ID
+          alias_item->dispid  = dispid;   // update dispatch ID
           }
         } // end of option "script"
 
-
       // set the option now
-
       iResult = SetBaseAlphaOptionItem (iItem,
                         AliasAlphaOptionsTable,
                         NUMITEMS (AliasAlphaOptionsTable),
-                        (char *) Alias_item,  
+                        (char *) alias_item,  
                         strValue,
                         bChanged);
 
@@ -6425,26 +5919,23 @@ bool bChanged;
         {
         if (!m_CurrentPlugin) // plugin mods don't really count
           SetModifiedFlag (TRUE);   // document has changed
-        Alias_item->nUpdateNumber    = App.GetUniqueNumber ();   // for concurrency checks
+        alias_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
         }
 
       return iResult;
       }  // end of found alpha option
     }  // end of not numeric option
 
- return eUnknownOption;
+  return eUnknownOption;
 }   // end of SetAliasOption
 
-static CTimer * pTimer = NULL;  // purely for #define below
 
-#define TMRO(arg) offsetof (CTimer, arg), sizeof (pTimer->arg)
+#define TMRO(arg) offsetof (CTimer, arg), sizeof (((CTimer*)NULL)->arg)
 
 //-----config name ----------------  default ---variable name ---- min, max, flags ---
 tConfigurationNumericOption TimerOptionsTable [] = {
 
-// numbers
-
-
+  // numbers
 {"hour",           0, TMRO(iAtHour),    0, 23},               
 {"minute",         0, TMRO(iAtMinute),  0, 59},               
 {"second",         0, TMRO(fAtSecond),  0, 59.9999, OPT_DOUBLE},               
@@ -6454,8 +5945,7 @@ tConfigurationNumericOption TimerOptionsTable [] = {
 {"send_to",        eSendToWorld,  TMRO(iSendTo), 0, eSendToLast - 1},               
 {"user",           0, TMRO(iUserOption), LONG_MIN, LONG_MAX},               
 
-// boolean
-
+  // boolean
 {"enabled",              false, TMRO(bEnabled)},               
 {"at_time",              false, TMRO(iType)},               
 {"one_shot",             false, TMRO(bOneShot)},               
@@ -6465,8 +5955,7 @@ tConfigurationNumericOption TimerOptionsTable [] = {
 {"temporary",            false, TMRO(bTemporary)},
 
 {NULL}   // end of table marker            
-
-  };  // end of TimerOptionsTable 
+};  // end of TimerOptionsTable 
 
 #define TMRA(arg) offsetof (CTimer, arg)
                     
@@ -6486,136 +5975,92 @@ tConfigurationAlphaOption TimerAlphaOptionsTable  [] =
 
 VARIANT CMUSHclientDoc::GetTimerOption(LPCTSTR TimerName, LPCTSTR OptionName) 
 {
-CString strTimerName = TimerName;
-CTimer * Timer_item;
-
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
-  vaResult.vt = VT_NULL;
+  CString strTimerName  = TimerName,
+          strOptionName = OptionName;
+  CTimer * timer_item = NULL;
+  
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   // return if bad name, if so return NULL
-  if (CheckObjectName (strTimerName, false))
-    return vaResult;
-
-  vaResult.vt = VT_EMPTY;
+  CheckObjectName (strTimerName,  false);
+  CheckObjectName (strOptionName, false);
 
   // see if Timer exists, if not return EMPTY
-  if (!GetTimerMap ().Lookup (strTimerName, Timer_item))
-	  return vaResult;
+  if (!GetTimerMap ().Lookup (strTimerName, timer_item))
+    return vaResult;
 
-
-CString strOptionName = OptionName;
-
-  strOptionName.MakeLower();
-  strOptionName.TrimLeft ();
-  strOptionName.TrimRight ();
-
-int iItem;
-int iResult = FindBaseOption (strOptionName, TimerOptionsTable, iItem);
-
-  
+  int iItem;
+  int iResult = FindBaseOption (strOptionName, TimerOptionsTable, iItem);
   if (iResult == eOK)
     {
-
     // numeric option
-
-    if (m_CurrentPlugin &&
-        (TimerOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	return vaResult;  // not available to plugin
-
-    double Value;
-    
-    // this is a pest!
-    if (strOptionName == "hour")
+    if (!m_CurrentPlugin || (TimerOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ) == 0)
       {
-      if (Timer_item->iType == CTimer::eInterval)
-        Value = Timer_item->iEveryHour;
-      else
-        Value = Timer_item->iAtHour;
-      } // end of option "hour"
-    else if (strOptionName == "minute")
-      {
-      if (Timer_item->iType == CTimer::eInterval)
-        Value = Timer_item->iEveryMinute;
-      else
-        Value = Timer_item->iAtMinute;
-      } // end of option "minute"
-    else if (strOptionName == "second")
-      {
-      if (Timer_item->iType == CTimer::eInterval)
-        Value = Timer_item->fEverySecond;
-      else
-        Value = Timer_item->fAtSecond;
-      } // end of option "second"
-    else
-      Value =  GetBaseOptionItem (iItem, 
-                                TimerOptionsTable, 
-                                NUMITEMS (TimerOptionsTable),
-                                (char *) Timer_item);  
+      double Value;
 
-    SetUpVariantDouble (vaResult, Value);
+      // this is a pest!
+      if (strOptionName == "hour")
+        Value = (timer_item->iType == CTimer::eInterval) ? timer_item->iEveryHour : timer_item->iAtHour;
+      else if (strOptionName == "minute")
+        Value = (timer_item->iType == CTimer::eInterval) ? timer_item->iEveryMinute : timer_item->iAtMinute;
+      else if (strOptionName == "second")
+        Value = (timer_item->iType == CTimer::eInterval) ? timer_item->fEverySecond : timer_item->fAtSecond;
+      else
+        Value = GetBaseOptionItem (iItem, 
+                                  TimerOptionsTable, 
+                                  NUMITEMS (TimerOptionsTable),
+                                  (char *) timer_item);
+
+      SetUpVariantDouble (vaResult, Value);
+      }
     }  // end of found numeric option
   else
     { // not numeric option, try alpha
-    int iResult = FindBaseAlphaOption (OptionName, TimerAlphaOptionsTable, iItem);
+    iResult = FindBaseAlphaOption (strOptionName, TimerAlphaOptionsTable, iItem);
     if (iResult == eOK)
       {
-
       // alpha option
-
-      if (m_CurrentPlugin &&
-          (TimerAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	  return vaResult;  // not available to plugin
-
-      CString strValue =  GetBaseAlphaOptionItem (iItem, 
-                                                 TimerAlphaOptionsTable,
-                                                 NUMITEMS (TimerAlphaOptionsTable),
-                                                 (char *) Timer_item);
-
-      SetUpVariantString (vaResult, strValue);
+      if (!m_CurrentPlugin || (TimerAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ) == 0)
+        {
+        CString strValue = GetBaseAlphaOptionItem (iItem, 
+                                                   TimerAlphaOptionsTable,
+                                                   NUMITEMS (TimerAlphaOptionsTable),
+                                                   (char *) timer_item);
+        SetUpVariantString (vaResult, strValue);
+        }
       }  // end of found
     }
-
-	return vaResult;
+  
+  return vaResult;
 } // end of GetTimerOption
 
 
 VARIANT CMUSHclientDoc::GetPluginTimerOption(LPCTSTR PluginID, LPCTSTR TimerName, LPCTSTR OptionName) 
 {
-GET_PLUGIN_STUFF (GetTimerOption (TimerName, OptionName))
+  GET_PLUGIN_STUFF (GetTimerOption (TimerName, OptionName));
 }
 
 long CMUSHclientDoc::SetTimerOption(LPCTSTR TimerName, LPCTSTR OptionName, LPCTSTR Value) 
 {
-CString strTimerName = TimerName;
-CString strValue = Value;
-CTimer * Timer_item;
+  CString strTimerName  = TimerName,
+          strOptionName = OptionName,
+          strValue      = Value;
+  CTimer * timer_item = NULL;
 
-long nStatus;
+  // trim spaces
+  CheckObjectName (strTimerName,  false);
+  CheckObjectName (strOptionName, false);
 
-  // return if bad name
-  if (nStatus = CheckObjectName (strTimerName, false))
-    return nStatus;
-
-  if (!GetTimerMap ().Lookup (strTimerName, Timer_item))
+  if (!GetTimerMap ().Lookup (strTimerName, timer_item))
     return eTimerNotFound;
 
-CString strOptionName = OptionName;
-
-  strOptionName.MakeLower();
-  strOptionName.TrimLeft ();
-  strOptionName.TrimRight ();
-
-int iItem;
-int iResult = FindBaseOption (strOptionName, TimerOptionsTable, iItem);
-
-bool bChanged;
-
+  int iItem;
+  bool bChanged;
+  int iResult = FindBaseOption (strOptionName, TimerOptionsTable, iItem);
   if (iResult == eOK)
     {
     // this is a numeric option
-    
     long iValue = 0;
     double fValue = 0;
 
@@ -6623,23 +6068,22 @@ bool bChanged;
       fValue = atof (Value);
     else
       {
-      if (!IsNumber (Value, true))
-         return eOptionOutOfRange;
-
+      if (!IsNumber (strValue, true))
+        return eOptionOutOfRange;
       iValue = atol (Value);
       }
 
     if (m_CurrentPlugin &&
         (TimerOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
-    	return ePluginCannotSetOption;  // not available to plugin
+      return ePluginCannotSetOption;  // not available to plugin
 
     if (TimerOptionsTable [iItem].iFlags & OPT_CANNOT_WRITE)
-    	return ePluginCannotSetOption;  // not available for writing at all    
+      return ePluginCannotSetOption;  // not available for writing at all    
 
     iResult = SetBaseOptionItem (iItem,
                         TimerOptionsTable,
                         NUMITEMS (TimerOptionsTable),
-                        (char *) Timer_item, 
+                        (char *) timer_item, 
                         iValue,
                         bChanged);
 
@@ -6647,91 +6091,80 @@ bool bChanged;
       {
       if (!m_CurrentPlugin) // plugin mods don't really count
         SetModifiedFlag (TRUE);   // document has changed
-      Timer_item->nUpdateNumber    = App.GetUniqueNumber ();   // for concurrency checks
+      timer_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
       }
 
-    if (iResult == eOK && Timer_item->iType == CTimer::eInterval)
+    if (iResult == eOK && timer_item->iType == CTimer::eInterval)
       {  // need to set "every" time, not "at" time
       if (strOptionName == "hour")
         {
-        Timer_item->iEveryHour = iValue;
-        ResetOneTimer (Timer_item);
+        timer_item->iEveryHour = iValue;
+        ResetOneTimer (timer_item);
         } // end of option "hour"
       else if (strOptionName == "minute")
         {
-        Timer_item->iEveryMinute = iValue; 
-        ResetOneTimer (Timer_item);
+        timer_item->iEveryMinute = iValue; 
+        ResetOneTimer (timer_item);
         } // end of option "minute"
       else if (strOptionName == "second")
         {
-        Timer_item->fEverySecond = fValue;
-        ResetOneTimer (Timer_item);
+        timer_item->fEverySecond = fValue;
+        ResetOneTimer (timer_item);
         } // end of option "second"
-
       } // end of need to fiddle with hour/minute/second
 
     // need to reset if we are changing this
     if (strOptionName == "at_time" && bChanged)
       {
       // copy from at to every or vice-versa
-      if (Timer_item->iType == CTimer::eInterval)
+      if (timer_item->iType == CTimer::eInterval)
         {
-        Timer_item->iEveryHour    = Timer_item->iAtHour;
-        Timer_item->iEveryMinute  = Timer_item->iAtHour;
-        Timer_item->fEverySecond  = Timer_item->fAtSecond;
+        timer_item->iEveryHour   = timer_item->iAtHour;
+        timer_item->iEveryMinute = timer_item->iAtHour;
+        timer_item->fEverySecond = timer_item->fAtSecond;
         }
       else
         {
-        Timer_item->iAtHour    = Timer_item->iEveryHour;
-        Timer_item->iAtMinute  = Timer_item->iEveryHour;
-        Timer_item->fAtSecond  = Timer_item->fEverySecond;
+        timer_item->iAtHour   = timer_item->iEveryHour;
+        timer_item->iAtMinute = timer_item->iEveryHour;
+        timer_item->fAtSecond = timer_item->fEverySecond;
         }
-       ResetOneTimer (Timer_item);
-      }
-    
-    return iResult;
 
+      ResetOneTimer (timer_item);
+      }
+
+    return iResult;
     }  // end of found
   else
     { // not numeric option, try alpha
     int iResult = FindBaseAlphaOption (strOptionName, TimerAlphaOptionsTable, iItem);
     if (iResult == eOK)
       {
-
       // alpha option
-
       if (m_CurrentPlugin &&
           (TimerAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
-    	  return ePluginCannotSetOption;  // not available to plugin
+        return ePluginCannotSetOption;  // not available to plugin
 
       if (TimerAlphaOptionsTable [iItem].iFlags & OPT_CANNOT_WRITE)
-    	  return ePluginCannotSetOption;  // not available for writing at all    
+        return ePluginCannotSetOption;  // not available for writing at all    
 
       // ------ preliminary validation before setting the option
 
-      if (strOptionName == "script")
+      // get Timer dispatch ID
+      if (strOptionName == "script" && GetScriptEngine () && !strValue.IsEmpty ())
         {
-  
-        // get Timer dispatch ID
-
-        if (GetScriptEngine () && !strValue.IsEmpty ())
-          {
-          DISPID dispid = DISPID_UNKNOWN;
-          CString strMessage;
-          dispid = GetProcedureDispid (strValue, "Timer", TimerName, strMessage);
-          if (dispid == DISPID_UNKNOWN)
-            return eScriptNameNotLocated;
-          Timer_item->dispid  = dispid;   // update dispatch ID
-          }
-        } // end of option "script"
-
+        CString strMessage;
+        DISPID dispid = GetProcedureDispid (strValue, "Timer", strTimerName, strMessage);
+        if (dispid == DISPID_UNKNOWN)
+          return eScriptNameNotLocated;
+        timer_item->dispid = dispid;   // update dispatch ID
+        }
 
       // set the option now
-
       iResult = SetBaseAlphaOptionItem (iItem,
                         TimerAlphaOptionsTable,
                         NUMITEMS (TimerAlphaOptionsTable),
-                        (char *) Timer_item,  
+                        (char *) timer_item,  
                         strValue,
                         bChanged);
 
@@ -6739,7 +6172,7 @@ bool bChanged;
         {
         if (!m_CurrentPlugin) // plugin mods don't really count
           SetModifiedFlag (TRUE);   // document has changed
-        Timer_item->nUpdateNumber    = App.GetUniqueNumber ();   // for concurrency checks
+        timer_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
         }
 
       return iResult;
@@ -6752,11 +6185,10 @@ bool bChanged;
 
 
 CTextDocument * CMUSHclientDoc::FindNotepad (const CString strTitle)
-  {
-CTextDocument * pTextDoc = NULL;
-
-  for (POSITION docPos = App.m_pNormalDocTemplate->GetFirstDocPosition();
-      docPos != NULL; )
+{
+  POSITION docPos = App.m_pNormalDocTemplate->GetFirstDocPosition();
+  CTextDocument * pTextDoc = NULL;
+  while (docPos != NULL)
     {
     pTextDoc = (CTextDocument *) App.m_pWorldDocTemplate->GetNextDoc(docPos);
 
@@ -6765,298 +6197,254 @@ CTextDocument * pTextDoc = NULL;
        pTextDoc->m_iUniqueDocumentNumber == m_iUniqueDocumentNumber &&
        pTextDoc->m_strTitle.CompareNoCase (strTitle) == 0)
       return pTextDoc;      // right title, world, document number
-
     } // end of doing each document
 
-
   return NULL;    // not found
-  }
+}
 
 
 long CMUSHclientDoc::SaveNotepad(LPCTSTR Title, LPCTSTR FileName, BOOL ReplaceExisting) 
 {
-CTextDocument * pTextDoc = FindNotepad (Title);
-
+  CTextDocument * pTextDoc = FindNotepad (Title);
   if (pTextDoc)
     return pTextDoc->DoSave(FileName, ReplaceExisting);
-
- return false;
+  return false;
 }
-
 
 
 long CMUSHclientDoc::CloseNotepad(LPCTSTR Title, BOOL QuerySave) 
 {
-CTextDocument * pTextDoc = FindNotepad (Title);
+  CTextDocument * pTextDoc = FindNotepad (Title);
+  if (!pTextDoc)
+    return false;
 
-  if (pTextDoc)
-    {
-      // see if they want to save it
-    if (QuerySave)
-	    if (!pTextDoc->SaveModified())
-		    return false;
+  // see if they want to save it
+  if (QuerySave && !pTextDoc->SaveModified())
+    return false;
 
-    // saved OK, let's close it
-    pTextDoc->OnCloseDocument ();
-    
-    return true;
-    } // end of having an existing notepad document
-
-
-return false;
+  // saved OK, let's close it
+  pTextDoc->OnCloseDocument ();
+  return true;
 }
 
 
 BSTR CMUSHclientDoc::GetEntity(LPCTSTR Name) 
 {
-	CString strResult;
-
+  CString strResult;
   m_CustomEntityMap.Lookup (Name, strResult);
-
-	return strResult.AllocSysString();
+  return strResult.AllocSysString();
 }
 
 long CMUSHclientDoc::Execute(LPCTSTR Command) 
 {
+  CString strCommand = Command;
 
-// remember current plugin
-CPlugin *  pCurrentPlugin = m_CurrentPlugin;
+  // stop an alias from recalling itself indefinitely
+  if (m_iExecutionDepth + 1 > MAX_EXECUTION_DEPTH)
+    return eCommandsNestedTooDeeply;
+  ++m_iExecutionDepth;
 
-// stop an alias from recalling itself indefinitely
+  // huh?  ASSERT (m_CurrentPlugin == NULL); 
 
-if (++m_iExecutionDepth > MAX_EXECUTION_DEPTH)
-  {
-  m_iExecutionDepth--;
-  return eCommandsNestedTooDeeply;
-  }
+  // remember current plugin
+  CPlugin *  pCurrentPlugin = m_CurrentPlugin;
+  m_CurrentPlugin = NULL;
 
-CString strFixedCommand = Command;
-
-// huh?  ASSERT (m_CurrentPlugin == NULL); 
-
-m_CurrentPlugin = NULL;
-
-// look for scripting prefix
-if (!m_strScriptPrefix.IsEmpty () &&    // and we *have* a script prefix
-    strFixedCommand.Left (m_strScriptPrefix.GetLength ()) == 
-                          m_strScriptPrefix)  // and it matches
-  {
-  CString strCommand = strFixedCommand.Mid (m_strScriptPrefix.GetLength ());
-
-  // if scripting enabled, do it
-  if (m_bEnableScripts)
+  // look for scripting prefix
+  if (!m_strScriptPrefix.IsEmpty () &&    // and we *have* a script prefix
+      strCommand.Left (m_strScriptPrefix.GetLength ()) == m_strScriptPrefix) // and it matches
     {
-    m_bInSendToScript = false;   // they can do DeleteLines here I think
-
-    if (m_ScriptEngine)      // scripting might be enabled, but not OK to run
-      m_ScriptEngine->Parse (strCommand, "Command line");
-    else
-      ColourNote ("white", "red", 
-          Translate ("Script cannot execute because of parse error in script file"));
-
-    m_bInSendToScript = true;
+    strCommand = strCommand.Mid (m_strScriptPrefix.GetLength ());
     
-    m_iExecutionDepth--;
-    m_CurrentPlugin = pCurrentPlugin;  // restore whatever plugin we are in
-    return eOK;
+    // if scripting enabled, do it
+    if (m_bEnableScripts)
+      {
+      m_bInSendToScript = false;   // they can do DeleteLines here I think
+      
+      if (m_ScriptEngine)      // scripting might be enabled, but not OK to run
+        m_ScriptEngine->Parse (strCommand, "Command line");
+      else
+        ColourNote ("white", "red",
+            Translate ("Script cannot execute because of parse error in script file"));
+      
+      m_bInSendToScript = true;
+      --m_iExecutionDepth;
+
+      m_CurrentPlugin = pCurrentPlugin;  // restore whatever plugin we are in
+      return eOK;
+      }
+
+    // warn if they seem to want to script but it is not enabled
+    strCommand.TrimLeft ();
+
+    if (strCommand.Left (6).CompareNoCase ("world.") == 0 ||
+        strCommand.Left (8).CompareNoCase ("$world->") == 0)
+      ColourNote ("white", "darkblue", 
+          Translate ("Warning - you appear to be doing a script command but scripting is not enabled."));
+    }      // end of having a scripting prefix
+  
+  // do command stacking first, so that other things (like aliases) work within command-stack
+  
+  // ---------------------- COMMAND STACKING ------------------------------
+  
+  if (m_enable_command_stack && !m_strCommandStackCharacter.IsEmpty ())
+    {
+    // new in version 3.74 - command stack character at start of line disables command stacking
+    if (!strCommand.IsEmpty () && strCommand [0] == m_strCommandStackCharacter [0])
+      strCommand.Delete (0, 1);   // delete command stack character itself
+    else
+      {
+      // still want command stacking
+      CString strTwoStacks = m_strCommandStackCharacter [0];
+      strTwoStacks += m_strCommandStackCharacter [0];
+      // convert two command stacks in a row to 0x01  (eg. ;;)
+      strCommand = ::Replace (strCommand, strTwoStacks, "\x01");
+      // convert any remaining command stacks to a newline
+      strCommand.Replace (CString (m_strCommandStackCharacter [0]), ENDLINE);
+      // replace any 0x01 with one command stack character
+      strCommand.Replace ('\x01', m_strCommandStackCharacter [0]);
+      }
     }
 
-  // warn if they seem to want to script but it is not enabled
+  // break up command into a list, terminated by newlines
+  CStringList strList;
+  StringToList (strCommand, ENDLINE, strList);
 
-  strCommand.TrimLeft ();
+  // if list is empty, make sure we send at least one empty line
+  if (strList.IsEmpty ())
+    strList.AddTail (""); 
 
-  if (strCommand.Left (6).CompareNoCase ("world.") == 0 ||
-      strCommand.Left (8).CompareNoCase ("$world->") == 0)
-   ColourNote ("white", "darkblue", 
-    Translate ("Warning - you appear to be doing a script command but scripting is not enabled."));
-
-  }      // end of having a scripting prefix
-
-
-// do command stacking first, so that other things (like aliases) work within command-stack
-
-// ---------------------- COMMAND STACKING ------------------------------
-
-if (m_enable_command_stack && 
- !m_strCommandStackCharacter.IsEmpty ())
-   {
-   // new in version 3.74 - command stack character at start of line disables command stacking
-   if (!strFixedCommand.IsEmpty () &&
-       strFixedCommand [0] == m_strCommandStackCharacter [0])
-     strFixedCommand.Delete (0, 1);   // delete command stack character itself
-   else
-     {
-     // still want command stacking
-     CString strTwoStacks =  m_strCommandStackCharacter [0];
-     strTwoStacks +=  m_strCommandStackCharacter [0];
-     // convert two command stacks in a row to 0x01  (eg. ;;)
-     strFixedCommand = ::Replace (strFixedCommand, strTwoStacks, "\x01");
-     // convert any remaining command stacks to a newline
-     strFixedCommand.Replace (CString (m_strCommandStackCharacter [0]), ENDLINE);
-     // replace any 0x01 with one command stack character
-     strFixedCommand.Replace ('\x01', m_strCommandStackCharacter [0]);
-     }
-   }
-
-CStringList strList;
-
-// break up command into a list, terminated by newlines
-StringToList (strFixedCommand, ENDLINE, strList);
-
-// if list is empty, make sure we send at least one empty line
-if (strList.IsEmpty ())
-  strList.AddTail (""); 
-
-for (POSITION command_pos = strList.GetHeadPosition (); command_pos; )
-  {
-  CString str = strList.GetNext (command_pos);
-
-
-  CString strOriginalMessage = str;
-
-  //  TRACE1 ("SendCommand = %s\n", str);
-
-  bool bOmitFromLog = false;
-
-  if (!m_bPluginProcessingCommand)
+  POSITION command_pos = strList.GetHeadPosition ();
+  CString str, strOriginal;
+  while (command_pos != NULL)
+    {
+    str = strList.GetNext (command_pos);
+    strOriginal = str;
+    
+    //  TRACE1 ("SendCommand = %s\n", str);
+    
+    bool bOmitFromLog = false;
+    if (!m_bPluginProcessingCommand)
       {
       m_bPluginProcessingCommand = true;  // so we don't go into a loop
       bool bOK = true;
       // tell each plugin what we are about to Command
-      for (POSITION pos = m_PluginList.GetHeadPosition(); pos; )
+      POSITION pos = m_PluginList.GetHeadPosition();
+      CPlugin * pPlugin = NULL;
+      while (pos != NULL)
         {
-        CPlugin * pPlugin = m_PluginList.GetNext (pos);
-
-        if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+        pPlugin = m_PluginList.GetNext (pos);
+        if (!pPlugin->m_bEnabled)   // ignore disabled plugins
           continue;
 
         // see what the plugin makes of this, excluding the ENDLINE
         if (!pPlugin->ExecutePluginScript (ON_PLUGIN_COMMAND, pPlugin->m_dispid_plugin_command, str))
           bOK = false;
         }   // end of doing each plugin
-
+      
       m_bPluginProcessingCommand = false;
 
       if (!bOK)
         continue;   // plugin doesn't want to send it
       }
 
-  // empty line - just send it
-
+    // empty line - just send it
     if (str.IsEmpty ())
       {
       // pressing <enter> might be trying to connect
       if (CheckConnected ())
         {
-        m_iExecutionDepth--;
+        --m_iExecutionDepth;
         m_CurrentPlugin = pCurrentPlugin;  // restore whatever plugin we are in
         return eWorldClosed;
         }
-
       SendMsg (ENDLINE, m_display_my_input, false, LoggingInput ()); 
-      
       continue;
-
       }
     
-  if (EvaluateCommand (str, true, bOmitFromLog))
-    break;    // error (eg. connection not open, don't keep at it)
- 
-  }   // end of processing each line individually
-
-// this command has completed, so we can reduce the execution depth
-
-  m_iExecutionDepth--;
-  m_CurrentPlugin = pCurrentPlugin;  // restore whatever plugin we are in
-	return eOK;
+    if (EvaluateCommand (str, true, bOmitFromLog))
+      break;    // error (eg. connection not open, don't keep at it)
+    }   // end of processing each line individually
+  
+  // this command has completed, so we can reduce the execution depth
+  --m_iExecutionDepth;
+  // restore whatever plugin we are in
+  m_CurrentPlugin = pCurrentPlugin;
+    
+  return eOK;
 }   // end of CMUSHclientDoc::Execute
 
 long CMUSHclientDoc::DoAfterSpecial(double Seconds, LPCTSTR SendText, short SendTo) 
 {
-
-int iHours,
-    iMinutes;
-
   // sanity check
   if (Seconds < 0.1)
     return eTimeInvalid;
 
   // fiddle seconds into hours/mins/seconds
-
-  iHours = Seconds / 3600;
+  int iHours = (int) Seconds / 3600;
   Seconds = Seconds - (iHours * 3600);
-  iMinutes = Seconds / 60;
+  int iMinutes = (int) Seconds / 60;
   Seconds = Seconds - (iMinutes * 60);
 
-// a really big number would make hours > 23
-
-  if (iHours > 23)
-    return eTimeInvalid;
-
   // check they are sending to somewhere valid
-
   if (SendTo < 0 || SendTo >= eSendToLast)
     return eOptionOutOfRange;
 
-CString strTimerName;
-CTimer * timer_item;
-
   // this is a temporary unlabelled timer, make up a name
-  strTimerName.Format ("*timer%s", (LPCTSTR) App.GetUniqueString ());
+  CString strTimerName;
+  strTimerName.Format ("*timer%s", App.GetUniqueString ());
 
-  if (iHours < 0 || iHours > 23)
+  if (iHours < 0   || iHours > 23   ||
+      iMinutes < 0 || iMinutes > 59 ||
+      Seconds < 0  || Seconds > 59.9999)
     return eTimeInvalid;
 
-  if (iMinutes < 0 || iMinutes > 59)
-    return eTimeInvalid;
+  // create new timer item
+  CTimer * timer_item = new CTimer();
 
-  if (Seconds < 0 || Seconds > 59.9999)
-    return eTimeInvalid;
+  timer_item->nUpdateNumber = App.GetUniqueNumber ();   // for concurrency checks
 
-  // create new timer item and insert in timer map
-  GetTimerMap ().SetAt (strTimerName, timer_item = new CTimer);
-
-  timer_item->nUpdateNumber    = App.GetUniqueNumber ();   // for concurrency checks
-
-  timer_item->iEveryHour = iHours;
+  timer_item->iType = CTimer::eInterval;
+  timer_item->iEveryHour   = iHours;
   timer_item->iEveryMinute = iMinutes;
   timer_item->fEverySecond = Seconds;
-  timer_item->iType  = CTimer::eInterval;
 
-  timer_item->strContents      = SendText;
-  timer_item->bEnabled         = true;
-  timer_item->bOneShot         = true;
-  timer_item->bTemporary       = true;
+  timer_item->strContents       = SendText;
+  timer_item->iSendTo           = SendTo;
+  timer_item->bEnabled          = true;
+  timer_item->bOneShot          = true;
+  timer_item->bTemporary        = true;
   timer_item->bActiveWhenClosed = true;
-
-  timer_item->iSendTo = SendTo;
 
   ResetOneTimer (timer_item);
 
+  // insert timer into timer map
+  GetTimerMap ().SetAt (strTimerName, timer_item);
   SortTimers ();
 
-	return eOK;
+  return eOK;
 }
 
 long CMUSHclientDoc::ChatCallGeneral (LPCTSTR Server, long Port, const bool zChat)
-  {
+{
   // if not chat name, try our character name
   if (m_strOurChatName.IsEmpty () && !m_name.IsEmpty ())
     {
-    m_strOurChatName = m_name;
-    SetModifiedFlag (TRUE);   // document has changed
+    if (!m_name.IsEmpty())
+      {
+      m_strOurChatName = m_name;
+      SetModifiedFlag (TRUE);   // document has changed
+      }
+    else // use a default
+      m_strOurChatName = DEFAULT_CHAT_NAME;
     }
-  
-  // still empty? use a default
-  if (m_strOurChatName.IsEmpty ())
-    m_strOurChatName = DEFAULT_CHAT_NAME;
 
   // default to port 4050 if none supplied
   if (Port == 0)
     Port = DEFAULT_CHAT_PORT;
 
-CChatSocket * pSocket = new CChatSocket (this);
-
+  
+  CChatSocket * pSocket = new CChatSocket (this);
   if (zChat)
     {
     pSocket->m_iChatConnectionType = eChatZMud;
@@ -7065,62 +6453,56 @@ CChatSocket * pSocket = new CChatSocket (this);
   else
     pSocket->m_iChatConnectionType = eChatMudMaster;
 
-	if (!pSocket->Create(0,
-                         SOCK_STREAM,
-                         FD_READ | FD_WRITE | FD_CONNECT | FD_CLOSE,
-                         NULL))
-	  {
-		delete pSocket;
-		return eCannotCreateChatSocket;
-	  }     // end of can't create socket
+  if (!pSocket->Create(0, SOCK_STREAM,
+                       FD_READ | FD_WRITE | FD_CONNECT | FD_CLOSE,
+                       NULL))
+    {
+    delete pSocket;
+    return eCannotCreateChatSocket;
+    }     // end of can't create socket
 
   pSocket->AsyncSelect ();
 
   pSocket->m_strServerName = Server;
   pSocket->m_ServerAddr.sin_port = htons((u_short)Port); 
 
-	pSocket->m_ServerAddr.sin_family = AF_INET;
-	pSocket->m_ServerAddr.sin_addr.s_addr = inet_addr(Server);
+  pSocket->m_ServerAddr.sin_family = AF_INET;
+  pSocket->m_ServerAddr.sin_addr.s_addr = inet_addr(Server);
 
-// if address is INADDR_NONE then address was a name, not a number
-
-	if (pSocket->m_ServerAddr.sin_addr.s_addr == INADDR_NONE)
-	 {
+  if (pSocket->m_ServerAddr.sin_addr.s_addr != INADDR_NONE)
+    // the name was a dotted IP address - just make the connection
+    pSocket->MakeCall ();
+  else
+    {
+    // address was a name
     pSocket->m_pGetHostStruct = new char [MAXGETHOSTSTRUCT];
-
     if (!pSocket->m_pGetHostStruct)
       {
-  		delete pSocket;
+      delete pSocket;
       return eCannotLookupDomainName;
       }
 
-    if (Frame.GetSafeHwnd ())   // forget it if we don't have a window yet
-      pSocket->m_hNameLookup = WSAAsyncGetHostByName (Frame.GetSafeHwnd (),
-                                                     WM_USER_HOST_NAME_RESOLVED,
-                                                     Server,
-                                                     pSocket->m_pGetHostStruct,
-                                                     MAXGETHOSTSTRUCT);
-
-   if (!pSocket->m_hNameLookup)
-     {
-		  delete pSocket;
+    if (!Frame.GetSafeHwnd ())   // forget it if we don't have a window yet
+      {
+      delete pSocket;
       return eCannotLookupDomainName;
-     }
+      }
 
-    m_ChatList.AddTail (pSocket);
-  	return eOK;
-
-	 }   // end of address not being an IP address
-
-
-// the name was a dotted IP address - just make the connection
+    pSocket->m_hNameLookup = WSAAsyncGetHostByName (Frame.GetSafeHwnd (),
+                                                    WM_USER_HOST_NAME_RESOLVED,
+                                                    Server,
+                                                    pSocket->m_pGetHostStruct,
+                                                    MAXGETHOSTSTRUCT);
+    if (!pSocket->m_hNameLookup)
+      {
+      delete pSocket;
+      return eCannotLookupDomainName;
+      }
+  }
 
   m_ChatList.AddTail (pSocket);
-
-  pSocket->MakeCall ();
   return eOK;   // OK for now, eh?
-
-  }
+}
 
 long CMUSHclientDoc::ChatCall(LPCTSTR Server, long Port) 
 {
@@ -7135,255 +6517,233 @@ long CMUSHclientDoc::ChatCallzChat(LPCTSTR Server, long Port)
 
 void CMUSHclientDoc::AnsiNote(LPCTSTR Text) 
 {
-// save old colours
-bool bOldNotesInRGB = m_bNotesInRGB;
-COLORREF iOldNoteColourFore = m_iNoteColourFore;
-COLORREF iOldNoteColourBack = m_iNoteColourBack;
-unsigned short iOldNoteStyle = m_iNoteStyle;
+  // save old colours
+  bool bOldNotesInRGB = m_bNotesInRGB;
+  COLORREF iOldNoteColourFore = m_iNoteColourFore;
+  COLORREF iOldNoteColourBack = m_iNoteColourBack;
+  unsigned short iOldNoteStyle = m_iNoteStyle;
 
-bool bBold = false;
-bool bInverse = false;
-bool bItalic = false;
-bool bUnderline = false;
-int iCurrentForeGround = WHITE;
-int iCurrentBackGround = BLACK;
+  bool bBold = false, bInverse = false,
+       bItalic = false, bUnderline = false;
+  
+  int iCurrentForeGround = WHITE;
+  int iCurrentBackGround = BLACK;
+  
+  m_iNoteStyle = NORMAL;   // start off with normal style
 
-m_iNoteStyle = NORMAL;   // start off with normal style
-
-const char * p,
-           * start;
-char c;
-long length;
-
-  p = start = Text;
-  while (c = *p)
+  const char * start = Text;
+  const char * p = Text;
+  char c;
+  while ((c = *p) != '\0')
     {
     if (c == ESC)
       {
-      length = p - start;
+      long length = p - start;
 
       // output earlier block
       if (length > 0)
         Tell (CString (start, length));
-      p++;    // skip the ESC
+      ++p;    // skip the ESC
 
       if (*p == '[')
         {
-        p++;    // skip the [
+        ++p;    // skip the [
 
         int iCode = 0;
         while (isdigit (*p) || *p == ';' || *p == 'm')
           {
-          if (isdigit (c = *p))
+          c = *p;
+          if (isdigit (c))
             {
             iCode *= 10;
             iCode += c - '0';
             }
-          else
-            if (c == ';' || c == 'm')
+          else if (c == ';' || c == 'm')
+            {
+            switch (iCode)
               {
-              switch (iCode)
-                {
-                // reset colours to defaults
-                case ANSI_RESET:
-                   iCurrentForeGround = WHITE;
-                   iCurrentBackGround = BLACK;
-                   bBold = false;     
-                   bInverse = false;
-                   bItalic = false;   
-                   bUnderline = false;
-                   break;
+              // reset colours to defaults
+              case ANSI_RESET:
+                 iCurrentForeGround = WHITE;
+                 iCurrentBackGround = BLACK;
+                 bBold = false;     
+                 bInverse = false;
+                 bItalic = false;   
+                 bUnderline = false;
+                 break;
 
-                // bold
-                case ANSI_BOLD:
-                   bBold = true;
-                   break;
+              // bold
+              case ANSI_BOLD:
+                 bBold = true;
+                 break;
 
-                // inverse
-                case ANSI_INVERSE:
-                   bInverse = true;
-                   break;
+              // inverse
+              case ANSI_INVERSE:
+                 bInverse = true;
+                 break;
 
-                // blink
-                case ANSI_BLINK:
-                case ANSI_SLOW_BLINK:
-                case ANSI_FAST_BLINK:
-                   bItalic = true;
-                   break;
+              // blink
+              case ANSI_BLINK:
+              case ANSI_SLOW_BLINK:
+              case ANSI_FAST_BLINK:
+                 bItalic = true;
+                 break;
 
-                // underline
-                case ANSI_UNDERLINE:
-                   bUnderline = true;
-                   break;
+              // underline
+              case ANSI_UNDERLINE:
+                 bUnderline = true;
+                 break;
 
-                // not bold
-                case ANSI_CANCEL_BOLD:
-                   bBold = false;
-                   break;
+              // not bold
+              case ANSI_CANCEL_BOLD:
+                 bBold = false;
+                 break;
 
-                // not inverse
-                case ANSI_CANCEL_INVERSE:
-                   bInverse = false;
-                   break;
+              // not inverse
+              case ANSI_CANCEL_INVERSE:
+                 bInverse = false;
+                 break;
 
-                // not blink
-                case ANSI_CANCEL_BLINK:
-                case ANSI_CANCEL_SLOW_BLINK:
-                   bItalic = false;
-                   break;
+              // not blink
+              case ANSI_CANCEL_BLINK:
+              case ANSI_CANCEL_SLOW_BLINK:
+                 bItalic = false;
+                 break;
 
-                // not underline
-                case ANSI_CANCEL_UNDERLINE:
-                   bUnderline = false;
-                   break;
+              // not underline
+              case ANSI_CANCEL_UNDERLINE:
+                 bUnderline = false;
+                 break;
 
-                // different foreground colour
-                case ANSI_TEXT_BLACK:
-                case ANSI_TEXT_RED    :
-                case ANSI_TEXT_GREEN  :
-                case ANSI_TEXT_YELLOW :
-                case ANSI_TEXT_BLUE   :
-                case ANSI_TEXT_MAGENTA:
-                case ANSI_TEXT_CYAN   :
-                case ANSI_TEXT_WHITE  :
-                   iCurrentForeGround = iCode - ANSI_TEXT_BLACK;
-                   break;
+              // different foreground colour
+              case ANSI_TEXT_BLACK  :
+              case ANSI_TEXT_RED    :
+              case ANSI_TEXT_GREEN  :
+              case ANSI_TEXT_YELLOW :
+              case ANSI_TEXT_BLUE   :
+              case ANSI_TEXT_MAGENTA:
+              case ANSI_TEXT_CYAN   :
+              case ANSI_TEXT_WHITE  :
+                 iCurrentForeGround = iCode - ANSI_TEXT_BLACK;
+                 break;
 
-                // different background colour
-                case ANSI_BACK_BLACK  :
-                case ANSI_BACK_RED    :
-                case ANSI_BACK_GREEN  :
-                case ANSI_BACK_YELLOW :
-                case ANSI_BACK_BLUE   :
-                case ANSI_BACK_MAGENTA:
-                case ANSI_BACK_CYAN   :
-                case ANSI_BACK_WHITE  :
-                   iCurrentBackGround = iCode - ANSI_BACK_BLACK;
-                   break;
-
-                } // end of switch
+              // different background colour
+              case ANSI_BACK_BLACK  :
+              case ANSI_BACK_RED    :
+              case ANSI_BACK_GREEN  :
+              case ANSI_BACK_YELLOW :
+              case ANSI_BACK_BLUE   :
+              case ANSI_BACK_MAGENTA:
+              case ANSI_BACK_CYAN   :
+              case ANSI_BACK_WHITE  :
+                 iCurrentBackGround = iCode - ANSI_BACK_BLACK;
+                 break;
+              } // end of switch
 
               m_iNoteStyle = NORMAL;
-
               // select colours
               if (bBold)
                 {
                 SetNoteColourFore (m_boldcolour [iCurrentForeGround]);
-                SetNoteColourBack (m_normalcolour [iCurrentBackGround]);
                 m_iNoteStyle |= HILITE;
                 }
               else
-                {
                 SetNoteColourFore (m_normalcolour [iCurrentForeGround]);
-                SetNoteColourBack (m_normalcolour [iCurrentBackGround]);
-                }
+
+              SetNoteColourBack (m_normalcolour [iCurrentBackGround]);
 
               // select other style bits
-              if (bInverse)
-                m_iNoteStyle |= INVERSE;
+              if (bInverse)   m_iNoteStyle |= INVERSE;
+              if (bItalic)    m_iNoteStyle |= BLINK;
+              if (bUnderline) m_iNoteStyle |= UNDERLINE;
 
-              if (bItalic)
-                m_iNoteStyle |= BLINK;
-
-              if (bUnderline)
-                m_iNoteStyle |= UNDERLINE;
-
-              p++;  // skip m or ;
+              ++p;  // skip m or ;
               }   // end of ESC [ nn ; or ESC [ nn m
 
           if (c == ';')
             iCode = 0;
+          else if (c == 'm')
+            break;
           else
-            if (c == 'm')
-              break;
-            else
-              p++;    // next character
+            ++p;    // next character
           } // end of getting code
         } // end of ESC [ something
        else
-         p++; // skip it
+         ++p; // skip it
 
       start = p;  // ready to start a new batch
       } // end of ESC something
     else
-      p++;  // just keep counting characters
-
+      ++p;  // just keep counting characters
     } // end of processing each character
 
-// output remaining text  - and newline
-Note (start);
+  // output remaining text  - and newline
+  Note (start);
 
-// put the colours back
-if (bOldNotesInRGB)
-  {
-  m_iNoteColourFore = iOldNoteColourFore;
-  m_iNoteColourBack = iOldNoteColourBack;
-  }
-else  
-  m_bNotesInRGB = false;
+  // put the colours back
+  if (bOldNotesInRGB)
+    {
+    m_iNoteColourFore = iOldNoteColourFore;
+    m_iNoteColourBack = iOldNoteColourBack;
+    }
+  else  
+    m_bNotesInRGB = false;
 
-// put style back
-m_iNoteStyle = iOldNoteStyle;
-
+  // put style back
+  m_iNoteStyle = iOldNoteStyle;
 } // end of CMUSHclientDoc::AnsiNote
 
 
-static CString AnsiCode (short Code) 
+static inline CString AnsiCode (short Code) 
 {
-return CFormat ("%c[%dm", ESC, Code); 
+  return CFormat ("%c[%dm", ESC, Code);
 }
 
 CString StripAnsi (const CString strMessage)
-  {
-CString strResult;
-
-const char * p,
-           * start;
-char c;
-long length;
-
-  p = start = strMessage;
-  while (c = *p)
+{
+  CString strResult;
+  
+  const char * p = strMessage;
+  const char * start = strMessage;
+  char c;
+  while ((c = *p) != NULL)
     {
     if (c == ESC)
       {
-      length = p - start;
+      long length = p - start;
 
       // output earlier block
       if (length > 0)
         strResult += CString (start, length);
-      p++;    // skip the ESC
+      ++p;    // skip the ESC
 
       if (*p == '[')
         {
-        p++;    // skip the [
+        ++p;    // skip the [
 
-        while (*p != 0 && 
-               *p != ';' && 
+        while (*p != '\0' && 
+               *p != ';'  && 
                *p != 'm')
-          p++;
+          ++p;
 
-        if (*p)
-          p++;   // end of getting code
+        if (*p != '\0')
+          ++p;   // end of getting code
         } // end of ESC [ something
        else
-         p++; // skip it
-
+         ++p; // skip it
       start = p;  // ready to start a new batch
       } // end of ESC something
     else
-      p++;  // just keep counting characters
-
+      ++p;  // just keep counting characters
     } // end of processing each character
 
-// get remaining text 
-  strResult += start;
-  return strResult;
-  }
+  // get remaining text 
+  return strResult + start;
+}
 
 long CMUSHclientDoc::ChatNameChange(LPCTSTR NewName) 
 {
-CString strNewName = NewName;
+  CString strNewName = NewName;
 
   strNewName.TrimLeft ();
   strNewName.TrimRight ();
@@ -7395,291 +6755,275 @@ CString strNewName = NewName;
     m_strOurChatName = "<no name>";
 
   ChatNote (eChatNameChange,
-              TFormat ("Your chat name changed from %s to %s", 
+            TFormat ("Your chat name changed from %s to %s", 
                      (LPCTSTR) m_strOurChatName, 
-                     (LPCTSTR) strNewName));
+                     (LPCTSTR) NewName));
 
   if (m_strOurChatName != strNewName)
     SetModifiedFlag (TRUE);   // document has changed
 
+  SendChatMessageToAll (CHAT_NAME_CHANGE, strNewName, false, false, false, 0, "", 0);
   m_strOurChatName = strNewName;
 
-  SendChatMessageToAll (CHAT_NAME_CHANGE, strNewName, false, false, false, 0, "", 0);
-	return eOK;
+  return eOK;
 }
 
 long CMUSHclientDoc::ChatEverybody(LPCTSTR Message, BOOL Emote) 
 {
-CString strMessage;
-
+  CString strMessage;
+  
   if (Emote)
     strMessage = CFormat ("\n%s%s%s %s%s\n",
-                              (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                              (LPCTSTR) m_strOurChatName,
-                               Message,
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_RED));   
-    else
+        (LPCTSTR) AnsiCode (ANSI_BOLD),
+        (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+        (LPCTSTR) m_strOurChatName,
+        Message,
+        (LPCTSTR) AnsiCode (ANSI_TEXT_RED));   
+  else
     strMessage = TFormat ("\n%s chats to everybody, '%s%s%s%s'\n",
-                              (LPCTSTR) m_strOurChatName,
-                              (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                               Message,
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_RED));   
+        (LPCTSTR) m_strOurChatName,
+        (LPCTSTR) AnsiCode (ANSI_BOLD),
+        (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+        Message,
+        (LPCTSTR) AnsiCode (ANSI_TEXT_RED));
 
-  if (SendChatMessageToAll (CHAT_TEXT_EVERYBODY,
-                                  strMessage,
-                                  true,    // unless ignoring them
-                                  false,
-                                  false,
-                                  0,    // don't ignore us
-                                  "",   // no group
-                                  0))   // use our stamp
-  {
+  if (!SendChatMessageToAll (CHAT_TEXT_EVERYBODY,
+                            strMessage,
+                            true,    // unless ignoring them
+                            false,
+                            false,
+                            0,    // don't ignore us
+                            "",   // no group
+                            0))   // use our stamp
+    {
+    ChatNote (eChatOutgoingEverybody, 
+        Translate ("No (relevant) chat connections."));
+    return eNoChatConnections;
+    }
+
   if (Emote)
     ChatNote (eChatOutgoingEverybody,
-              TFormat ("You emote to everybody: %s%s%s %s%s", 
-                              (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                              (LPCTSTR) m_strOurChatName,
-                               Message,
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));   
+        TFormat ("You emote to everybody: %s%s%s %s%s", 
+            (LPCTSTR) AnsiCode (ANSI_BOLD),  
+            (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+            (LPCTSTR) m_strOurChatName,
+            Message,
+            (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));   
   else
     ChatNote (eChatOutgoingEverybody,
-              TFormat ("You chat to everybody, '%s%s%s%s'", 
-                              (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                               Message,
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));   
+        TFormat ("You chat to everybody, '%s%s%s%s'", 
+            (LPCTSTR) AnsiCode (ANSI_BOLD),  
+            (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+            Message,
+            (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));
+
   return eOK;
-  }
-else
-  {
-  ChatNote (eChatOutgoingEverybody, 
-            Translate ("No (relevant) chat connections."));
-  return eNoChatConnections;
-  }
 }
+
 
 
 long CMUSHclientDoc::ChatID(long ID, LPCTSTR Message, BOOL Emote) 
 {
-
   // quiet failure on ID zero - probably caused by a ChatGetID lookup failure
   if (ID == 0)
     return eChatIDNotFound;
 
-CString strMessage;
-
   CChatSocket * pSocket = GetChatSocket (ID); // find them
-
   if (!pSocket)
     {
     ChatNote (eChatOutgoingPersonal, TFormat ("Chat ID %i is not connected.", ID));
-	  return eChatIDNotFound;
+    return eChatIDNotFound;
     }
 
-  if (Emote)  
-   strMessage = TFormat ("\nTo you, %s%s%s %s%s\n",
-                              (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                              (LPCTSTR) m_strOurChatName,
-                               Message,
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_RED)   
-                               );
-  else
-    strMessage = TFormat ("\n%s chats to you, '%s%s%s%s'\n",
-                              (LPCTSTR) m_strOurChatName,
-                              (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                               Message,
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_RED)   
-                               );
+  CString strMessage;
 
-  pSocket->m_iCountOutgoingPersonal++;
-  pSocket->SendChatMessage (CHAT_TEXT_PERSONAL, strMessage);
-
-  if (Emote)  
+  ++pSocket->m_iCountOutgoingPersonal;
+  if (Emote)
+    {
+    pSocket->SendChatMessage(CHAT_TEXT_PERSONAL,
+        TFormat ("\nTo you, %s%s%s %s%s\n",
+            (LPCTSTR) AnsiCode (ANSI_BOLD),  
+            (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+            (LPCTSTR) m_strOurChatName,
+            Message,
+            (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));
     ChatNote (eChatOutgoingPersonal,
-              TFormat ("You emote to %s: %s%s%s %s%s", 
-                  (LPCTSTR) pSocket->m_strRemoteUserName, 
-                              (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                              (LPCTSTR) m_strOurChatName,
-                               Message,
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));   
+        TFormat ("You emote to %s: %s%s%s %s%s", 
+            (LPCTSTR) pSocket->m_strRemoteUserName, 
+            (LPCTSTR) AnsiCode (ANSI_BOLD),  
+            (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+            (LPCTSTR) m_strOurChatName,
+            Message,
+            (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));
+    }
   else
+    {
+    pSocket->SendChatMessage(CHAT_TEXT_PERSONAL,
+        TFormat ("\n%s chats to you, '%s%s%s%s'\n",
+            (LPCTSTR) m_strOurChatName,
+            (LPCTSTR) AnsiCode (ANSI_BOLD),  
+            (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),
+            Message,
+            (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));
     ChatNote (eChatOutgoingPersonal,
-              TFormat ("You chat to %s, '%s%s%s%s'", 
-                        (LPCTSTR) pSocket->m_strRemoteUserName, 
-                        (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                        (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                         Message,
-                        (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));   
+        TFormat ("You chat to %s, '%s%s%s%s'", 
+            (LPCTSTR) pSocket->m_strRemoteUserName,
+            (LPCTSTR) AnsiCode (ANSI_BOLD),
+            (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN), 
+            Message,
+            (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));
+    }
+
   return eOK;
-
 }
 
 
 long CMUSHclientDoc::ChatPersonal(LPCTSTR Who, LPCTSTR Message, BOOL Emote) 
 {
-int iCount = 0;
-
-  if (strlen (Who) == 0)
+  if (Who[0] == '\0')
     return eBadParameter;
 
-  for (POSITION chatpos = m_ChatList.GetHeadPosition (); chatpos; )
+  POSITION chatpos = m_ChatList.GetHeadPosition ();
+  CChatSocket * pSocket = NULL;
+  int iCount;
+  for (iCount = 0; chatpos != NULL; ++iCount)
     {
-    CChatSocket * pSocket = m_ChatList.GetNext (chatpos);
-    if (pSocket->m_iChatStatus == eChatConnected)
-      {
-      if (pSocket->m_strRemoteUserName.CompareNoCase (Who) == 0)
-        {
-        if (ChatID (pSocket->m_iChatID, Message, Emote) == eOK)
-          iCount++; // count matches
-        }
-      }   // end of chat session not being deleted
+    pSocket = m_ChatList.GetNext (chatpos);
+    if (pSocket->m_iChatStatus == eChatConnected &&
+        pSocket->m_strRemoteUserName.CompareNoCase (Who) == 0 &&
+        ChatID (pSocket->m_iChatID, Message, Emote) == eOK)
+      ++iCount; // count matches
     } // end of all chat sessions
 
   if (iCount == 0)
     {
     ChatNote (eChatOutgoingPersonal, TFormat ("%s is not connected.", Who));
-	  return eChatPersonNotFound;
+    return eChatPersonNotFound;
     }
-  else
-    if (iCount > 1)
-      ChatNote (eChatOutgoingPersonal, TFormat ("%i matches.", iCount));
 
+  ChatNote (eChatOutgoingPersonal, TFormat ("%i matches.", iCount));
   return eOK;
 }
 
 long CMUSHclientDoc::ChatGroup(LPCTSTR Group, LPCTSTR Message, BOOL Emote) 
 {
-  if (strlen (Group) == 0)
+  if (Group[0] == '\0')
     return eBadParameter;
 
   CString strMessage;
-  
+
   if (Emote)
     strMessage = TFormat ("%-15s\nTo the group, %s%s%s %s%s\n",
-                                Group,
-                              (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                              (LPCTSTR) m_strOurChatName,
-                               Message,
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_RED));   
+        Group,
+        (LPCTSTR) AnsiCode (ANSI_BOLD),  
+        (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+        (LPCTSTR) m_strOurChatName,
+        Message,
+        (LPCTSTR) AnsiCode (ANSI_TEXT_RED));
   else
     strMessage = TFormat ("%-15s\n%s chats to the group, '%s%s%s%s'\n",
-                                Group,
-                                (LPCTSTR) m_strOurChatName,
-                                (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                                (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                                 Message,
-                                (LPCTSTR) AnsiCode (ANSI_TEXT_RED));   
+        Group,
+        (LPCTSTR) m_strOurChatName,
+        (LPCTSTR) AnsiCode (ANSI_BOLD),  
+        (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),
+        Message,
+        (LPCTSTR) AnsiCode (ANSI_TEXT_RED));
 
-if (SendChatMessageToAll (CHAT_TEXT_GROUP,
-                                  strMessage,
-                                  true,      // unless ignoring them
-                                  false,     // to all connections
-                                  false,
-                                  0,
-                                  Group,
-                                  0))    
-  {
+  if (!SendChatMessageToAll (CHAT_TEXT_GROUP,
+          strMessage,
+          true,      // unless ignoring them
+          false,     // to all connections
+          false,
+          0,
+          Group,
+          0))
+    {
+    ChatNote (eChatOutgoingGroup,
+      TFormat ("No chat connections in the group %s.", Group));
+    return eNoChatConnections;
+    }
+
   if (Emote)
     ChatNote (eChatOutgoingGroup,
-              TFormat ("You emote to the group %s: %s%s%s %s%s", 
-                              Group, 
-                              (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                              (LPCTSTR) m_strOurChatName,
-                               Message,
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));   
+        TFormat ("You emote to the group %s: %s%s%s %s%s", 
+            Group, 
+            (LPCTSTR) AnsiCode (ANSI_BOLD),  
+            (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+            (LPCTSTR) m_strOurChatName,
+            Message,
+            (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));
   else
     ChatNote (eChatOutgoingGroup,
-              TFormat ("You chat to the group %s, '%s%s%s%s'", 
-                               Group, 
-                              (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                               Message,
-                              (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));   
+        TFormat ("You chat to the group %s, '%s%s%s%s'", 
+        Group, 
+        (LPCTSTR) AnsiCode (ANSI_BOLD),  
+        (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+        Message,
+        (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));   
 
   return eOK;
-  }
-else
-  {
-  ChatNote (eChatOutgoingGroup,
-              TFormat ("No chat connections in the group %s.", Group));
-  return eNoChatConnections;
-  }
-
 }
 
 // Does a note in the chat colour - including processing ANSI codes
 
 void CMUSHclientDoc::ChatNote(short NoteType, LPCTSTR Message) 
 {
-
   CString strMessage = Message;
 
   // strip leading \n
-  if (strMessage.GetLength () >= 1 && strMessage.Left (1) == '\n')
+  if (!strMessage.IsEmpty () && strMessage.Left (1) == '\n')
     strMessage = strMessage.Mid (1);
 
   // strip trailing \n
-  if (strMessage.GetLength () >= 1 && strMessage.Right (1) == '\n')
+  if (!strMessage.IsEmpty () && strMessage.Right (1) == '\n')
     strMessage = strMessage.Left (strMessage.GetLength () - 1);
 
   // check message is not too long for what we accept - bytes
-
-  if (m_iMaxChatBytesPerMessage > 0)
-    {
-    if (strMessage.GetLength () > m_iMaxChatBytesPerMessage)
-      {
-      strMessage = strMessage.Left (m_iMaxChatBytesPerMessage);
-      strMessage += TFormat ("\n[Chat message truncated, exceeds %i bytes]", 
+  if (m_iMaxChatBytesPerMessage > 0 && strMessage.GetLength () > m_iMaxChatBytesPerMessage)
+    strMessage = strMessage.Left (m_iMaxChatBytesPerMessage)
+        + TFormat ("\n[Chat message truncated, exceeds %i bytes]", 
             m_iMaxChatBytesPerMessage);
-      }
-    }   // end of byte count check wanted
 
   // check message is not too long for what we accept - lines
-  
   if (m_iMaxChatLinesPerMessage > 0)
     {
     int iLines = 0;
     char * p;
-
-    for (p = strMessage.GetBuffer (strMessage.GetLength ());
-         *p;
-         p++)
+    for (p = strMessage.GetBuffer (strMessage.GetLength ()); *p != NULL; ++p)
       {
       if (*p == '\n')
-        if (++iLines >= m_iMaxChatLinesPerMessage)
+        {
+        ++iLines;
+        if (iLines == m_iMaxChatLinesPerMessage)
           {
-          *p = 0;
+          *p = '\0';
           break;    // stop scanning for newlines
           }
-      } // end of buffer scan
+        }
+      }
     strMessage.ReleaseBuffer (-1);
-    if (iLines >= m_iMaxChatLinesPerMessage && p [1])
+
+    if (iLines == m_iMaxChatLinesPerMessage && p [1])
       strMessage += TFormat ("\n[Chat message truncated, exceeds %i lines]", 
-            m_iMaxChatLinesPerMessage);
+          m_iMaxChatLinesPerMessage);
     }   // end of line count check wanted
 
+  POSITION pluginpos = m_PluginList.GetHeadPosition();
   CPlugin * pSavedPlugin = m_CurrentPlugin;
+  CPlugin * pPlugin = NULL;
   // tell each plugin what we are about to display
-  for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+  while (pluginpos != NULL)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+     pPlugin = m_PluginList.GetNext (pluginpos);
 
-    if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+    if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
 
     // see what the plugin makes of this,
     if (!pPlugin->ExecutePluginScript (ON_PLUGIN_CHAT_DISPLAY, 
                           pPlugin->m_dispid_plugin_On_Chat_Display, 
                           NoteType,     // message number
-                          string (strMessage)    // message text
+                          (LPCTSTR) strMessage    // message text
                           ))
       {
       m_CurrentPlugin = pSavedPlugin;
@@ -7689,11 +7033,11 @@ void CMUSHclientDoc::ChatNote(short NoteType, LPCTSTR Message)
   m_CurrentPlugin = pSavedPlugin;
 
 
-// save old colours - because we switch to the chat colour below
-bool bOldNotesInRGB = m_bNotesInRGB;
-COLORREF iOldNoteColourFore = m_iNoteColourFore;
-COLORREF iOldNoteColourBack = m_iNoteColourBack;
-
+  // save old colours - because we switch to the chat colour below
+  bool bOldNotesInRGB = m_bNotesInRGB;
+  COLORREF iOldNoteColourFore = m_iNoteColourFore;
+  COLORREF iOldNoteColourBack = m_iNoteColourBack;
+  
   if (m_cChatForegroundColour == m_cChatBackgroundColour) 
     NoteColourRGB (RGB (255, 0, 0), RGB (0, 0, 0));
   else
@@ -7713,77 +7057,67 @@ COLORREF iOldNoteColourBack = m_iNoteColourBack;
     }
   else  
     m_bNotesInRGB = false;
-
 }
 
 long CMUSHclientDoc::ChatAcceptCalls(short Port) 
 {
-
   if (m_pChatListenSocket)
     return eChatAlreadyListening;
 
-  if (Port && m_IncomingChatPort != Port)
+  if (m_IncomingChatPort != Port)
     {
     SetModifiedFlag (TRUE);   // document has changed
-    m_IncomingChatPort = Port;
+    m_IncomingChatPort = (Port > 0) ? Port : DEFAULT_CHAT_PORT;
+    }
+  
+  // set flag for next session if necessary
+  if (!m_bAcceptIncomingChatConnections)
+    {
+    SetModifiedFlag (TRUE);   // document has changed
+    m_bAcceptIncomingChatConnections = true;
     }
 
-  if (m_IncomingChatPort == 0)
-    m_IncomingChatPort = DEFAULT_CHAT_PORT;
+  Frame.SetStatusMessageNow (TFormat ("Accepting chat calls on port %d",
+      m_IncomingChatPort));
 
-// set flag for next session if necessary
- if (!m_bAcceptIncomingChatConnections)
-   {
-   SetModifiedFlag (TRUE);   // document has changed
-   m_bAcceptIncomingChatConnections = true;
-   }
+  m_pChatListenSocket = new CChatListenSocket (this);
+  if (!m_pChatListenSocket->Create (m_IncomingChatPort,
+      SOCK_STREAM, FD_ACCEPT | FD_CLOSE, NULL))
+	{
+    int nError = GetLastError();
+    ChatNote (eChatConnection, TFormat ("Cannot accept calls on port %i, code = %i (%s)", 
+        m_IncomingChatPort, 
+        nError,
+        GetSocketError (nError)));
 
- Frame.SetStatusMessageNow (TFormat ("Accepting chat calls on port %d",
-                              m_IncomingChatPort));
-
- m_pChatListenSocket = new CChatListenSocket (this);
-
-	if (!m_pChatListenSocket->Create (m_IncomingChatPort,
-                         SOCK_STREAM,
-                         FD_ACCEPT | FD_CLOSE ,
-                         NULL))
-	  {
-    int nError = GetLastError ();
-		delete m_pChatListenSocket;
+    delete m_pChatListenSocket;
     m_pChatListenSocket = NULL;
-    ChatNote (eChatConnection,
-              TFormat (
-              "Cannot accept calls on port %i, code = %i (%s)", 
-                    m_IncomingChatPort, 
-                    nError,
-                    GetSocketError (nError)));
-		return eCannotCreateChatSocket;
-	  }     // end of can't create socket
+    
+    return eCannotCreateChatSocket;
+    }     // end of can't create socket
 
   m_pChatListenSocket->Listen ();
 
-  ChatNote (eChatConnection,
-            TFormat (
-    "Listening for chat connections on port %d", m_IncomingChatPort));
-
-	return eOK;
+  ChatNote (eChatConnection, TFormat ("Listening for chat connections on port %d",
+      m_IncomingChatPort));
+  
+  return eOK;
 }    // end of CMUSHclientDoc::ChatAcceptCalls
 
 void CMUSHclientDoc::ChatStopAcceptingCalls() 
 {
-if (m_pChatListenSocket)
-  {
-  ShutDownSocket (*m_pChatListenSocket);
+  if (!m_pChatListenSocket)
+    return;
 
-  ChatNote (eChatConnection, "Stopped accepting chat connections.");
+  ShutDownSocket (*m_pChatListenSocket);
   delete m_pChatListenSocket;
   m_pChatListenSocket = NULL;
+
+  ChatNote (eChatConnection, "Stopped accepting chat connections.");
 
   // remember they don't want them
   SetModifiedFlag (TRUE);   // document has changed
   m_bAcceptIncomingChatConnections = false;
-  }
-
 }
 
 // get list of chat IDs
@@ -7791,120 +7125,115 @@ VARIANT CMUSHclientDoc::GetChatList()
 {
   COleSafeArray sa;   // for list
 
-  long iCount = 0;
-  POSITION pos;
-
   // count ones not marked for deletion
-  for (pos = m_ChatList.GetHeadPosition (); pos; )
-    {
-    CChatSocket * pSocket = m_ChatList.GetNext (pos);
-    if (pSocket->m_iChatStatus == eChatConnected)
-      iCount++;
-    } // end of all chat sessions
+  POSITION pos = m_ChatList.GetHeadPosition ();
+  long iCount = 0;
+  while (pos != NULL)
+    if (m_ChatList.GetNext (pos)->m_iChatStatus == eChatConnected)
+      ++iCount;
 
-  if (iCount) // cannot create empty array dimension
+  if (iCount > 0) // cannot create empty array dimension
     {
     sa.CreateOneDim (VT_VARIANT, iCount);
   
     // put the chat sessions into the array
-      for (iCount = 0, pos = m_ChatList.GetHeadPosition (); pos; )
+    pos = m_ChatList.GetHeadPosition ();
+    iCount = 0;
+    while (pos != NULL)
+      {
+      CChatSocket * pSocket = m_ChatList.GetNext (pos);
+      if (pSocket->m_iChatStatus == eChatConnected)
         {
-        CChatSocket * pSocket = m_ChatList.GetNext (pos);
-
-        if (pSocket->m_iChatStatus == eChatConnected)
-          {
-          // the array must be a bloody array of variants, or VBscript kicks up
-          COleVariant v (pSocket->m_iChatID);
-          sa.PutElement (&iCount, &v);
-          iCount++;
-          }
-        }      // end of looping through each chat session
+        // the array must be a bloody array of variants, or VBscript kicks up
+        sa.PutElement (&iCount, &((COleVariant)pSocket->m_iChatID));
+        ++iCount;
+        }
+      }      // end of looping through each chat session
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 }
 
 
 // get info about one chat ID
 VARIANT CMUSHclientDoc::GetChatInfo(long ChatID, short InfoType) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
+  VARIANT vaResult;
+  VariantInit(&vaResult);
   vaResult.vt = VT_NULL;
 
   CChatSocket * pSocket = GetChatSocket (ChatID);
+  if (!pSocket)
+    return vaResult;
 
-  if (pSocket)
-    switch (InfoType)
-      {
-       case   1: SetUpVariantString (vaResult, pSocket->m_strServerName); break;
-       case   2: SetUpVariantString (vaResult, pSocket->m_strRemoteUserName); break;
-       case   3: SetUpVariantString (vaResult, pSocket->m_strGroup); break;
-       case   4: SetUpVariantString (vaResult, pSocket->m_strRemoteVersion); break;
-       case   5: SetUpVariantString (vaResult, pSocket->m_strAllegedAddress); break;
-       case   6: SetUpVariantString (vaResult, inet_ntoa (pSocket->m_ServerAddr.sin_addr)); break;
-       case   7: SetUpVariantLong   (vaResult, ntohs (pSocket->m_ServerAddr.sin_port)); break;
-       case   8: SetUpVariantLong   (vaResult, pSocket->m_iAllegedPort); break;
-       case   9: SetUpVariantLong   (vaResult, pSocket->m_iChatStatus); break;
-       case  10: SetUpVariantLong   (vaResult, pSocket->m_iChatConnectionType); break;
-       case  11: SetUpVariantLong   (vaResult, pSocket->m_iChatID); break;
-       case  12: SetUpVariantBool   (vaResult, pSocket->m_bIncoming); break;
-       case  13: SetUpVariantBool   (vaResult, pSocket->m_bCanSnoop); break;
-       case  14: SetUpVariantBool   (vaResult, pSocket->m_bYouAreSnooping); break;
-       case  15: SetUpVariantBool   (vaResult, pSocket->m_bHeIsSnooping); break;
-       case  16: SetUpVariantBool   (vaResult, pSocket->m_bCanSendCommands); break;
-       case  17: SetUpVariantBool   (vaResult, pSocket->m_bPrivate); break;
-       case  18: SetUpVariantBool   (vaResult, pSocket->m_bCanSendFiles); break;
-       case  19: SetUpVariantBool   (vaResult, pSocket->m_bIgnore); break;
-       case  20: SetUpVariantDouble (vaResult, pSocket->m_fLastPingTime); break;
-         
-       case  21: 
-         if (pSocket->m_tWhenStarted.GetTime ())     // only if non-zero, otherwise return empty
-           SetUpVariantDate   (vaResult, COleDateTime (pSocket->m_tWhenStarted.GetTime ())); 
-         break;
-       case  22: 
-         if (pSocket->m_tLastIncoming.GetTime ())     // only if non-zero, otherwise return empty
-           SetUpVariantDate   (vaResult, COleDateTime (pSocket->m_tLastIncoming.GetTime ())); 
-         break;
-       case  23: 
-         if (pSocket->m_tLastOutgoing.GetTime ())     // only if non-zero, otherwise return empty
-           SetUpVariantDate   (vaResult, COleDateTime (pSocket->m_tLastOutgoing.GetTime ())); 
-         break;
+  switch (InfoType)
+    {
+    case   1: SetUpVariantString (vaResult, pSocket->m_strServerName); break;
+    case   2: SetUpVariantString (vaResult, pSocket->m_strRemoteUserName); break;
+    case   3: SetUpVariantString (vaResult, pSocket->m_strGroup); break;
+    case   4: SetUpVariantString (vaResult, pSocket->m_strRemoteVersion); break;
+    case   5: SetUpVariantString (vaResult, pSocket->m_strAllegedAddress); break;
+    case   6: SetUpVariantString (vaResult, inet_ntoa (pSocket->m_ServerAddr.sin_addr)); break;
+    case   7: SetUpVariantLong   (vaResult, ntohs (pSocket->m_ServerAddr.sin_port)); break;
+    case   8: SetUpVariantLong   (vaResult, pSocket->m_iAllegedPort); break;
+    case   9: SetUpVariantLong   (vaResult, pSocket->m_iChatStatus); break;
+    case  10: SetUpVariantLong   (vaResult, pSocket->m_iChatConnectionType); break;
+    case  11: SetUpVariantLong   (vaResult, pSocket->m_iChatID); break;
+    case  12: SetUpVariantBool   (vaResult, pSocket->m_bIncoming); break;
+    case  13: SetUpVariantBool   (vaResult, pSocket->m_bCanSnoop); break;
+    case  14: SetUpVariantBool   (vaResult, pSocket->m_bYouAreSnooping); break;
+    case  15: SetUpVariantBool   (vaResult, pSocket->m_bHeIsSnooping); break;
+    case  16: SetUpVariantBool   (vaResult, pSocket->m_bCanSendCommands); break;
+    case  17: SetUpVariantBool   (vaResult, pSocket->m_bPrivate); break;
+    case  18: SetUpVariantBool   (vaResult, pSocket->m_bCanSendFiles); break;
+    case  19: SetUpVariantBool   (vaResult, pSocket->m_bIgnore); break;
+    case  20: SetUpVariantDouble (vaResult, pSocket->m_fLastPingTime); break;
+      
+    case  21: 
+      if (pSocket->m_tWhenStarted.GetTime ())     // only if non-zero, otherwise return empty
+        SetUpVariantDate   (vaResult, COleDateTime (pSocket->m_tWhenStarted.GetTime ())); 
+      break;
+    case  22: 
+      if (pSocket->m_tLastIncoming.GetTime ())     // only if non-zero, otherwise return empty
+        SetUpVariantDate   (vaResult, COleDateTime (pSocket->m_tLastIncoming.GetTime ())); 
+      break;
+    case  23: 
+      if (pSocket->m_tLastOutgoing.GetTime ())     // only if non-zero, otherwise return empty
+        SetUpVariantDate   (vaResult, COleDateTime (pSocket->m_tLastOutgoing.GetTime ())); 
+      break;
 
-       case  24: 
-         if (pSocket->m_tStartedFileTransfer.GetTime ())     // only if non-zero, otherwise return empty
-           SetUpVariantDate   (vaResult, COleDateTime (pSocket->m_tStartedFileTransfer.GetTime ())); 
-         break;
+    case  24: 
+      if (pSocket->m_tStartedFileTransfer.GetTime ())     // only if non-zero, otherwise return empty
+        SetUpVariantDate   (vaResult, COleDateTime (pSocket->m_tStartedFileTransfer.GetTime ())); 
+      break;
 
-       case  25: SetUpVariantBool   (vaResult, pSocket->m_bDoingFileTransfer); break;
-       case  26: SetUpVariantBool   (vaResult, pSocket->m_bSendFile); break;
-       case  27: SetUpVariantString (vaResult, pSocket->m_strSenderFileName); break;
-       case  28: SetUpVariantString (vaResult, pSocket->m_strOurFileName); break;
-       case  29: SetUpVariantLong   (vaResult, pSocket->m_iFileSize); break;
-       case  30: SetUpVariantLong   (vaResult, pSocket->m_iFileBlocks); break;
-       case  31: SetUpVariantLong   (vaResult, pSocket->m_iBlocksTransferred); break;
-       case  32: SetUpVariantLong   (vaResult, pSocket->m_iFileBlockSize); break;
-       case  33: SetUpVariantLong   (vaResult, pSocket->m_iCountIncomingPersonal); break;
-       case  34: SetUpVariantLong   (vaResult, pSocket->m_iCountIncomingAll); break;
-       case  35: SetUpVariantLong   (vaResult, pSocket->m_iCountIncomingGroup); break;
-       case  36: SetUpVariantLong   (vaResult, pSocket->m_iCountOutgoingPersonal); break;
-       case  37: SetUpVariantLong   (vaResult, pSocket->m_iCountOutgoingAll); break;
-       case  38: SetUpVariantLong   (vaResult, pSocket->m_iCountOutgoingGroup); break;
-       case  39: SetUpVariantLong   (vaResult, pSocket->m_iCountMessages); break;
-       case  40: SetUpVariantLong   (vaResult, pSocket->m_iCountFileBytesIn); break;
-       case  41: SetUpVariantLong   (vaResult, pSocket->m_iCountFileBytesOut); break;
-       case  42: SetUpVariantLong   (vaResult, pSocket->m_zChatStamp); break;
-       case  43: SetUpVariantString (vaResult, pSocket->m_strEmailAddress); break;
-       case  44: SetUpVariantString (vaResult, pSocket->m_strPGPkey); break;
-       case  45: SetUpVariantShort  (vaResult, pSocket->m_zChatStatus); break;
-       case  46: SetUpVariantLong   (vaResult, pSocket->m_iUserOption); break;
-         
-      default:
-        vaResult.vt = VT_EMPTY;
-        break;
-
-      } // end of switch
+    case  25: SetUpVariantBool   (vaResult, pSocket->m_bDoingFileTransfer); break;
+    case  26: SetUpVariantBool   (vaResult, pSocket->m_bSendFile); break;
+    case  27: SetUpVariantString (vaResult, pSocket->m_strSenderFileName); break;
+    case  28: SetUpVariantString (vaResult, pSocket->m_strOurFileName); break;
+    case  29: SetUpVariantLong   (vaResult, pSocket->m_iFileSize); break;
+    case  30: SetUpVariantLong   (vaResult, pSocket->m_iFileBlocks); break;
+    case  31: SetUpVariantLong   (vaResult, pSocket->m_iBlocksTransferred); break;
+    case  32: SetUpVariantLong   (vaResult, pSocket->m_iFileBlockSize); break;
+    case  33: SetUpVariantLong   (vaResult, pSocket->m_iCountIncomingPersonal); break;
+    case  34: SetUpVariantLong   (vaResult, pSocket->m_iCountIncomingAll); break;
+    case  35: SetUpVariantLong   (vaResult, pSocket->m_iCountIncomingGroup); break;
+    case  36: SetUpVariantLong   (vaResult, pSocket->m_iCountOutgoingPersonal); break;
+    case  37: SetUpVariantLong   (vaResult, pSocket->m_iCountOutgoingAll); break;
+    case  38: SetUpVariantLong   (vaResult, pSocket->m_iCountOutgoingGroup); break;
+    case  39: SetUpVariantLong   (vaResult, pSocket->m_iCountMessages); break;
+    case  40: SetUpVariantLong   (vaResult, pSocket->m_iCountFileBytesIn); break;
+    case  41: SetUpVariantLong   (vaResult, pSocket->m_iCountFileBytesOut); break;
+    case  42: SetUpVariantLong   (vaResult, pSocket->m_zChatStamp); break;
+    case  43: SetUpVariantString (vaResult, pSocket->m_strEmailAddress); break;
+    case  44: SetUpVariantString (vaResult, pSocket->m_strPGPkey); break;
+    case  45: SetUpVariantShort  (vaResult, pSocket->m_zChatStatus); break;
+    case  46: SetUpVariantLong   (vaResult, pSocket->m_iUserOption); break;
+       
+    default:
+      vaResult.vt = VT_EMPTY;
+      break;
+    } // end of switch
 
   return vaResult;
 }
@@ -7919,11 +7248,10 @@ long CMUSHclientDoc::ChatPing(long ID)
   if (App.m_iCounterFrequency)
     QueryPerformanceCounter (&pSocket->m_iPingStartTime);
 
-  CString strMessage = CTime::GetCurrentTime().Format (TranslateTime ("%A, %B %d, %Y, %#I:%M %p"));
+  pSocket->SendChatMessage (CHAT_PING_REQUEST, CTime::GetCurrentTime().Format (
+      TranslateTime ("%A, %B %d, %Y, %#I:%M %p")));
 
-  pSocket->SendChatMessage (CHAT_PING_REQUEST, strMessage);
-
-	return eOK;
+  return eOK;
 }
 
 
@@ -7934,8 +7262,7 @@ long CMUSHclientDoc::ChatPeekConnections(long ID)
     return eChatIDNotFound;
   
   pSocket->SendChatMessage (CHAT_PEEK_CONNECTIONS, "");
-
-	return eOK;
+  return eOK;
 }
 
 long CMUSHclientDoc::ChatRequestConnections(long ID) 
@@ -7943,46 +7270,43 @@ long CMUSHclientDoc::ChatRequestConnections(long ID)
   CChatSocket * pSocket = GetChatSocket (ID);
   if (!pSocket)
     return eChatIDNotFound;
-  
-  pSocket->SendChatMessage (CHAT_REQUEST_CONNECTIONS, "");
 
-	return eOK;
+  pSocket->SendChatMessage (CHAT_REQUEST_CONNECTIONS, "");
+  return eOK;
 }
 
 
 long CMUSHclientDoc::ChatDisconnect(long ID) 
 {
-
   CChatSocket * pSocket = GetChatSocket (ID);
   if (!pSocket)
     return eChatIDNotFound;
 
-  ChatNote (eChatConnection,
-            TFormat ("Connection to %s dropped.",
-            (LPCTSTR) pSocket->m_strRemoteUserName));
+  ChatNote (eChatConnection, TFormat ("Connection to %s dropped.",
+      (LPCTSTR) pSocket->m_strRemoteUserName));
 
   pSocket->OnClose (0);    // close connection
-
-	return eOK;
+  return eOK;
 }
 
 long CMUSHclientDoc::ChatDisconnectAll() 
 {
+  POSITION pos = m_ChatList.GetHeadPosition ();
   int iCount = 0;
-  for (POSITION pos = m_ChatList.GetHeadPosition (); pos; )
+  while (pos != NULL)
     {
     CChatSocket * pSocket = m_ChatList.GetNext (pos);
     if (!pSocket->m_bDeleteMe)
       {
-      iCount++;
       pSocket->OnClose (0);    // close connection
+      ++iCount;
       }
     } // end of all chat sessions
-  ChatNote (eChatConnection,
-            TFormat ("%i connection%s closed.", 
-            PLURAL (iCount)));
 
-	return iCount;
+  ChatNote (eChatConnection, TFormat ("%i connection%s closed.", 
+      PLURAL (iCount)));
+  
+  return iCount;
 }
 
 // generic chat message sender, for plugins to fool around with
@@ -7994,7 +7318,7 @@ long CMUSHclientDoc::ChatMessage(long ID, short Message, LPCTSTR Text)
   
   pSocket->SendChatMessage (Message, Text);
 
-	return eOK;
+  return eOK;
 }
 
 /*
@@ -8038,9 +7362,7 @@ long CMUSHclientDoc::ChatMessage(long ID, short Message, LPCTSTR Text)
 
 BSTR CMUSHclientDoc::ANSI(short Code) 
 {
-CString strResult = CFormat ("%c[%dm", ESC, Code); 
-
-	return strResult.AllocSysString();
+  return ::AnsiCode(Code).AllocSysString();
 }
 
 
@@ -8048,19 +7370,15 @@ CString strResult = CFormat ("%c[%dm", ESC, Code);
 
 BSTR CMUSHclientDoc::StripANSI(LPCTSTR Message) 
 {
-CString strResult = ::StripAnsi (Message);
-	return strResult.AllocSysString();
+  return ::StripAnsi (Message).AllocSysString();
 }
 
-static CChatSocket * pChat = NULL;  // purely for #define below
-
-#define CHATO(arg) offsetof (CChatSocket, arg), sizeof (pChat->arg)
+#define CHATO(arg) offsetof (CChatSocket, arg), sizeof (((CChatSocket*)NULL)->arg)
 
 //-----config name ----------------  default ---variable name ---- min, max, flags ---
 tConfigurationNumericOption ChatOptionsTable [] = {
 
-// boolean
-
+  // boolean
 {"can_send_commands",    false, CHATO(m_bCanSendCommands)},               
 {"can_send_files",       false, CHATO(m_bCanSendFiles)},               
 {"can_snoop",            false, CHATO(m_bCanSnoop)},               
@@ -8068,13 +7386,11 @@ tConfigurationNumericOption ChatOptionsTable [] = {
 {"served",               false, CHATO(m_bIncoming)},               
 {"private",              false, CHATO(m_bPrivate)},
 
-// numbers 
-               
+  // numbers
 {"user",                 0, CHATO(m_iUserOption), LONG_MIN, LONG_MAX},               
 
 {NULL}   // end of table marker            
-
-  };  // end of ChatOptionsTable 
+};  // end of ChatOptionsTable 
 
 #define CHATA(arg) offsetof (CChatSocket, arg)
                     
@@ -8093,178 +7409,109 @@ tConfigurationAlphaOption ChatAlphaOptionsTable  [] =
 };    // end of ChatAlphaOptionsTable
 
 
-
 VARIANT CMUSHclientDoc::GetChatOption(long ID, LPCTSTR OptionName) 
 {
-CChatSocket * chat_item;
+  CChatSocket * chat_item = NULL;
 
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
+  VARIANT vaResult;
+  VariantInit(&vaResult);
   vaResult.vt = VT_EMPTY;
 
   chat_item = GetChatSocket (ID);
   if (!chat_item)
-	  return vaResult;
+    return vaResult;
 
-int iItem;
-int iResult = FindBaseOption (OptionName, ChatOptionsTable, iItem);
-
+  int iItem;
   
+  int iResult = FindBaseOption (OptionName, ChatOptionsTable, iItem);
   if (iResult == eOK)
-    {
-
     // numeric option
-
-    if (m_CurrentPlugin &&
-        (ChatOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	return vaResult;  // not available to plugin
-
-    long Value =  GetBaseOptionItem (iItem, 
-                              ChatOptionsTable, 
-                              NUMITEMS (ChatOptionsTable),
-                              (char *) chat_item);  
-
-    SetUpVariantLong (vaResult, Value);
-    }  // end of found numeric option
+    if (!m_CurrentPlugin || (ChatOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ) == 0)
+      SetUpVariantLong (vaResult, (long) GetBaseOptionItem (iItem,
+          ChatOptionsTable,
+          NUMITEMS (ChatOptionsTable),
+          (char *) chat_item));
   else
     { // not numeric option, try alpha
-    int iResult = FindBaseAlphaOption (OptionName, ChatAlphaOptionsTable, iItem);
+    iResult = FindBaseAlphaOption (OptionName, ChatAlphaOptionsTable, iItem);
     if (iResult == eOK)
-      {
-
       // alpha option
-
-      if (m_CurrentPlugin &&
-          (ChatAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ))
-    	  return vaResult;  // not available to plugin
-
-      CString strValue =  GetBaseAlphaOptionItem (iItem, 
-                                                 ChatAlphaOptionsTable,
-                                                 NUMITEMS (ChatAlphaOptionsTable),
-                                                 (char *) chat_item);
-
-      SetUpVariantString (vaResult, strValue);
-      }  // end of found
+      if (!m_CurrentPlugin || (ChatAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_READ) == 0)
+        SetUpVariantString (vaResult, GetBaseAlphaOptionItem (iItem, 
+            ChatAlphaOptionsTable,
+            NUMITEMS (ChatAlphaOptionsTable),
+            (char *) chat_item));
     }
 
-	return vaResult;
+  return vaResult;
 }
 
 long CMUSHclientDoc::SetChatOption(long ID, LPCTSTR OptionName, LPCTSTR Value) 
 {
-CString strValue = Value;
-CChatSocket * chat_item;
+  CString strOptionName = OptionName,
+          strValue      = Value;
 
-  chat_item = GetChatSocket (ID);
+  CChatSocket * chat_item = GetChatSocket (ID);
   if (!chat_item)
     return eChatIDNotFound;
 
-CString strOptionName = OptionName;
+  // trim spaces, make lowercase
+  CheckObjectName(strOptionName, false);
 
-  strOptionName.MakeLower();
-  strOptionName.TrimLeft ();
-  strOptionName.TrimRight ();
-
-int iItem;
-int iResult = FindBaseOption (strOptionName, ChatOptionsTable, iItem);
-
-bool bChanged;
-
+  bool bChanged;
+  int iItem;
+  int iResult = FindBaseOption (strOptionName, ChatOptionsTable, iItem);
   if (iResult == eOK)
     {
     // this is a numeric option
     
-    if (!IsNumber (Value, true))
-       return eOptionOutOfRange;
+    if (!IsNumber (strValue, true))
+      return eOptionOutOfRange;
 
-    long iValue = atol (Value);
-
-    if (m_CurrentPlugin &&
-        (ChatOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
-    	return ePluginCannotSetOption;  // not available to plugin
+    if (m_CurrentPlugin && (ChatOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
+      return ePluginCannotSetOption;  // not available to plugin
 
     if (ChatOptionsTable [iItem].iFlags & OPT_CANNOT_WRITE)
-    	return ePluginCannotSetOption;  // not available for writing at all    
+      return ePluginCannotSetOption;  // not available for writing at all    
 
+    long iValue = atol (strValue);
     iResult = SetBaseOptionItem (iItem,
-                        ChatOptionsTable,
-                        NUMITEMS (ChatOptionsTable),
-                        (char *) chat_item, 
-                        iValue,
-                        bChanged);
+        ChatOptionsTable,
+        NUMITEMS (ChatOptionsTable),
+        (char *) chat_item, 
+        iValue,
+        bChanged);
 
     if (iResult == eOK && bChanged)
       {
-      if (strOptionName == "can_send_commands")
-         if (iValue)
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("You can now send %s commands", 
-                (LPCTSTR) m_strOurChatName));
-      else
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("You can no longer send %s commands", 
-                (LPCTSTR) m_strOurChatName));
-      else
-      if (strOptionName == "can_send_files")
-         if (iValue)
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("You can now send %s files", 
-                (LPCTSTR) m_strOurChatName));
-      else
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("You can no longer send %s files", 
-                (LPCTSTR) m_strOurChatName));
-      else
-      if (strOptionName == "can_snoop")
-         if (iValue)
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("You can now snoop %s", 
-                (LPCTSTR) m_strOurChatName));
-      else
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("You can no longer snoop %s", 
-                (LPCTSTR) m_strOurChatName));
-      else
-      if (strOptionName == "ignore")
-         if (iValue)
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("%s is ignoring you", 
-                (LPCTSTR) m_strOurChatName));
-      else
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("%s is no longer ignoring you", 
-                (LPCTSTR) m_strOurChatName));
-      else
-      if (strOptionName == "private")
-         if (iValue)
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("%s has marked your connection as private", 
-                (LPCTSTR) m_strOurChatName));
-      else
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("%s has marked your connection as public", 
-                (LPCTSTR) m_strOurChatName));
+      CString chatNotice;
 
+      if (strOptionName == "can_send_commands")
+        chatNotice = (iValue != 0) ? "You can now send %s commands"             : "You can no longer send %s commands";
+      else if (strOptionName == "can_send_files")
+        chatNotice = (iValue != 0) ? "You can now send %s files"                : "You can no longer send %s files";
+      else if (strOptionName == "can_snoop")
+        chatNotice = (iValue != 0) ? "You can now snoop %s"                     : "You can no longer snoop %s";
+      else if (strOptionName == "ignore")
+        chatNotice = (iValue != 0) ? "%s is ignoring you"                       : "%s is no longer ignoring you";
+      else if (strOptionName == "private")
+        chatNotice = (iValue != 0) ? "%s has marked your connection as private" : "%s has marked your connection as public";
+
+      chat_item->SendChatMessage (CHAT_MESSAGE, TFormat (chatNotice, (LPCTSTR) m_strOurChatName));
       }  // end of succesfully changing the option
 
     return iResult;
-
     }  // end of found
   else
     { // not numeric option, try alpha
-    int iResult = FindBaseAlphaOption (strOptionName, ChatAlphaOptionsTable, iItem);
+    iResult = FindBaseAlphaOption (strOptionName, ChatAlphaOptionsTable, iItem);
     if (iResult == eOK)
       {
-
       // alpha option
-
-      if (m_CurrentPlugin &&
-          (ChatAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
-    	  return ePluginCannotSetOption;  // not available to plugin
-
+      if (m_CurrentPlugin && (ChatAlphaOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
+        return ePluginCannotSetOption;  // not available to plugin
       if (ChatAlphaOptionsTable [iItem].iFlags & OPT_CANNOT_WRITE)
-    	  return ePluginCannotSetOption;  // not available for writing at all    
+        return ePluginCannotSetOption;  // not available for writing at all    
 
       // ------ preliminary validation before setting the option
 
@@ -8277,25 +7524,22 @@ bool bChanged;
                         strValue,
                         bChanged);
 
-    if (iResult == eOK && bChanged)
-      {
+      if (iResult == eOK && bChanged)
+        {
+        CString chatNotice;
 
-      if (strOptionName == "group")
-        if (strlen (Value) > 0)
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("%s has added you to the group %s", 
-                (LPCTSTR) m_strOurChatName, Value));
-        else
-         chat_item->SendChatMessage (CHAT_MESSAGE, 
-             TFormat ("%s has removed you from the chat group", 
-                (LPCTSTR) m_strOurChatName));
-      }  // end of succesfully changing the option
+        if (strOptionName == "group")
+          chatNotice = (!strValue.IsEmpty()) ? "%s has added you to the group %s" : "%s has removed you from the chat group";
+
+        chat_item->SendChatMessage(CHAT_MESSAGE, TFormat(chatNotice,
+            (LPCTSTR) m_strOurChatName, strValue));
+        }  // end of succesfully changing the option
 
       return iResult;
       }  // end of found alpha option
     }  // end of not numeric option
-
- return eUnknownOption;
+  
+  return eUnknownOption;
 }
 
 // for scripting, a simple routine to convert a name to an ID
@@ -8303,12 +7547,10 @@ bool bChanged;
 
 long CMUSHclientDoc::ChatGetID(LPCTSTR Who) 
 {
-
-CString strWho = Who;
+  CString strWho = Who;
 
   strWho.TrimLeft ();
   strWho.TrimRight ();
-
   if (strWho.IsEmpty ())
     return 0;   // can't find a blank name
 
@@ -8319,26 +7561,24 @@ CString strWho = Who;
     long id = atol (strWho);
     if (GetChatSocket (id) == NULL)
       {
-      ChatNote (eChatInformation, 
-                TFormat ("Chat ID %ld is not connected.", 
-                        id));
+      ChatNote (eChatInformation, TFormat ("Chat ID %ld is not connected.", id));
       return 0;
       }
-    else
-      return id;
+    return id;
     }    // end of numeric person
 
-  for (POSITION chatpos = m_ChatList.GetHeadPosition (); chatpos; )
+  POSITION chatpos = m_ChatList.GetHeadPosition ();
+  CChatSocket * pSocket = NULL;
+  while (chatpos != NULL)
     {
-    CChatSocket * pSocket = m_ChatList.GetNext (chatpos);
-    if (pSocket->m_iChatStatus == eChatConnected)
-      if (pSocket->m_strRemoteUserName.CompareNoCase (strWho) == 0)
-        return pSocket->m_iChatID;
+    pSocket = m_ChatList.GetNext (chatpos);
+    if (pSocket->m_iChatStatus == eChatConnected &&
+        pSocket->m_strRemoteUserName.CompareNoCase (strWho) == 0)
+      return pSocket->m_iChatID;
     } // end of all chat sessions
 
-  ChatNote (eChatInformation, 
-            TFormat ("Cannot find connection \"%s\".", 
-                    (LPCTSTR) strWho));
+  ChatNote (eChatInformation, TFormat ("Cannot find connection \"%s\".",
+      (LPCTSTR) strWho));
 
   return 0;  // not found
 }
@@ -8346,159 +7586,131 @@ CString strWho = Who;
 // "chats" the clipboard to a remote user (eg. for pasting aliases etc.)
 long CMUSHclientDoc::ChatPasteText(long ID) 
 {
-
   // quiet failure on ID zero - probably caused by a ChatGetID lookup failure
   if (ID == 0)
     return eChatIDNotFound;
 
   CChatSocket * pSocket = GetChatSocket (ID); // find them
-
   if (!pSocket)
     {
     ChatNote (eChatOutgoingPersonal, TFormat ("Chat ID %i is not connected.", ID));
-	  return eChatIDNotFound;
+    return eChatIDNotFound;
     }
 
-CString strContents; 
-
+  CString strContents; 
   if (!GetClipboardContents (strContents, m_bUTF_8, false))
     return eClipboardEmpty; // can't do it
 
-CString strMessage;
+  pSocket->SendChatMessage (CHAT_TEXT_PERSONAL, TFormat ("\n%s pastes to you: \n\n%s%s%s%s\n",
+      (LPCTSTR) m_strOurChatName,
+      (LPCTSTR) AnsiCode (ANSI_BOLD),  
+      (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+      (LPCTSTR) strContents,
+      (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));
 
-  strMessage = TFormat ("\n%s pastes to you: \n\n%s%s%s%s\n",
-                            (LPCTSTR) m_strOurChatName,
-                            (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                            (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                            (LPCTSTR) strContents,
-                            (LPCTSTR) AnsiCode (ANSI_TEXT_RED)   
-                             );
+  ChatNote (eChatOutgoingPersonal, TFormat ("You paste to %s: \n\n%s%s%s%s", 
+      (LPCTSTR) pSocket->m_strRemoteUserName, 
+      (LPCTSTR) AnsiCode (ANSI_BOLD),  
+      (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+      (LPCTSTR) strContents,
+      (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));
 
-  pSocket->SendChatMessage (CHAT_TEXT_PERSONAL, strMessage);
-  ChatNote (eChatOutgoingPersonal,
-            TFormat ("You paste to %s: \n\n%s%s%s%s", 
-                      (LPCTSTR) pSocket->m_strRemoteUserName, 
-                      (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                      (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                      (LPCTSTR) strContents,
-                      (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));   
-    return eOK;
-
+  return eOK;
 }
 
 long CMUSHclientDoc::ChatPasteEverybody() 
 {
-CString strContents; 
-
+  CString strContents; 
   if (!GetClipboardContents (strContents, m_bUTF_8, false))
     return eClipboardEmpty; // can't do it
 
-CString strMessage;
+  CString strMessage = TFormat ("\n%s pastes to everybody: \n\n%s%s%s%s\n",
+      (LPCTSTR) m_strOurChatName,
+      (LPCTSTR) AnsiCode (ANSI_BOLD),  
+      (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
+      (LPCTSTR) strContents,
+      (LPCTSTR) AnsiCode (ANSI_TEXT_RED));
 
-  strMessage = TFormat ("\n%s pastes to everybody: \n\n%s%s%s%s\n",
-                            (LPCTSTR) m_strOurChatName,
-                            (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                            (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                            (LPCTSTR) strContents,
-                            (LPCTSTR) AnsiCode (ANSI_TEXT_RED)   
-                             );
+  if (!SendChatMessageToAll (CHAT_TEXT_EVERYBODY,
+      strMessage,
+      true,    // unless ignoring them
+      false,
+      false,
+      0,    // don't ignore us
+      "",   // no group
+      0))   // use our stamp
+    {
+    ChatNote (eChatOutgoingEverybody, "No (relevant) chat connections.");
+    return eNoChatConnections;
+    }
 
-  if (SendChatMessageToAll (CHAT_TEXT_EVERYBODY,
-                                  strMessage,
-                                  true,    // unless ignoring them
-                                  false,
-                                  false,
-                                  0,    // don't ignore us
-                                  "",   // no group
-                                  0))   // use our stamp
-  {
-  ChatNote (eChatOutgoingEverybody,
-            TFormat ("You paste to everybody: \n\n%s%s%s%s", 
-                      (LPCTSTR) AnsiCode (ANSI_BOLD),  
-                      (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),  
-                      (LPCTSTR) strContents,
-                      (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));   
+  ChatNote (eChatOutgoingEverybody, TFormat ("You paste to everybody: \n\n%s%s%s%s",
+      (LPCTSTR) AnsiCode (ANSI_BOLD),
+      (LPCTSTR) AnsiCode (ANSI_TEXT_CYAN),
+      (LPCTSTR) strContents,
+      (LPCTSTR) AnsiCode (ANSI_TEXT_RED)));
+
   return eOK;
-  }
-else
-  {
-  ChatNote (eChatOutgoingEverybody, 
-            "No (relevant) chat connections.");
-  return eNoChatConnections;
-  }
-
-
 }
 
 
 long CMUSHclientDoc::ChatSendFile(long ID, LPCTSTR FileName) 
 {
+  CString strFileName = FileName;
 
   // quiet failure on ID zero - probably caused by a ChatGetID lookup failure
   if (ID == 0)
     return eChatIDNotFound;
 
   CChatSocket * pSocket = GetChatSocket (ID); // find them
-
   if (!pSocket)
     {
     ChatNote (eChatFile, TFormat ("Chat ID %i is not connected.", ID));
-	  return eChatIDNotFound;
+    return eChatIDNotFound;
     }
 
   if (pSocket->m_bDoingFileTransfer)
     {
-    if (pSocket->m_bSendFile)
-      ChatNote (eChatFile, TFormat ("Already sending file %s",
-                  (LPCTSTR) pSocket->m_strOurFileName));
-    else
-      ChatNote (eChatFile, TFormat ("Already receiving file %s",
-                  (LPCTSTR) pSocket->m_strOurFileName));
-
+    ChatNote(eChatFile, TFormat(
+        (pSocket->m_bSendFile) ? "Already sending file %s" : "Already receiving file %s",
+        (LPCTSTR) pSocket->m_strOurFileName));
     return eAlreadyTransferringFile;
     }
 
-  CString strName = FileName;
-
   // if no file name, put up standard file dialog
-  if (strName.IsEmpty ())
+  if (strFileName.IsEmpty ())
     {
+    CFileDialog dlg(TRUE,		// TRUE for FileOpen
+        "",						// default extension
+        "",						// initial file name
+        OFN_HIDEREADONLY|OFN_FILEMUSTEXIST,
+        "All files (*.*)|*.*||");
 
-	  CFileDialog	dlg(TRUE,						// TRUE for FileOpen
-					  "",						// default extension
-					  "",						// initial file name
-					  OFN_HIDEREADONLY|OFN_FILEMUSTEXIST,
-					  "All files (*.*)|*.*||");
-	  
     dlg.m_ofn.lpstrTitle = "Select file to send";
-	  
+  
     ChangeToFileBrowsingDirectory ();
     int nResult = dlg.DoModal();
     ChangeToStartupDirectory ();
 
     if (nResult != IDOK)
-		  return eFileNotFound;
+      return eFileNotFound;
 
-    strName = dlg.GetPathName();
-
+    strFileName = dlg.GetPathName();
     }   // end of no file name supplied
 
   // remember file to open
-  pSocket->m_strOurFileName = strName;
-
-         
+  pSocket->m_strOurFileName = strFileName;
   try
     {
-    pSocket->m_pFile = new CFile (strName, CFile::modeRead | CFile::shareDenyWrite); // open file
+    pSocket->m_pFile       = new CFile (strFileName, CFile::modeRead | CFile::shareDenyWrite); // open file
     pSocket->m_pFileBuffer = new unsigned char [pSocket->m_iFileBlockSize]; // get buffer    
-    pSocket->m_iFileSize = pSocket->m_pFile->GetLength ();
-    
+    pSocket->m_iFileSize   = (long) pSocket->m_pFile->GetLength ();
     } // end of try block
-
   catch (CFileException * e)
     {
-    ChatNote (eChatFile, TFormat ("File %s cannot be opened.", (LPCTSTR) strName));
+    ChatNote (eChatFile, TFormat ("File %s cannot be opened.", (LPCTSTR) strFileName));
     e->Delete ();
+
     // reset the two fields we changed so far
     pSocket->m_strOurFileName.Empty ();
     pSocket->m_iFileSize = 0;
@@ -8513,10 +7725,9 @@ long CMUSHclientDoc::ChatSendFile(long ID, LPCTSTR FileName)
   pSocket->m_strSenderFileName = pSocket->m_pFile->GetFileName ();
 
   // ask them to receive the file
-  pSocket->SendChatMessage (CHAT_FILE_START, 
-      TFormat ("%s,%ld",
-                (LPCTSTR) pSocket->m_strSenderFileName,
-                pSocket->m_iFileSize));
+  pSocket->SendChatMessage (CHAT_FILE_START, TFormat ("%s,%ld",
+      (LPCTSTR) pSocket->m_strSenderFileName,
+      pSocket->m_iFileSize));
 
   // get ready for transfer
   pSocket->m_tStartedFileTransfer = CTime::GetCurrentTime();  // when started
@@ -8525,42 +7736,39 @@ long CMUSHclientDoc::ChatSendFile(long ID, LPCTSTR FileName)
   pSocket->m_iBlocksTransferred = 0;   // no blocks yet
   // add block-size minus one to allow for final partial block
   pSocket->m_iFileBlocks = (pSocket->m_iFileSize + pSocket->m_iFileBlockSize - 1L) /
-                  pSocket->m_iFileBlockSize;
+      pSocket->m_iFileBlockSize;
 
-  shsInit  (&pSocket->m_shsInfo);
+  shsInit (&pSocket->m_shsInfo);
   double K = pSocket->m_iFileSize / 1024.0;
 
-  ChatNote (eChatFile, TFormat (
-              "Initiated transfer of file %s, %ld bytes (%1.1f Kb).", 
-                    (LPCTSTR) strName, 
-                    pSocket->m_iFileSize,
-                    K));
-	return eOK;
+  ChatNote (eChatFile, TFormat ("Initiated transfer of file %s, %ld bytes (%1.1f Kb).", 
+      (LPCTSTR) strFileName, 
+      pSocket->m_iFileSize,
+      K));
+  
+  return eOK;
 }
 
 // abort a file transfer in progress
 
 long CMUSHclientDoc::ChatStopFileTransfer(long ID) 
 {
-
   // quiet failure on ID zero - probably caused by a ChatGetID lookup failure
   if (ID == 0)
     return eChatIDNotFound;
-
+  
   CChatSocket * pSocket = GetChatSocket (ID); // find them
-
   if (!pSocket)
     {
     ChatNote (eChatOutgoingPersonal, TFormat ("Chat ID %i is not connected.", ID));
-	  return eChatIDNotFound;
+    return eChatIDNotFound;
     }
 
   if (!pSocket->m_bDoingFileTransfer)
     return eNotTransferringFile;
 
   pSocket->StopFileTransfer (true);
-
-	return eOK;
+  return eOK;
 }
 
 
@@ -8568,169 +7776,140 @@ VARIANT CMUSHclientDoc::GetHostAddress(LPCTSTR HostName)
 {
   COleSafeArray sa;   // for list
 
-  if (strlen (HostName) > 0)
+  if (HostName[0] != '\0')
     {
-
     LPHOSTENT pHost = gethostbyname (HostName);
     long iCount;
+    for (iCount = 0; pHost != NULL && pHost->h_addr_list [iCount] != NULL; ++iCount)
+      ;
 
-    for (iCount = 0; pHost != NULL && pHost->h_addr_list [iCount] != NULL; iCount++ )
-      {};   // end of counting them
-
-    if (iCount) // cannot create empty array dimension
+    if (iCount > 0) // cannot create empty array dimension
       {
       sa.CreateOneDim (VT_VARIANT, iCount);
   
-    // put the addresses into the array
-      for (long i = 0; pHost != NULL && pHost->h_addr_list [i] != NULL; i++ )
+      // put the addresses into the array
+      for (iCount = 0; pHost != NULL && pHost->h_addr_list [iCount] != NULL; ++iCount)
         {
-        COleVariant v (inet_ntoa ( *((in_addr *)pHost->h_addr_list[i])));
-        sa.PutElement (&i, &v);
+        COleVariant v = inet_ntoa ( *((in_addr *)pHost->h_addr_list[iCount]));
+        sa.PutElement (&iCount, &v);
         }      // end of looping through each IP address
       } // end of having at least one
     }   // end of non-blank name
 
-	return sa.Detach ();
+  return sa.Detach ();
 }
 
 BSTR CMUSHclientDoc::GetHostName(LPCTSTR IPaddress) 
 {
-	CString strResult;
-
-  if (strlen (IPaddress) > 0)
+  CString strResult;
+  
+  if (IPaddress[0] != '\0')
     {
     unsigned long ulAddress = inet_addr (IPaddress);
     if (ulAddress != INADDR_NONE)
       {
       LPHOSTENT lpHostEntry = gethostbyaddr ((const char *) &ulAddress, 
-                                             sizeof ulAddress, 
-                                             AF_INET);
+          sizeof ulAddress, 
+          AF_INET);
+
       if (lpHostEntry != NULL)
-        strResult =  lpHostEntry->h_name;
+        strResult = lpHostEntry->h_name;
       } // end of valid IP address
     }   // end of non-blank name
-
-	return strResult.AllocSysString();
+  
+  return strResult.AllocSysString();
 }
 
 
 BSTR CMUSHclientDoc::GetClipboard() 
 {
-CString strContents; 
-
- GetClipboardContents (strContents, m_bUTF_8, false);   // no warning
-
-	return strContents.AllocSysString();
+  CString strContents; 
+  GetClipboardContents (strContents, m_bUTF_8, false);   // no warning
+  return strContents.AllocSysString();
 }
 
 long CMUSHclientDoc::ImportXML(LPCTSTR XML) 
 {
-long iCount = 0;
-
   CMemFile f ((unsigned char *)  XML, strlen (XML));
   CArchive ar (&f, CArchive::load);
 
-    try
+  long iCount = -1;
+
+  if (!IsArchiveXML(ar))
+    return iCount;
+
+  try
     {
-
-    if (IsArchiveXML (ar))
-      {
-
-      UINT iTriggers = 0;
-      UINT iAliases = 0;
-      UINT iTimers = 0;
-      UINT iMacros = 0;
+      UINT iTriggers  = 0;
+      UINT iAliases   = 0;
+      UINT iTimers    = 0;
+      UINT iMacros    = 0;
       UINT iVariables = 0;
-      UINT iColours = 0;
-      UINT iKeypad = 0;
-      UINT iPrinting = 0;
+      UINT iColours   = 0;
+      UINT iKeypad    = 0;
+      UINT iPrinting  = 0;
 
       // do it
       Load_World_XML (ar, 
-                      // don't load plugins or general world config here  (note, this sets XML_OVERWRITE)
-                      ~(XML_PLUGINS | XML_NO_PLUGINS | XML_GENERAL), 
-                      0,          // load flags
-                      &iTriggers,  
-                      &iAliases,   
-                      &iTimers,    
-                      &iMacros,    
-                      &iVariables, 
-                      &iColours,   
-                      &iKeypad,    
-                      &iPrinting);  
+          // don't load plugins or general world config here  (note, this sets XML_OVERWRITE)
+          ~(XML_PLUGINS | XML_NO_PLUGINS | XML_GENERAL), 
+          0,          // load flags
+          &iTriggers,  &iAliases, &iTimers, &iMacros,
+          &iVariables, &iColours, &iKeypad, &iPrinting);
 
-      iCount =  iTriggers +  
-                iAliases +   
-                iTimers +    
-                iMacros +    
-                iVariables + 
-                iColours +   
-                iKeypad +    
-                iPrinting;  
-
-      }
-    else
-      iCount = -1;    // not in XML
-
+      iCount = iTriggers  + iAliases + iTimers + iMacros
+             + iVariables + iColours + iKeypad + iPrinting;
      } // end of try block
-  catch (CArchiveException* ) 
-    {
-    iCount = -1;    // error parsing XML
+  catch (CArchiveException* e) 
+    { // error parsing XML
+      e->Delete();
     }
 
-	return iCount;
+  return iCount;
 }
 
 
 long CMUSHclientDoc::DoCommand(LPCTSTR Command) 
 {
-
-int nID = StringToCommandID (Command);
-
+  int nID = StringToCommandID (Command);
   if (nID == 0)
     return eNoSuchCommand;
 
   Frame.PostMessage(WM_COMMAND, nID, 0);
-
-	return eOK;
+  return eOK;
 }
 
 
 VARIANT CMUSHclientDoc::GetInternalCommandsList() 
 {
-
   COleSafeArray sa;   // for list
 
-  long iCount;
-
   // count them
-	for (iCount = 0; CommandIDs [iCount].iCommandID; iCount++)
-    {};   // end of counting them
+  long iCount;
+  for (iCount = 0; CommandIDs [iCount].iCommandID != 0; ++iCount)
+    ;
 
   sa.CreateOneDim (VT_VARIANT, iCount);
 
-// put the addresses into the array
-	for (long i = 0; CommandIDs [i].iCommandID; i++)
+  // put the addresses into the array
+  for (iCount = 0; CommandIDs [iCount].iCommandID; ++iCount)
     {
-    COleVariant v (CommandIDs [i].sCommandName);
-    sa.PutElement (&i, &v);
+    sa.PutElement (&iCount, &((COleVariant)CommandIDs [iCount].sCommandName));
     }      // end of looping through each command
 
-	return sa.Detach ();
+  return sa.Detach ();
 }
 
 
 long CMUSHclientDoc::GetNotepadLength(LPCTSTR Title) 
 {
-CTextDocument * pTextDoc = FindNotepad (Title);
+  CTextDocument * pTextDoc = FindNotepad (Title);
 
-int iLength = 0;
-
+  int iLength = 0;
   if (pTextDoc)
     {
     // find the view
-    POSITION pos=pTextDoc->GetFirstViewPosition();
-
+    POSITION pos = pTextDoc->GetFirstViewPosition();
     if (pos)
       {
       CView* pView = pTextDoc->GetNextView(pos);
@@ -8740,21 +7919,20 @@ int iLength = 0;
         iLength = pmyView->GetWindowTextLength ();
         } // end of having the right type of view
       }   // end of having a view
-    } // end of having an existing notepad document
+    }
 
-	return iLength;
+  return iLength;
 }
 
 BSTR CMUSHclientDoc::GetNotepadText(LPCTSTR Title) 
 {
-CString strResult;
-CTextDocument * pTextDoc = FindNotepad (Title);
+  CString strResult;
 
+  CTextDocument * pTextDoc = FindNotepad (Title);
   if (pTextDoc)
     {
     // find the view
     POSITION pos=pTextDoc->GetFirstViewPosition();
-
     if (pos)
       {
       CView* pView = pTextDoc->GetNextView(pos);
@@ -8766,8 +7944,7 @@ CTextDocument * pTextDoc = FindNotepad (Title);
       }   // end of having a view
     } // end of having an existing notepad document
 
-
-	return strResult.AllocSysString();
+  return strResult.AllocSysString();
 }
 
 
@@ -8785,7 +7962,7 @@ CTextDocument * pTextDoc = FindNotepad (Title);
 
 long CMUSHclientDoc::AdjustColour(long Colour, short Method) 
 {
-return ::AdjustColour (Colour, Method);
+  return ::AdjustColour (Colour, Method);
 }
 
 /*
@@ -8801,21 +7978,19 @@ Type:
 
 BSTR CMUSHclientDoc::ExportXML(short Type, LPCTSTR Name) 
 {
-	CString strResult;
   CString strName = Name;
+  CString strResult;
 
-  if (!CheckObjectName (strName, false))
+  // trim spaces, make lowercase
+  CheckObjectName (strName, false);
+
+  char* p = NULL;
+  try
     {
-    char * p = NULL;
-
-    try
-      {
-      CMemFile f;      // open memory file for writing
-      CArchive ar(&f, CArchive::store);
-
+    CMemFile f;      // open memory file for writing
+    CArchive ar(&f, CArchive::store);
 
     // see if trigger exists, if not return EMPTY
-
     switch (Type)
       {
       case 0:   // trigger
@@ -8827,8 +8002,8 @@ BSTR CMUSHclientDoc::ExportXML(short Type, LPCTSTR Name)
           Save_One_Trigger_XML (ar, t);
           Save_Footer_XML (ar, "triggers");
           } // end of item existing
-        }
         break;
+        }
 
       case 1:   // alias
         {
@@ -8839,8 +8014,8 @@ BSTR CMUSHclientDoc::ExportXML(short Type, LPCTSTR Name)
           Save_One_Alias_XML (ar, t);
           Save_Footer_XML (ar, "aliases");
           } // end of item existing
-        }
         break;
+        }
 
       case 2:   // timer
         {
@@ -8851,12 +8026,11 @@ BSTR CMUSHclientDoc::ExportXML(short Type, LPCTSTR Name)
           Save_One_Timer_XML (ar, t);
           Save_Footer_XML (ar, "timers");
           } // end of item existing
-        }
         break;
+        }
 
       case 3:   // macro
-        {
-        for (int i = 0; i < NUMITEMS (strMacroDescriptions); i++)
+        for (int i = 0; i < NUMITEMS (strMacroDescriptions); ++i)
           {
           if (strMacroDescriptions [i].CompareNoCase (strName) == 0)
             {
@@ -8865,7 +8039,6 @@ BSTR CMUSHclientDoc::ExportXML(short Type, LPCTSTR Name)
             Save_Footer_XML (ar, "macros");
             } // end of item existing
           } // end of finding which one
-        }
         break;
 
       case 4:   // variable
@@ -8877,12 +8050,12 @@ BSTR CMUSHclientDoc::ExportXML(short Type, LPCTSTR Name)
           Save_One_Variable_XML (ar, t);
           Save_Footer_XML (ar, "variables");
           } // end of item existing
-        }
         break;
+        }
 
       case 5:   // keypad
         {
-        for (int i = 0; i < NUMITEMS (strKeypadNames); i++)
+        for (int i = 0; i < NUMITEMS (strKeypadNames); ++i)
           {
           if (strKeypadNames [i].CompareNoCase (strName) == 0)
             {
@@ -8891,35 +8064,26 @@ BSTR CMUSHclientDoc::ExportXML(short Type, LPCTSTR Name)
             Save_Footer_XML (ar, "keypad");
             } // end of item existing
           } // end of finding which one
-
-        }
         break;
+        }
 
       } // end of switch
 
-      ar.Close();
+    ar.Close();
 
-      int nLength = f.GetLength ();
-      p = (char *) f.Detach ();
+    p = (char *) f.Detach ();
+    strResult = CString (p, (int) f.GetLength ());
+    }   // end of try block
+  catch (CException* e)
+    {
+    e->Delete();
+    strResult.Empty ();
+    }   // end of catch
 
-      strResult = CString (p, nLength);
+  free (p);   // remove memory allocated in CMemFile
+  p = NULL;
 
-      free (p);   // remove memory allocated in CMemFile
-      p = NULL;
-
-      }   // end of try block
-
-    catch (CException* e)
-	    {
-      if (p)
-        free (p);   // remove memory allocated in CMemFile
-	    e->Delete();
-      strResult.Empty ();
-	    }   // end of catch
-
-    } // end of name OK
-
-	return strResult.AllocSysString();
+  return strResult.AllocSysString();
 }
 
 void CMUSHclientDoc::Hyperlink(LPCTSTR Action, 
@@ -8934,7 +8098,7 @@ void CMUSHclientDoc::Hyperlink(LPCTSTR Action,
     return;
 
   // don't muck around if empty message
-  if (Action [0] == 0)
+  if (Action [0] == '\0')
     return;
 
   // If current line is not a note line, force a line change (by displaying
@@ -8942,64 +8106,35 @@ void CMUSHclientDoc::Hyperlink(LPCTSTR Action,
   // the back of the previous line. This has various implications, including
   // the way that "bleed colour to edge" will work. Otherwise it bleeds the
   // forthcoming note colour to the edge of the previous (mud) line.
-
   if ((m_pCurrentLine->flags & NOTE_OR_COMMAND) != COMMENT)
     DisplayMsg ("", 0, COMMENT);
 
-  COLORREF forecolour = m_iHyperlinkColour,
-           backcolour;
-
-  if (m_bNotesInRGB)
-    backcolour = m_iNoteColourBack;
-  else
-    {
-    if (m_iNoteTextColour == SAMECOLOUR)
-      {
-      if (m_bCustom16isDefaultColour)
-        backcolour =  m_customback [15];
-      else
-        backcolour =  m_normalcolour [BLACK];
-      } // not same colour
-    else
-  	  backcolour =  m_customback [m_iNoteTextColour];
-    }
+  COLORREF forecolour = m_iHyperlinkColour;
+  COLORREF backcolour = GetNoteColourBack();
 
   SetColour (TextColour, forecolour);
   SetColour (BackColour, backcolour);
 
   // change to underlined hyperlink
-  AddStyle (COLOUR_RGB | 
-            (URL ? ACTION_HYPERLINK : ACTION_SEND) | 
-            UNDERLINE, 
-            forecolour, 
-            backcolour, 0, 
-            GetAction (Action, 
-                        Hint [0] == 0 ? Action : Hint, 
-                        ""));
+  AddStyle (COLOUR_RGB | (URL ? ACTION_HYPERLINK : ACTION_SEND) | UNDERLINE, 
+      forecolour, backcolour, 0, 
+      GetAction (Action, (Hint[0] == '\0') ? Action : Hint, ""));
 
   // output the link text
-  if (strlen (Text) > 0)
-    AddToLine (Text, 0);
-  else
-    AddToLine (Action, 0);
+  AddToLine ((Text[0] != '\0') ? Text : Action, 0);
 
   // add another style to finish the hyperlink
-
   if (m_bNotesInRGB)
     AddStyle (COLOUR_RGB, m_iNoteColourFore, m_iNoteColourBack, 0, NULL);
   else
     {
-    if (m_iNoteTextColour == SAMECOLOUR)
-      {
-      if (m_bCustom16isDefaultColour)
-        AddStyle (COLOUR_CUSTOM, 15, BLACK, 0, NULL);
-      else
-        AddStyle (COLOUR_ANSI, WHITE, BLACK, 0, NULL);
-      } // not same colour
-    else
+    if (m_iNoteTextColour != SAMECOLOUR)
       AddStyle (COLOUR_CUSTOM, m_iNoteTextColour, BLACK, 0, NULL);
+    else if (m_bCustom16isDefaultColour)
+      AddStyle (COLOUR_CUSTOM, 15, BLACK, 0, NULL);
+    else
+      AddStyle (COLOUR_ANSI, WHITE, BLACK, 0, NULL);
     } // not RGB
-
 }
 
 /*
@@ -9021,76 +8156,58 @@ void CMUSHclientDoc::NoteStyle(short Style)
 
 short CMUSHclientDoc::GetNoteStyle() 
 {
-	return m_iNoteStyle & TEXT_STYLE;
+  return m_iNoteStyle & TEXT_STYLE;
 }
 
 
 long CMUSHclientDoc::GetFrame() 
 {
-	return (long) App.m_pMainWnd->m_hWnd;
+  return (long) App.m_pMainWnd->m_hWnd;
 }
 
 // create a new array
 long CMUSHclientDoc::ArrayCreate(LPCTSTR Name) 
 {
-
-  tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
-  if (it != GetArrayMap ().end ())
+  if (GetArrayMap ().find (Name) != GetArrayMap ().end ())
     return eArrayAlreadyExists;
 
-  tStringToStringMap * m = new tStringToStringMap;
-
-  GetArrayMap ().insert (make_pair (Name, m));
-
+  GetArrayMap ().insert (make_pair (Name, new tStringToStringMap()));
   return eOK;
-
-  } // end of CMUSHclientDoc::ArrayCreate
+} // end of CMUSHclientDoc::ArrayCreate
 
 // delete an array by name
 long CMUSHclientDoc::ArrayDelete(LPCTSTR Name) 
 {
-
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
     return eArrayDoesNotExist;
 
   it->second->clear ();  // remove all entries
-
   delete it->second;     // delete the pointer
-
   GetArrayMap ().erase (it);  // erase from map of arrays
 
-	return eOK;
-  }  // end of CMUSHclientDoc::ArrayDelete
+  return eOK;
+}  // end of CMUSHclientDoc::ArrayDelete
 
 // list all known arrays into an array of variants
 
 VARIANT CMUSHclientDoc::ArrayListAll() 
 {
   COleSafeArray sa;   // for array list
-
-  long iCount = 0;
   
   // put the arrays into the array
   if (!GetArrayMap ().empty ())    // cannot create empty dimension
     {
     sa.CreateOneDim (VT_VARIANT, GetArrayMap ().size ());
 
-    for (tStringMapOfMaps::iterator it = GetArrayMap ().begin (); 
-         it != GetArrayMap ().end ();
-         it++)
-           {
-            // the array must be a bloody array of variants, or VBscript kicks up
-            COleVariant v (it->first.c_str ());
-            sa.PutElement (&iCount, &v);
-            iCount++;
-           }
-
+    tStringMapOfMaps::iterator it = GetArrayMap ().begin ();
+    long iCount;
+    for (iCount = 0; it != GetArrayMap ().end (); ++it, ++iCount)
+      // the array must be a bloody array of variants, or VBscript kicks up
+      sa.PutElement (&iCount, &((COleVariant)it->first.c_str ()));
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 }   // end of CMUSHclientDoc::ArrayListAll
 
 // list the keys for a particular array
@@ -9099,31 +8216,20 @@ VARIANT CMUSHclientDoc::ArrayListKeys(LPCTSTR Name)
 {
   COleSafeArray sa;   // for array list
 
-  tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
-  if (it == GetArrayMap ().end ())
-    return sa.Detach ();   // empty array if array does not exist
-
-  long iCount = 0;
-  
   // put the keys into the array
-  if (!it->second->empty ())    // cannot create empty dimension
+  tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
+  if (it != GetArrayMap ().end () && !it->second->empty ()) // cannot create empty dimension
     {
     sa.CreateOneDim (VT_VARIANT, it->second->size ());
 
-    for (tStringToStringMap::iterator i = it->second->begin (); 
-         i != it->second->end ();
-         i++)
-           {
-            // the array must be a bloody array of variants, or VBscript kicks up
-            COleVariant v (i->first.c_str ());
-            sa.PutElement (&iCount, &v);
-            iCount++;
-           }
-
+    tStringToStringMap::iterator i = it->second->begin ();
+    long iCount;
+    for (iCount = 0; i != it->second->end (); ++i, ++iCount)
+      // the array must be a bloody array of variants, or VBscript kicks up
+      sa.PutElement (&iCount, &((COleVariant)i->first.c_str ()));
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 } // end of CMUSHclientDoc::ArrayListKeys
 
 // lists the values (not the keys) in a particular array
@@ -9131,32 +8237,21 @@ VARIANT CMUSHclientDoc::ArrayListKeys(LPCTSTR Name)
 VARIANT CMUSHclientDoc::ArrayListValues(LPCTSTR Name) 
 {
   COleSafeArray sa;   // for array list
-
-  tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
-  if (it == GetArrayMap ().end ())
-    return sa.Detach ();   // empty array if array does not exist
-
-  long iCount = 0;
   
   // put the keys into the array
-  if (!it->second->empty ())    // cannot create empty dimension
+  tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
+  if (it != GetArrayMap ().end () && !it->second->empty ()) // cannot create empty dimension
     {
     sa.CreateOneDim (VT_VARIANT, it->second->size ());
 
-    for (tStringToStringMap::iterator i = it->second->begin (); 
-         i != it->second->end ();
-         i++)
-           {
-            // the array must be a bloody array of variants, or VBscript kicks up
-            COleVariant v (i->second.c_str ());
-            sa.PutElement (&iCount, &v);
-            iCount++;
-           }
-
+    tStringToStringMap::iterator i = it->second->begin ();
+    long iCount;
+    for (iCount = 0; i != it->second->end (); ++i, ++iCount)
+      // the array must be a bloody array of variants, or VBscript kicks up
+      sa.PutElement (&iCount, &((COleVariant)i->second.c_str ()));
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 }
 
 // import from a delimited string into an array
@@ -9168,30 +8263,24 @@ VARIANT CMUSHclientDoc::ArrayListValues(LPCTSTR Name)
 
 long CMUSHclientDoc::ArrayImport(LPCTSTR Name, LPCTSTR Values, LPCTSTR Delimiter) 
 {
-  // delimiter had better be a single character, other than backslash
-  string sDelimiter (Delimiter);
+  string sDelimiter = Delimiter;
 
+  // delimiter had better be a single character, other than backslash
   if (sDelimiter.size () != 1 || sDelimiter == "\\")
-     return eBadDelimiter;
+    return eBadDelimiter;
 
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
     return eArrayDoesNotExist;
 
-  vector<string> v;
-  int iDuplicates = 0;
-
-  string sEscapedDelimiter = "\\" + sDelimiter;
-  string sValues (Values);  
   string sTemp;
-
+  string sValues = Values;
+  string sEscapedDelimiter = "\\" + sDelimiter;
   if (sValues.find (sEscapedDelimiter) != string::npos)
     {
     int iTemp;
-
     // find a character not in the string
-    for (iTemp = 1; iTemp <= 255; iTemp++)
+    for (iTemp = 1; iTemp <= 255; ++iTemp)
       {
       sTemp = string (1, iTemp);
       if (sValues.find (sTemp) == string::npos)
@@ -9202,86 +8291,79 @@ long CMUSHclientDoc::ArrayImport(LPCTSTR Name, LPCTSTR Values, LPCTSTR Delimiter
       return eCannotImport;
 
     sValues = FindAndReplace (sValues, sEscapedDelimiter, sTemp);
-
     } // end of having at least one escaped delimiter in the string
 
+  vector<string> v;
   StringToVector (sValues, v, sDelimiter, false); // don't trim spaces
-
-  if (v.size () & 1)
+  if (v.size () % 2 == 1)
     return eArrayNotEvenNumberOfValues;
 
   // insert pairs (key, value) into designated map
-  for (vector<string>::iterator i = v.begin (); i != v.end (); )
+  vector<string>::iterator i = v.begin ();
+  pair<tStringToStringMap::iterator, bool> status;
+  int iDuplicates = 0;
+  while (i != v.end ())
     {
     string sKey = *i++;
     string sValue = *i++;
 
     // fix up backslashes and delimiters
     sKey = FindAndReplace (sKey, "\\\\", "\\");
-    if (!sTemp.empty ())
-      sKey = FindAndReplace (sKey, sTemp, sDelimiter);
     sValue = FindAndReplace (sValue, "\\\\", "\\");
     if (!sTemp.empty ())
+      {
+      sKey = FindAndReplace (sKey, sTemp, sDelimiter);
       sValue = FindAndReplace (sValue, sTemp, sDelimiter);
+      }
 
-    pair<tStringToStringMap::iterator, bool> status = 
-        it->second->insert (make_pair (sKey, sValue));
-
+    status = it->second->insert (make_pair (sKey, sValue));
     if (!status.second)
       {
       status.first->second = sValue;
-      iDuplicates++;
+      ++iDuplicates;
       }
     }
 
-  if (iDuplicates)
-    return eImportedWithDuplicates;
-
-	return eOK;
+  return iDuplicates ? eImportedWithDuplicates : eOK;
 } // end of CMUSHclientDoc::ArrayImport
 
 // get an element from an array by key
 VARIANT CMUSHclientDoc::ArrayGet(LPCTSTR Name, LPCTSTR Key) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
     return vaResult;     // empty
 
   tStringToStringMap::iterator i = it->second->find (Key);
-
   if (i == it->second->end ())
     return vaResult;     // empty
 
   SetUpVariantString (vaResult, i->second.c_str ());
-  
-	return vaResult;
-  }  // end of CMUSHclientDoc::ArrayGet
+  return vaResult;
+}  // end of CMUSHclientDoc::ArrayGet
 
 // set an array item by key - overwriting is allowed but warned in the return value
 long CMUSHclientDoc::ArraySet(LPCTSTR Name, LPCTSTR Key, LPCTSTR Value) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
     return eArrayDoesNotExist;   
 
-  pair<tStringToStringMap::iterator, bool> status = 
+  pair<tStringToStringMap::iterator, bool> status =
       it->second->insert (make_pair (Key, Value));
-
   if (!status.second)
     {
     status.first->second = Value;
     return eSetReplacingExistingValue;
     }
 
-	return eOK;
+  return eOK;
 } // end of CMUSHclientDoc::ArraySet
 
 // exports an entire array as a delimited string
@@ -9289,27 +8371,23 @@ long CMUSHclientDoc::ArraySet(LPCTSTR Name, LPCTSTR Key, LPCTSTR Value)
 
 VARIANT CMUSHclientDoc::ArrayExport(LPCTSTR Name, LPCTSTR Delimiter) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
     {
     SetUpVariantLong (vaResult, eArrayDoesNotExist);
-	  return vaResult;
+    return vaResult;
     }
-
-  // empty array gives empty string
-  if (it->second->empty ())
-    {
+  else if (it->second->empty ())
+    { // empty array gives empty string
     SetUpVariantString (vaResult, "");
     return vaResult;
     }
 
   // delimiter had better be a single character, other than backslash
-  string sDelimiter (Delimiter);
-
+  string sDelimiter = Delimiter;
   if (sDelimiter.size () != 1 || sDelimiter == "\\")
     {
     SetUpVariantLong (vaResult, eBadDelimiter);
@@ -9317,86 +8395,77 @@ VARIANT CMUSHclientDoc::ArrayExport(LPCTSTR Name, LPCTSTR Delimiter)
     }
 
   string sResult;
-  int iCount = 0;
-
+  string sKey, sData;
+  unsigned int iCount = 0;
   for (tStringToStringMap::iterator i = it->second->begin ();
        i != it->second->end ();
        i++)
-         {
-         string sKey (i->first);
-         string sData (i->second);
+    {
+    // replace backslashes by two of them
+    sKey  = FindAndReplace (i->first,  "\\", "\\\\");
+    sData = FindAndReplace (i->second, "\\", "\\\\");
 
-         // replace backslashes by two of them
-         sKey = FindAndReplace (sKey, "\\", "\\\\");
-         // replace delimiter by backslash, delimiter
-         sKey = FindAndReplace (sKey, sDelimiter, "\\" + sDelimiter);
-
-         // replace backslashes by two of them
-         sData = FindAndReplace (sData, "\\", "\\\\");
-         // replace delimiter by backslash, delimiter
-         sData = FindAndReplace (sData, sDelimiter, "\\" + sDelimiter);
-
-         sResult += sKey + sDelimiter + sData;
-         if (++iCount < it->second->size ())
-          sResult += sDelimiter;
-         }  // end of doing each one
-
+    // replace delimiter by backslash, delimiter
+    sKey  = FindAndReplace (sKey,  sDelimiter, "\\" + sDelimiter);
+    sData = FindAndReplace (sData, sDelimiter, "\\" + sDelimiter);
+    
+    sResult += sKey + sDelimiter + sData;
+    ++iCount;
+    
+    if (iCount < it->second->size ())
+      sResult += sDelimiter;
+    }  // end of doing each one
 
   SetUpVariantString (vaResult, sResult.c_str ());
-	return vaResult;
+  return vaResult;
 } // end of CMUSHclientDoc::ArrayExport
 
 // export the keys but not the values as a delimited string
 VARIANT CMUSHclientDoc::ArrayExportKeys(LPCTSTR Name, LPCTSTR Delimiter) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
     {
     SetUpVariantLong (vaResult, eArrayDoesNotExist);
-	  return vaResult;
+    return vaResult;
     }
-
-  // empty array gives empty string
-  if (it->second->empty ())
-    {
+  else if (it->second->empty ())
+    { // empty array gives empty string
     SetUpVariantString (vaResult, "");
     return vaResult;
     }
 
   // delimiter had better be a single character, other than backslash
-  string sDelimiter (Delimiter);
-
+  string sDelimiter = Delimiter;
   if (sDelimiter.size () != 1 || sDelimiter == "\\")
     {
     SetUpVariantLong (vaResult, eBadDelimiter);
     return vaResult;
     }
 
-  string sResult;
-  int iCount = 0;
-
+  string sResult, sKey;
+  unsigned int iCount = 0;
   for (tStringToStringMap::iterator i = it->second->begin ();
        i != it->second->end ();
        i++)
-     {
-     string sKey (i->first);
+    {
+    // replace backslashes by two of them
+    sKey = FindAndReplace (i->first, "\\", "\\\\");
+    // replace delimiter by backslash, delimiter
+    sKey = FindAndReplace (sKey, sDelimiter, "\\" + sDelimiter);
+    sResult += sKey;
 
-     // replace backslashes by two of them
-     sKey = FindAndReplace (sKey, "\\", "\\\\");
-     // replace delimiter by backslash, delimiter
-     sKey = FindAndReplace (sKey, sDelimiter, "\\" + sDelimiter);
+    ++iCount;
 
-     sResult += sKey;
-     if (++iCount < it->second->size ())
+    if (iCount < it->second->size ())
       sResult += sDelimiter;
-     }  // end of doing each one
+    }  // end of doing each one
 
   SetUpVariantString (vaResult, sResult.c_str ());
-	return vaResult;
+  return vaResult;
 } // end of CMUSHclientDoc::ArrayExportKeys
 
 // clear existing contents from an array
@@ -9404,15 +8473,12 @@ VARIANT CMUSHclientDoc::ArrayExportKeys(LPCTSTR Name, LPCTSTR Delimiter)
 
 long CMUSHclientDoc::ArrayClear(LPCTSTR Name) 
 {
-
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
     return eArrayDoesNotExist;
 
   it->second->clear ();  // remove all entries
-
-	return eOK;
+  return eOK;
 } // end of CMUSHclientDoc::ArrayClear
 
 // delete a keyed item from an array
@@ -9420,102 +8486,80 @@ long CMUSHclientDoc::ArrayClear(LPCTSTR Name)
 
 long CMUSHclientDoc::ArrayDeleteKey(LPCTSTR Name, LPCTSTR Key) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
     return eArrayDoesNotExist;   
 
   tStringToStringMap::iterator i = it->second->find (Key);
-
   if (i == it->second->end ())
     return eKeyDoesNotExist;     
 
   it->second->erase (i);
-
   return eOK;
-  
 } // end of CMUSHclientDoc::ArrayDeleteKey
 
 // quick test to see if an array exists
 BOOL CMUSHclientDoc::ArrayExists(LPCTSTR Name) 
 {
-
-  return GetArrayMap ().find (Name) != GetArrayMap ().end ();
-
-  } // end of CMUSHclientDoc::ArrayExists
+  return (GetArrayMap ().find (Name) != GetArrayMap ().end ());
+} // end of CMUSHclientDoc::ArrayExists
 
 // quick test to see if a key exists
 BOOL CMUSHclientDoc::ArrayKeyExists(LPCTSTR Name, LPCTSTR Key) 
 {
-
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
-    return FALSE;   
-
-  return it->second->find (Key) != it->second->end ();
-
+    return FALSE;
+  return (it->second->find (Key) != it->second->end ());
 } // end of CMUSHclientDoc::ArrayKeyExists
 
 // return count of all arrays
 long CMUSHclientDoc::ArrayCount() 
 {
-	return GetArrayMap ().size ();
+  return GetArrayMap ().size ();
 } // end of CMUSHclientDoc::ArrayCount
 
 // return count of elements in a particular array
 long CMUSHclientDoc::ArraySize(LPCTSTR Name) 
 {
-
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
     return 0;   
-
-	return it->second->size ();
+  return it->second->size ();
 }   // end of CMUSHclientDoc::ArraySize
 
 VARIANT CMUSHclientDoc::ArrayGetFirstKey(LPCTSTR Name) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
     return vaResult;     // empty
 
   tStringToStringMap::iterator i = it->second->begin ();
-
   if (i == it->second->end ())
     return vaResult;     // empty
 
   SetUpVariantString (vaResult, i->first.c_str ());
-  
-	return vaResult;
+  return vaResult;
 }
 
 VARIANT CMUSHclientDoc::ArrayGetLastKey(LPCTSTR Name) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   tStringMapOfMaps::iterator it = GetArrayMap ().find (Name);
-
   if (it == GetArrayMap ().end ())
     return vaResult;     // empty
 
   tStringToStringMap::reverse_iterator i = it->second->rbegin ();
-
   if (i == it->second->rend ())
     return vaResult;     // empty
 
   SetUpVariantString (vaResult, i->first.c_str ());
-  
-	return vaResult;
+  return vaResult;
 }
 
 // reset time on status bar
@@ -9527,7 +8571,7 @@ void CMUSHclientDoc::ResetStatusTime()
 // enable/disable auto-mapper
 void CMUSHclientDoc::EnableMapping(BOOL Enabled) 
 {
- m_bMapping =	Enabled != 0;
+  m_bMapping = (Enabled != 0);
 }
 
 // restores the main frame and brings it to the front
@@ -9543,113 +8587,94 @@ void CMUSHclientDoc::ActivateClient()
 // remove backtracks from a speedwalk string
 BSTR CMUSHclientDoc::RemoveBacktracks(LPCTSTR Path) 
 {
-	CString strResult;
+  CString strResult;
 
   // first convert to individual items separated by newlines
-
   CString strWalk = DoEvaluateSpeedwalk (Path);
 
   // if string empty, or has an error message, just return it
   if (strWalk.IsEmpty () || strWalk.Left (1) == "*")
-	  return strWalk.AllocSysString();
+    return strWalk.AllocSysString();
 
   // convert speedwalk string into a nice vector we can walk
   vector<string> w;   // input
-
   StringToVector ((LPCTSTR) strWalk, w, ENDLINE);
 
   // empty? ah well, can't be many backtracks to remove
   if (w.empty ())
-	  return strResult.AllocSysString();
+    return strResult.AllocSysString();
 
   // we will push each item onto our queue (stack) and look for
   // backtracks on the top of it
 
   deque<string> q;    // output
   MapDirectionsIterator it;    // for looking up reverses
-
+  string sDirection;
   for (vector<string>::const_iterator wi = w.begin ();
        wi != w.end ();
-       wi++)
-     {
-     string sThisDirection = *wi;
-     // convert back to a single character if possible
-     it = MapDirectionsMap.find (tolower (sThisDirection));
-     if (it != MapDirectionsMap.end ())
-       sThisDirection = it->second.m_sDirectionToLog;
+       ++wi)
+    {
+    sDirection = *wi;
 
-     // if output stack is empty we can hardly remove a backtrack
-     if (q.empty ())
-       q.push_back (sThisDirection); // so just add this one
-     else
-       {
-       string sTop = q.back ();
-       it = MapDirectionsMap.find (sTop);
-       // if new entry is inverse of top of stack, discard both
-       if (it != MapDirectionsMap.end () && 
-           it->second.m_sReverseDirection == sThisDirection)
-         q.pop_back ();
-       else
-         q.push_back (sThisDirection);
-       }  // end of stack not empty
+    // convert back to a single character if possible
+    it = MapDirectionsMap.find (tolower (sDirection));
+    if (it != MapDirectionsMap.end ())
+      sDirection = it->second.m_sDirectionToLog;
 
-     }  // end of looking at each direction in the input string
+    // if output stack is empty we can hardly remove a backtrack
+    if (q.empty ())
+      q.push_back (sDirection); // so just add this one
+    else
+      {
+      it = MapDirectionsMap.find (q.back ());
+      // if new entry is inverse of top of stack, discard both
+      if (it != MapDirectionsMap.end () && 
+          it->second.m_sReverseDirection == sDirection)
+        q.pop_back ();
+      else
+        q.push_back (sDirection);
+      }  // end of stack not empty
+    }  // end of looking at each direction in the input string
 
   // empty? must have cleaned everything up
   if (q.empty ())
-	  return strResult.AllocSysString();
+    return strResult.AllocSysString();
 
   string sPrev;
   int iCount = 0;
-  string sDirection;
-
   for (deque<string>::const_iterator di = q.begin ();
       di != q.end ();
-      di++)
+      ++di)
     {
     sDirection = trim (*di);
-
     if (sDirection.empty ())
       continue;
 
-//  multiple length movements must be put in brackets
-//   (eg. up, down, ne, nw)
-
+    //  multiple length movements must be put in brackets
+    //   (eg. up, down, ne, nw)
     if (sDirection.size () > 1)
       sDirection = "(" + sDirection + ")";
 
     if (sDirection == sPrev && iCount < 99)
-      iCount++;
+      ++iCount;
     else
       {
       // output previous speedwalk
       if (!sPrev.empty ())
-        {
-        if (iCount > 1)
-          strResult += CFormat ("%i%s", iCount, sPrev.c_str ());
-        else
-          strResult += sPrev.c_str ();
-        strResult += " ";
-        }
+        strResult += (iCount > 1 ? CFormat ("%i%s", iCount, sPrev.c_str ()) : sPrev.c_str ())
+                   + "";
       sPrev = sDirection;
       iCount = 1;
       } // end of not multiple identical speedwalks
-
     } // end of pulling entries out of new queue
 
   // output final speedwalk
   if (!sPrev.empty ())
-    {
-    if (iCount > 1)
-      strResult += CFormat ("%i%s", iCount, sPrev.c_str ());
-    else
-      strResult += sPrev.c_str ();
-    strResult += " ";
-    }
+      strResult += (iCount > 1 ? CFormat ("%i%s", iCount, sPrev.c_str ()) : sPrev.c_str ())
+                 + "";
 
   return strResult.AllocSysString();
-
-  }
+}
 
 /*
 
@@ -9752,71 +8777,41 @@ note "'" &  arrayexport ("b", ",") & "'"
 
 VARIANT CMUSHclientDoc::GetTriggerWildcard(LPCTSTR TriggerName, LPCTSTR WildcardName) 
 {
-CString strTriggerName = TriggerName;
+  CString strTriggerName = TriggerName;
+  CTrigger * trigger_item = NULL;
 
-CTrigger * trigger_item;
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  // trim spaces, make lowercase
+  CheckObjectName (strTriggerName, false);
 
-  vaResult.vt = VT_NULL;
+  if (WildcardName [0] != '\0' && GetTriggerMap ().Lookup (strTriggerName, trigger_item) && trigger_item->regexp)
+    SetUpVariantString (vaResult, trigger_item->regexp->GetWildcard (WildcardName).c_str ());
 
-  // return if bad name, if so return NULL
-  if (CheckObjectName (strTriggerName, false))
-    return vaResult;
-
-  vaResult.vt = VT_EMPTY;
-
-  // see if trigger exists, if not return EMPTY
-  if (!GetTriggerMap ().Lookup (strTriggerName, trigger_item))
-	  return vaResult;
-
-  if (WildcardName [0] != 0 && trigger_item->regexp)
-    {
-    CString strResult = trigger_item->regexp->GetWildcard (WildcardName).c_str ();
-
-    SetUpVariantString (vaResult, strResult);
-    }
-	return vaResult;
+  return vaResult;
 }
 
 VARIANT CMUSHclientDoc::GetAliasWildcard(LPCTSTR AliasName, LPCTSTR WildcardName) 
 {
-CString strAliasName = AliasName;
+  CString strAliasName = AliasName;
+  CAlias * alias_item = NULL;
 
-CAlias * alias_item;
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  // trim spaces, make lowercase
+  CheckObjectName (strAliasName, false);
 
-  vaResult.vt = VT_NULL;
+  if (WildcardName[0] != '\0' && GetAliasMap ().Lookup (strAliasName, alias_item) && alias_item->regexp)
+    SetUpVariantString (vaResult, alias_item->regexp->GetWildcard (WildcardName).c_str ());
 
-  // return if bad name, if so return NULL
-  if (CheckObjectName (strAliasName, false))
-    return vaResult;
-
-  vaResult.vt = VT_EMPTY;
-
-  // see if alias exists, if not return EMPTY
-  if (!GetAliasMap ().Lookup (strAliasName, alias_item))
-	  return vaResult;
-
-  if (WildcardName [0] != 0 && alias_item->regexp)
-    {
-    CString strResult = alias_item->regexp->GetWildcard (WildcardName).c_str ();
-
-    SetUpVariantString (vaResult, strResult);
-    }
-
-	return vaResult;
-  
+  return vaResult;
 }
 
 
 BSTR CMUSHclientDoc::GetRecentLines(long Count) 
 {
-	CString strResult;
-
   // assemble multi-line match text
   int iPos = m_sRecentLines.size () - Count;
   if (iPos < 0)
@@ -9825,32 +8820,27 @@ BSTR CMUSHclientDoc::GetRecentLines(long Count)
   string s;
 
   for (int iCount = 0; 
-        iCount < Count &&
-        iPos != m_sRecentLines.size ()
-        ; iPos++, iCount++
+        iCount < Count && iPos != m_sRecentLines.size ();
+        ++iPos, ++iCount
       )
     {
     if (!s.empty ())
       s += '\n';
     s += m_sRecentLines [iPos];
     } // end of assembling text
-  strResult = s.c_str ();
 
-	return strResult.AllocSysString();
+  return CString(s.c_str ()).AllocSysString();
 }
-
 
 BSTR CMUSHclientDoc::TranslateGerman(LPCTSTR Text) 
 {
-	CString strResult = FixUpGerman (Text);
-
-	return strResult.AllocSysString();
+  return FixUpGerman (Text).AllocSysString();
 }
 
 
 BSTR CMUSHclientDoc::GetWorldID() 
 {
-	return m_strWorldID.AllocSysString();
+  return m_strWorldID.AllocSysString();
 }
 
 
@@ -10053,25 +9043,22 @@ long CMUSHclientDoc::ClearPane(LPCTSTR Name)
 // accelerator finding functor
 
 struct fFindAccelerator : binary_function<ACCEL, ACCEL, bool>
-  {
+{
   bool operator() (const ACCEL & a1, const ACCEL & a2) const
-    { 
-    return (a1.fVirt | FNOINVERT) == (a2.fVirt | FNOINVERT) &&
-           a1.key == a2.key;
-    };
-  }; // end of fFindAccelerator
+  { 
+    return ((a1.fVirt | FNOINVERT) == (a2.fVirt | FNOINVERT)) && a1.key == a2.key;
+  };
+}; // end of fFindAccelerator
 
 
 long CMUSHclientDoc::AcceleratorTo(LPCTSTR Key, LPCTSTR Send, short SendTo) 
 {
-BYTE fVirt;
-WORD key;
-
   // check they are sending to somewhere valid
-
   if (SendTo < 0 || SendTo >= eSendToLast)
     return eOptionOutOfRange;
 
+  BYTE fVirt;
+  WORD key;
   try
     {
     StringToKeyCode (Key, fVirt, key);
@@ -10079,57 +9066,46 @@ WORD key;
   catch (CException* e)
     {
     e->Delete ();
-    return  eBadParameter;
+    return eBadParameter;
     } // end of catch
-
-       
+  
   fVirt |= FNOINVERT;   // no inverting of menus
 
-	POSITION pos = NULL;
-  
-  pos = GetFirstViewPosition();
-	if (!pos)
-		return eBadParameter;
-  
+  POSITION pos = GetFirstViewPosition();
+  if (!pos)
+    return eBadParameter;
 
-  CMDIChildWnd * pMDIframe = NULL;
+  // work out what our MDI frame is - that will have the accelerators in it
+  CMDIChildWnd* pMDIframe = (CMDIChildWnd*) GetNextView(pos)->GetParentFrame ();
 
-	// work out what our MDI frame is - that will have the accelerators in it
-
-	CView* pView = GetNextView(pos);
-	CWnd * pFrame =  pView->GetParentFrame ();
-	pMDIframe = (CMDIChildWnd *) pFrame;
-
-  vector <ACCEL> vAccel;
-  HACCEL hAccel;
-
-  hAccel = GetDefaultAccelerator ();
-
+  HACCEL hAccel = GetDefaultAccelerator ();
   // none for the document? Try the MDI frame
-  if (hAccel == 0 && pMDIframe)
+  if (hAccel == 0 && pMDIframe != NULL)
+    {
     hAccel = pMDIframe->GetDefaultAccelerator ();
-
-  // try the multi-doc template
-  if (hAccel == 0)
+    if (hAccel == 0) // try the multi-doc template
       hAccel = App.m_pWorldDocTemplate->m_hAccelTable;
+    }
 
-	// find number of them
-	int iCount = CopyAcceleratorTable (hAccel, NULL, 10000);
-  vAccel.resize (iCount);   // make room, set "size" to iCount
+  // find number of them
+  int iCount = CopyAcceleratorTable (hAccel, NULL, 10000);
 
-	CopyAcceleratorTable (hAccel, &vAccel [0], iCount);
+  vector<ACCEL> vAccel;
+  vAccel.resize(iCount); // make room
+  CopyAcceleratorTable (hAccel, &vAccel [0], iCount);
 
-  ACCEL aWanted;            // new accelerator
+  ACCEL aWanted; // new accelerator
   aWanted.fVirt = fVirt;
-  aWanted.key = key;
-  aWanted.cmd = 0;
+  aWanted.key   = key;
+  aWanted.cmd   = 0;
   
   // if accelerator already exists, remove it
-  vAccel.erase (remove_if (vAccel.begin (), vAccel.end (), bind2nd (fFindAccelerator (), aWanted)),
-         vAccel.end ());
+  vAccel.erase (
+      remove_if (vAccel.begin (), vAccel.end (), bind2nd (fFindAccelerator (), aWanted)),
+      vAccel.end ());
 
   // new in version 3.75 - if no Send string, simply delete accelerator
-  if (Send [0]) 
+  if (Send[0] != '\0') 
     {
     // the command we will allocate (eg. 12000, 12001 etc.)
     WORD command;
@@ -10139,7 +9115,6 @@ WORD key;
 
     // see if we have previously allocated that accelerator
     map<long, WORD>::const_iterator it = m_AcceleratorToCommandMap.find (virt_plus_key);
-
     if (it == m_AcceleratorToCommandMap.end ())
       {
       // check not too many ;)
@@ -10153,36 +9128,28 @@ WORD key;
       command = it->second;  // re-use command
 
     aWanted.cmd = command;
-
     // put command into accelerator table
     vAccel.push_back (aWanted);
-
     // remember what the command was for that keystroke
     m_AcceleratorToCommandMap [virt_plus_key] = command;
-
     // remember what to send if they use that command
     m_CommandToMacroMap [command] = Send;
-
     // and where to send it
     m_CommandToSendToMap [command] = SendTo;
-
     }  // end of having something to do (ie. not deleting accelerator)
 
   // create new handle
   hAccel = CreateAcceleratorTable (&vAccel [0], vAccel.size ());
-
   // destroy old one, if we had one
   if (m_accelerator)
     DestroyAcceleratorTable (m_accelerator);
-
   // replace accelerator table in document
   m_accelerator = hAccel;
 
   // test test test
-
 //  App.m_pWorldDocTemplate->m_hAccelTable = hAccel;
 
-	return eOK;
+  return eOK;
 }  // end of CMUSHclientDoc::AcceleratorTo
 
 long CMUSHclientDoc::Accelerator(LPCTSTR Key, LPCTSTR Send) 
@@ -10215,40 +9182,38 @@ VARIANT CMUSHclientDoc::AcceleratorList()
   COleSafeArray sa;   // for wildcard list
 
   long iCount = m_AcceleratorToCommandMap.size ();
+  if (iCount == 0) // cannot create empty array dimension
+    return sa.Detach();
 
-  if (iCount) // cannot create empty array dimension
-    {
-    sa.CreateOneDim (VT_VARIANT, iCount);
+  sa.CreateOneDim (VT_VARIANT, iCount);
   
-    map<long, WORD>::const_iterator it;
+  map<long, WORD>::const_iterator it = m_AcceleratorToCommandMap.begin ();
+  CString key, sendTo, result;
+  for (iCount = 0; it != m_AcceleratorToCommandMap.end (); ++it, ++iCount)
+    {
+    key = KeyCodeToString ((BYTE)(it->first >> 16), (WORD)it->first);
+    sendTo.Format ("\t[%i]", m_CommandToSendToMap [it->second]);
 
-    for (iCount = 0, it = m_AcceleratorToCommandMap.begin (); 
-         it != m_AcceleratorToCommandMap.end (); it++, iCount++)
-      {
-      CString key = KeyCodeToString (it->first >> 16, it->first);
-      string command = m_CommandToMacroMap [it->second];
+    // for backwards compatability, send to Execute is shown as empty
+    if (m_CommandToSendToMap [it->second] == eSendToExecute)
+      sendTo = "";
 
-      CString strSendTo;
-      strSendTo.Format ("\t[%i]", m_CommandToSendToMap [it->second]);
+    result = CFormat ("%s = %s%s",
+        (LPCTSTR) key, 
+        string(m_CommandToMacroMap [it->second]).c_str (), 
+        (LPCTSTR) sendTo);
 
-      // for backwards compatability, send to Execute is shown as empty
-      if (m_CommandToSendToMap [it->second] == eSendToExecute)
-        strSendTo = "";
-      // the array must be a bloody array of variants, or VBscript kicks up
-      COleVariant v (CFormat ("%s = %s%s", (LPCTSTR) key, 
-                      command.c_str (), 
-                      (LPCTSTR) strSendTo));
-      sa.PutElement (&iCount, &v);
-      }      // end of looping through each accelerator
-    } // end of having at least one
+    // the array must be a bloody array of variants, or VBscript kicks up
+    sa.PutElement (&iCount, &((COleVariant)result));
+    }      // end of looping through each accelerator
 
-	return sa.Detach ();
+  return sa.Detach ();
 }
 
 
 void CMUSHclientDoc::MapColour(long Original, long Replacement) 
 {
-m_ColourTranslationMap [Original] = Replacement;
+  m_ColourTranslationMap [Original] = Replacement;
 }
 
 // /MapColour (ColourNameToRGB ("blue"), ColourNameToRGB ("gold"))
@@ -10256,7 +9221,7 @@ m_ColourTranslationMap [Original] = Replacement;
 
 long CMUSHclientDoc::GetMapColour(long Which) 
 {
-	return TranslateColour (Which);
+  return TranslateColour (Which);
 }
 
 VARIANT CMUSHclientDoc::MapColourList() 
@@ -10264,111 +9229,107 @@ VARIANT CMUSHclientDoc::MapColourList()
   COleSafeArray sa;   // for wildcard list
 
   long iCount = m_ColourTranslationMap.size ();
+  if (iCount == 0) // cannot create empty array dimension
+    return sa.Detach();
 
-  if (iCount) // cannot create empty array dimension
+  sa.CreateOneDim (VT_VARIANT, iCount);
+
+  map<COLORREF, COLORREF>::const_iterator it = m_ColourTranslationMap.begin (); 
+  for (iCount = 0; it != m_ColourTranslationMap.end (); ++it, ++iCount)
     {
-    sa.CreateOneDim (VT_VARIANT, iCount);
-  
-    map<COLORREF, COLORREF>::const_iterator it;
+    // the array must be a bloody array of variants, or VBscript kicks up
+    COleVariant v (CFormat ("%s = %s", 
+                  (LPCTSTR) ColourToName (it->first), 
+                  (LPCTSTR) ColourToName (it->second)));
+    sa.PutElement (&iCount, &v);
+    }      // end of looping through each colour
 
-    for (iCount = 0, it = m_ColourTranslationMap.begin (); 
-         it != m_ColourTranslationMap.end (); it++, iCount++)
-      {
-      // the array must be a bloody array of variants, or VBscript kicks up
-      COleVariant v (CFormat ("%s = %s", 
-                    (LPCTSTR) ColourToName (it->first), 
-                    (LPCTSTR) ColourToName (it->second)));
-      sa.PutElement (&iCount, &v);
-      }      // end of looping through each colour
-    } // end of having at least one
-
-	return sa.Detach ();
-
+  return sa.Detach ();
 }
 
 VARIANT CMUSHclientDoc::SpellCheck(LPCTSTR Text) 
 {
+  static const char sFunction [] = "spellcheck_string";
 
-const char sFunction [] = "spellcheck_string";
-
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   if (!App.m_bSpellCheckOK)
     return vaResult;
 
-set<string> errors;
+  set<string> errors;
 
-  if (App.m_SpellChecker_Lua)
+  if (!App.m_SpellChecker_Lua)
+    return vaResult;
+
+  lua_settop(App.m_SpellChecker_Lua, 0);  // clear stack
+  // L: -
+
+  // get the checker function
+  lua_getglobal (App.m_SpellChecker_Lua, sFunction);  
+  if (!lua_isfunction (App.m_SpellChecker_Lua, -1))
+    return vaResult;  // cannot spell check string
+  // L: func
+
+  lua_pushstring (App.m_SpellChecker_Lua, Text);  // string to be checked
+  // L: func, str
+
+  if (CallLuaWithTraceBack (App.m_SpellChecker_Lua, 1, 1))
     {
+    LuaError (App.m_SpellChecker_Lua, "Run-time error", sFunction, "world.SpellCheck", "", this);
+    return vaResult;  // cannot spell check string - syntax error
+    }
+  // L: result
 
-    lua_settop(App.m_SpellChecker_Lua, 0);   // clear stack
+  if (lua_isnumber (App.m_SpellChecker_Lua, -1))
+    {
+    SetUpVariantLong (vaResult, (long) lua_tonumber (App.m_SpellChecker_Lua, -1)); // no errors
+	return vaResult;
+    }
 
-    lua_getglobal (App.m_SpellChecker_Lua, sFunction);  
-    if (!lua_isfunction (App.m_SpellChecker_Lua, -1))
-      return vaResult;  // cannot spell check string
+  // must be table or else return bad result
+  if (!lua_istable (App.m_SpellChecker_Lua, -1))
+  {
+    return vaResult;  // cannot spell check string - syntax error
+  }
 
-    lua_pushstring (App.m_SpellChecker_Lua, Text);  // string to be checked
+  // convert returned table into a set
+  for (int i = 1; ; ++i)
+    {
+    lua_rawgeti (App.m_SpellChecker_Lua, 1, i);   // get i'th item
+    // L: tbl, value
+    if (lua_isnil (App.m_SpellChecker_Lua, -1))
+      break;    // first nil key, leave loop
 
-    int narg = lua_gettop(App.m_SpellChecker_Lua) - 1;  // all but the function
-    int error = CallLuaWithTraceBack (App.m_SpellChecker_Lua, narg, 1);
-  
-    if (error)
-      {
-      LuaError (App.m_SpellChecker_Lua, "Run-time error", sFunction, "world.SpellCheck", "", this);
-      return vaResult;  // cannot spell check string - syntax error
-      }  
+    // to avoid crashes, ignore table items that are not strings
+    if (lua_isstring (App.m_SpellChecker_Lua, -1))
+       errors.insert (lua_tostring (App.m_SpellChecker_Lua, -1));
 
-    if (lua_isnumber (App.m_SpellChecker_Lua, -1))
-      {
-      SetUpVariantLong (vaResult, lua_tonumber (App.m_SpellChecker_Lua, -1));        // no errors
-  	  return vaResult;
-      }
+    lua_pop (App.m_SpellChecker_Lua, 1); // remove value
+    // L: tbl
+    } // end of looping through table
+  // L: tbl, nil
 
-    // must be table or else return bad result
-    if (!lua_istable (App.m_SpellChecker_Lua, -1))
-      return vaResult;  // cannot spell check string - syntax error
+  // maybe didn't find any errors?
+  if (errors.empty ())
+    {
+    SetUpVariantLong (vaResult, 0);        // no errors
+    return vaResult;
+    }
 
-    // convert returned table into a set
-    for (int i = 1; ; i++)
-      {
-      lua_rawgeti (App.m_SpellChecker_Lua, 1, i);   // get i'th item
-      if (lua_isnil (App.m_SpellChecker_Lua, -1))
-        break;    // first nil key, leave loop
-      // to avoid crashes, ignore table items that are not strings
-      if (lua_isstring (App.m_SpellChecker_Lua, -1))
-         errors.insert (lua_tostring (App.m_SpellChecker_Lua, -1));
-      lua_pop (App.m_SpellChecker_Lua, 1); // remove value
-      } // end of looping through table
+  // now make array of the errors
+  COleSafeArray sa;   // for wildcard list
 
-    // maybe didn't find any errors?
-    if (errors.empty ())
-      {
-      SetUpVariantLong (vaResult, 0);        // no errors
-  	  return vaResult;
-      }
+  sa.CreateOneDim (VT_VARIANT, errors.size ());
 
-    // now make array of the errors
-    COleSafeArray sa;   // for wildcard list
+  long iCount = 0;
+  for (set<string>::const_iterator it = errors.begin (); 
+       it != errors.end ();
+       ++it, ++iCount)
+    // the array must be a bloody array of variants, or VBscript kicks up
+    sa.PutElement (&iCount, &((COleVariant)it->c_str ()));
 
-    sa.CreateOneDim (VT_VARIANT, errors.size ());
-
-    long iCount = 0;
-
-    for (set<string>::const_iterator it = errors.begin (); 
-         it != errors.end (); it++, iCount++)
-      {
-      // the array must be a bloody array of variants, or VBscript kicks up
-      COleVariant v (it->c_str ());
-      sa.PutElement (&iCount, &v);
-      }      // end of looping through each error
-
-	  return sa.Detach ();
-    }   // end custom spell check
-
-
-return vaResult;
-
+  return sa.Detach ();
 } // end of SpellCheck
   
 
@@ -10377,141 +9338,116 @@ long CMUSHclientDoc::SpellCheckCommand(long StartCol, long EndCol)
   if (!App.m_bSpellCheckOK)
     return -1;
 
-  CEdit * pEdit = NULL;
-  CWnd * pWnd = NULL;
-
   // find command window
-
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-  	  {
-		  CSendView* pmyView = (CSendView*)pView;
-
-      // what is the current selection?
-
-      pWnd = pmyView;
-      pEdit = & (pmyView->GetEditCtrl());
+  POSITION pos = GetFirstViewPosition();
+  CEdit* pEdit = NULL;
+  while (pos != NULL)
+	{
+	CView* pView = GetNextView(pos);
+    
+    if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+      {
+      pEdit = &(((CSendView*)pView)->GetEditCtrl());
       break;
-      
-      }	  // end of being a CSendView
+      }
     }   // end of loop through views
 
   if (pEdit == NULL)
 	  return -1;    // couldn't find it
 
-  int nStartChar, 
-      nEndChar;
-
   // get current selection
+  int nStartChar, nEndChar;
   pEdit->GetSel (nStartChar, nEndChar); 
 
   // make wanted selection 1-relative
   if (StartCol > 0)
-    StartCol--;
-
-  bool bHaveSelection = EndCol > StartCol &&
-                         StartCol >= 0 &&
-                         EndCol >= 0;
+    --StartCol;
 
   // select what the scripter wanted
-  if (bHaveSelection)
+  if (EndCol > StartCol && StartCol >= 0)
      pEdit->SetSel (StartCol, EndCol); 
 
-  if (App.m_SpellChecker_Lua)
+  if (!App.m_SpellChecker_Lua)
+    return -1;
+
+  lua_settop(App.m_SpellChecker_Lua, 0);   // clear stack
+  // L: -
+
+  lua_getglobal (App.m_SpellChecker_Lua, SPELLCHECKFUNCTION);  
+  if (!lua_isfunction (App.m_SpellChecker_Lua, -1))
+    return true;  // assume ok, what can we do?
+  // L: func
+
+  CString strText;
+  bool bAll = GetSelection (pEdit, strText);
+    
+  lua_pushstring (App.m_SpellChecker_Lua, strText);  // string to be checked
+  lua_pushboolean (App.m_SpellChecker_Lua, bAll);    // doing all?
+  // L: func, strText, bAll
+    
+  if (CallLuaWithTraceBack (App.m_SpellChecker_Lua, 2, 1))
     {
+    LuaError (App.m_SpellChecker_Lua, "Run-time error", SPELLCHECKFUNCTION, "Command-line spell-check");
+    lua_close (App.m_SpellChecker_Lua);
+    App.m_SpellChecker_Lua = NULL;
+    App.m_bSpellCheckOK = false;
+    return -1;    
+    }
+  // L: result
 
-    lua_settop(App.m_SpellChecker_Lua, 0);   // clear stack
-
-    lua_getglobal (App.m_SpellChecker_Lua, SPELLCHECKFUNCTION);  
-    if (!lua_isfunction (App.m_SpellChecker_Lua, -1))
-      return true;  // assume ok, what can we do?
-
-    CString strText;
-    bool bAll = GetSelection (pEdit, strText);
-    
-    lua_pushstring (App.m_SpellChecker_Lua, strText);  // string to be checked
-    lua_pushboolean (App.m_SpellChecker_Lua, bAll);    // doing all?
-
-    int narg = lua_gettop(App.m_SpellChecker_Lua) - 1;  // all but the function
-    int error = CallLuaWithTraceBack (App.m_SpellChecker_Lua, narg, 1);
-    
-    if (error)
-      {
-      LuaError (App.m_SpellChecker_Lua, "Run-time error", SPELLCHECKFUNCTION, "Command-line spell-check");
-      lua_close (App.m_SpellChecker_Lua);
-      App.m_SpellChecker_Lua = NULL;
-      App.m_bSpellCheckOK = false;
-      return -1;    
-      }  
-
-    if (lua_isstring (App.m_SpellChecker_Lua, -1))
-      {
-      const char * p = lua_tostring (App.m_SpellChecker_Lua, -1);
-      if (bAll)
-        pEdit->SetSel (0, -1, TRUE);
-      pEdit->ReplaceSel (p, true);
-      // put original selection back
-      pEdit->SetSel (nStartChar, nEndChar); 
-      return 1;   // spell checked ok
-      }
-
+  if (lua_isstring (App.m_SpellChecker_Lua, -1))
+    {
+    const char * p = lua_tostring (App.m_SpellChecker_Lua, -1);
+    if (bAll)
+      pEdit->SetSel (0, -1, TRUE);
+    pEdit->ReplaceSel (p, true);
     // put original selection back
     pEdit->SetSel (nStartChar, nEndChar); 
-    return 0;      // they cancelled
+    return 1;   // spell checked ok
     }
 
-  return -1;
-
+  // put original selection back
+  pEdit->SetSel (nStartChar, nEndChar); 
+  return 0;      // they cancelled
 } // end of CMUSHclientDoc::SpellCheckCommand
 
 
 VARIANT CMUSHclientDoc::SpellCheckDlg(LPCTSTR Text) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
-  if (!App.m_bSpellCheckOK)
+  if (!App.m_bSpellCheckOK || !App.m_SpellChecker_Lua)
     return vaResult;
 
+  lua_settop(App.m_SpellChecker_Lua, 0);   // clear stack
+  // L: -
 
-  if (App.m_SpellChecker_Lua)
+  lua_getglobal (App.m_SpellChecker_Lua, SPELLCHECKFUNCTION);  
+  if (!lua_isfunction (App.m_SpellChecker_Lua, -1))
+    return vaResult;  // cannot spell check string
+  // L: func
+
+  lua_pushstring (App.m_SpellChecker_Lua, Text);  // string to be checked
+  // L: func, Text
+
+  if (CallLuaWithTraceBack (App.m_SpellChecker_Lua, 1, 1))
     {
+    LuaError (App.m_SpellChecker_Lua, "Run-time error", SPELLCHECKFUNCTION, "world.SpellCheckDlg", "", this);
+    return vaResult;  // cannot spell check string - syntax error or dialog cancelled
+    }  
 
-    lua_settop(App.m_SpellChecker_Lua, 0);   // clear stack
-
-    lua_getglobal (App.m_SpellChecker_Lua, SPELLCHECKFUNCTION);  
-    if (!lua_isfunction (App.m_SpellChecker_Lua, -1))
-      return vaResult;  // cannot spell check string
-
-    lua_pushstring (App.m_SpellChecker_Lua, Text);  // string to be checked
-
-    int narg = lua_gettop(App.m_SpellChecker_Lua) - 1;  // all but the function
-    int error = CallLuaWithTraceBack (App.m_SpellChecker_Lua, narg, 1);
-  
-    if (error)
-      {
-      LuaError (App.m_SpellChecker_Lua, "Run-time error", SPELLCHECKFUNCTION, "world.SpellCheckDlg", "", this);
-      return vaResult;  // cannot spell check string - syntax error or dialog cancelled
-      }  
-
-    // must be string or else return bad result
-    if (!lua_isstring (App.m_SpellChecker_Lua, -1))
-      return vaResult;  // shouldn't happen? maybe dialog cancelled
-
+  // must be string
+  if (lua_isstring (App.m_SpellChecker_Lua, -1))
     SetUpVariantString (vaResult, lua_tostring (App.m_SpellChecker_Lua, -1)); 
-    }
 
-
-	return vaResult;
+  return vaResult;
 }
 
 
 BSTR CMUSHclientDoc::MakeRegularExpression(LPCTSTR Text) 
 {
-	return ConvertToRegularExpression (Text).AllocSysString();
+  return ConvertToRegularExpression (Text).AllocSysString();
 }   // end of CMUSHclientDoc::MakeRegularExpression
 
 
@@ -10523,33 +9459,27 @@ void CMUSHclientDoc::MoveMainWindow(long Left, long Top, long Width, long Height
 
 void CMUSHclientDoc::MoveWorldWindow(long Left, long Top, long Width, long Height) 
 {
-MoveWorldWindowX (Left, Top, Width, Height, 1);   // move first window
+  MoveWorldWindowX (Left, Top, Width, Height, 1);   // move first window
 }
 
 long CMUSHclientDoc::MoveNotepadWindow(LPCTSTR Title, long Left, long Top, long Width, long Height) 
 {
-CTextDocument * pTextDoc = FindNotepad (Title);
+  CTextDocument * pTextDoc = FindNotepad (Title);
+  if (!pTextDoc)
+    return false;
 
-  if (pTextDoc)
-    {
-    // get the view
-    POSITION pos=pTextDoc->GetFirstViewPosition();
+  // get the view
+  POSITION pos = pTextDoc->GetFirstViewPosition();
+  if (!pos)
+    return false;
 
-    if (pos)
-      {
-      CView* pView = pTextDoc->GetNextView(pos);
+  CView* pView = pTextDoc->GetNextView(pos);
+  if (!pView->IsKindOf(RUNTIME_CLASS(CTextView)))
+    return false;
 
-      if (pView->IsKindOf(RUNTIME_CLASS(CTextView)))
-        {
-        CTextView* pmyView = (CTextView*)pView;
-        pmyView->GetParentFrame ()->MoveWindow (Left, Top, Width, Height);
-        return true;            
-        } // end of having the right type of view
-      }   // end of having a view
-    } // end of having an existing notepad document
-
-
-return false;
+  CTextView* pmyView = (CTextView*)pView;
+  pmyView->GetParentFrame ()->MoveWindow (Left, Top, Width, Height);
+  return true;
 }
 
 /*
@@ -10678,55 +9608,51 @@ long CMUSHclientDoc::GetSystemMetrics(long Index)
   return ::GetSystemMetrics (Index);
 }
 
-static void windowPositionHelper (CString & str, const RECT & r)
+static inline void windowPositionHelper (CString & str, const RECT & r)
   {
-  str.Format ("%ld,%ld,%ld,%ld", 
-              r.left, 
-              r.top, 
-              r.right - r.left,  // Width
-              r.bottom - r.top);  // Height
+  str.Format ("%ld,%ld,%ld,%ld",
+      r.left,
+      r.top, 
+      r.right - r.left,  // Width
+      r.bottom - r.top);  // Height
   } // end of windowPositionHelper
 
 // warning - different in Lua
 BSTR CMUSHclientDoc::GetMainWindowPosition() 
 {
-	CString strResult;
-
   CWindowPlacement wp;
   Frame.GetWindowPlacement(&wp);  
 
-	windowPositionHelper (strResult, wp.rcNormalPosition);
+  CString strResult;
+  windowPositionHelper (strResult, wp.rcNormalPosition);
   return strResult.AllocSysString();
 }
 
 // warning - different in Lua
 BSTR CMUSHclientDoc::GetNotepadWindowPosition(LPCTSTR Title) 
 {
-	CString strResult;
+  CString strResult;
 
   CTextDocument * pTextDoc = FindNotepad (Title);
-
   if (pTextDoc)
     {
-    CWindowPlacement wp;
-
     // get the view
     POSITION pos=pTextDoc->GetFirstViewPosition();
-
     if (pos)
       {
       CView* pView = pTextDoc->GetNextView(pos);
-
       if (pView->IsKindOf(RUNTIME_CLASS(CTextView)))
         {
         CTextView* pmyView = (CTextView*)pView;
+
+        CWindowPlacement wp;
         pmyView->GetParentFrame ()->GetWindowPlacement(&wp);
       	windowPositionHelper (strResult, wp.rcNormalPosition);
         } // end of having the right type of view
       }   // end of having a view
     } // end of having an existing notepad document
 
-	return strResult.AllocSysString();
+  return strResult.AllocSysString();
 }
 
 // warning - different in Lua
@@ -10736,15 +9662,14 @@ BSTR CMUSHclientDoc::GetWorldWindowPosition()
 }
 
 
-
 // /UdpSend ("10.0.0.3", 4111, "m,textcolour,5555")
 
 long CMUSHclientDoc::UdpSend(LPCTSTR IP, short Port, LPCTSTR Text) 
 {
-// timer t ("UdpSend");
+  // timer t ("UdpSend");
 
-int s;  // socket
-struct sockaddr_in sa; 	
+  int s;  // socket
+  struct sockaddr_in sa; 	
 
   // work out address to send to
   memset (&sa, 0, sizeof(sa));
@@ -10760,20 +9685,19 @@ struct sockaddr_in sa;
     return WSAGetLastError ();    // cannot create socket
 
   // allow broadcasts
-  int x = 1;
-  setsockopt( s, SOL_SOCKET, SO_BROADCAST, (const char *) &x, sizeof x);
+  const char x = 1;
+  setsockopt(s, SOL_SOCKET, SO_BROADCAST, &x, sizeof(x));
 
   // send it
-  long result = sendto (s, 
-                        Text, strlen (Text), 
-                        0,     // flags
-                        (struct sockaddr *) &sa, sizeof sa);
+  long result = sendto (s, Text, strlen (Text),
+      0,     // flags
+      (struct sockaddr *) &sa, sizeof sa);
 
   // close it regardless
   closesocket (s);
 
   if (result == SOCKET_ERROR)
-	  return WSAGetLastError ();    // return error reason
+    return WSAGetLastError ();    // return error reason
 
   return 0;
 }
@@ -10783,14 +9707,12 @@ struct sockaddr_in sa;
 
 long CMUSHclientDoc::UdpListen(LPCTSTR IP, short Port, LPCTSTR Script) 
 {
-
   // I think we'll insist plugins do this
   if (m_CurrentPlugin == NULL)
     return eNotAPlugin;
 
   // see if we already have one for this port
   map<int, UDPsocket *>::iterator it = m_UDPsocketMap.find (Port);
-
   // delete existing, so we can use an empty script to achieve this
   if (it != m_UDPsocketMap.end ())
     {
@@ -10803,43 +9725,36 @@ long CMUSHclientDoc::UdpListen(LPCTSTR IP, short Port, LPCTSTR Script)
     }
 
   // no script, cannot do it 
-  if (strlen (Script) == 0)
+  if (Script[0] == '\0')
     return eNoNameSpecified;
 
   // make a new listener
   UDPsocket * pSocket = new UDPsocket (this);
-
-	if (!pSocket->Create (Port, SOCK_DGRAM, FD_READ, IP))
-	  {
-		delete pSocket;
-		return eBadParameter;
-	  }     // end of can't create socket
+  if (!pSocket->Create (Port, SOCK_DGRAM, FD_READ, IP))
+   {
+     delete pSocket;
+     return eBadParameter;
+  }     // end of can't create socket
 
   // remember script to call, and which plugin it is (should be?) in
-  pSocket->m_strScript = Script;
-  pSocket->m_strPluginID =  m_CurrentPlugin->m_strID;
+  pSocket->m_strScript   = Script;
+  pSocket->m_strPluginID = m_CurrentPlugin->m_strID;
 
   // keep a map of them
   m_UDPsocketMap [Port] = pSocket;
-	return eOK;
+  return eOK;
 }
 
 
-long CMUSHclientDoc::NotepadColour (LPCTSTR Title, 
-                                      LPCTSTR TextColour, 
-                                      LPCTSTR BackgroundColour) 
+long CMUSHclientDoc::NotepadColour (LPCTSTR Title, LPCTSTR TextColour, LPCTSTR BackgroundColour) 
 {
-CTextDocument * pTextDoc = FindNotepad (Title);
-
+  CTextDocument * pTextDoc = FindNotepad (Title);
   if (!pTextDoc)
     return false;
 
-  COLORREF iTextColour,
-           iBackColour;
-
-  if (SetColour (TextColour, iTextColour))
-    return false;    // can't find colour
-  if (SetColour (BackgroundColour, iBackColour))
+  COLORREF iTextColour, iBackColour;
+  if (SetColour (TextColour, iTextColour) ||
+      SetColour (BackgroundColour, iBackColour))
     return false;    // can't find colour
 
   pTextDoc->m_textColour = iTextColour;
@@ -10847,9 +9762,7 @@ CTextDocument * pTextDoc = FindNotepad (Title);
 
   pTextDoc->UpdateAllViews (NULL);
   return true;  // did it!
-
 }   // end of CMUSHclientDoc::NotepadColour
-
 
 
 long CMUSHclientDoc::NotepadFont(LPCTSTR Title, 
@@ -10858,38 +9771,30 @@ long CMUSHclientDoc::NotepadFont(LPCTSTR Title,
                                  short Style, 
                                  short Charset) 
 {
-CTextDocument * pTextDoc = FindNotepad (Title);
-
+  CTextDocument * pTextDoc = FindNotepad (Title);
   if (!pTextDoc)
     return false;
 
   // font name provided?
-  if (strlen (FontName) > 0)
-   pTextDoc->m_strFontName = FontName;
-
+  if (FontName[0] != '\0')
+    pTextDoc->m_strFontName = FontName;
   // size provided?
   if (Size > 0)
-   pTextDoc->m_iFontSize = Size;
-
-  if (Style & 1)   // bold
-    pTextDoc->m_iFontWeight = FW_BOLD;
-  else
-    pTextDoc->m_iFontWeight = FW_NORMAL;
-
-  pTextDoc->m_bFontItalic = (Style & 2) != 0;
+    pTextDoc->m_iFontSize = Size;
+  
+  pTextDoc->m_iFontWeight    = (Style & 1) ? FW_BOLD : FW_NORMAL;
+  pTextDoc->m_bFontItalic    = (Style & 2) != 0;
   pTextDoc->m_bFontUnderline = (Style & 4) != 0;
   pTextDoc->m_bFontStrikeout = (Style & 8) != 0;
-
-  pTextDoc->m_iFontCharset = Charset;
+  pTextDoc->m_iFontCharset   = Charset;
 
   pTextDoc->SetTheFont ();
-
   return true;    // done it OK
 }
 
 void CMUSHclientDoc::MtSrand(long Seed) 
 {
-	init_genrand (Seed);
+  init_genrand (Seed);
 }
 
 /* example Lua code:
@@ -10911,12 +9816,12 @@ void CMUSHclientDoc::MtSrand(long Seed)
 
 double CMUSHclientDoc::MtRand() 
 {
-	return genrand ();
+  return genrand ();
 }
 
 void CMUSHclientDoc::SetChanged(BOOL ChangedFlag) 
 {
-SetModifiedFlag (ChangedFlag);
+  SetModifiedFlag (ChangedFlag);
 }
 
 
@@ -10925,23 +9830,17 @@ VARIANT CMUSHclientDoc::UdpPortList()
   COleSafeArray sa;   // for wildcard list
 
   long iCount = m_UDPsocketMap.size ();
-
   if (iCount) // cannot create empty array dimension
     {
     sa.CreateOneDim (VT_VARIANT, iCount);
-  
-    map<int, UDPsocket *>::const_iterator it;
 
-    for (iCount = 0, it = m_UDPsocketMap.begin (); 
-         it != m_UDPsocketMap.end (); it++, iCount++)
-      {
+    map<int, UDPsocket *>::const_iterator it = m_UDPsocketMap.begin ();
+    for (iCount = 0; it != m_UDPsocketMap.end (); ++it, ++iCount)
       // the array must be a bloody array of variants, or VBscript kicks up
-      COleVariant v ((long) it->first);
-      sa.PutElement (&iCount, &v);
-      }      // end of looping through each colour
+      sa.PutElement (&iCount, &((COleVariant)(long)it->first));
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 }
 
 
@@ -10957,160 +9856,124 @@ void CMUSHclientDoc::NoteHr()
   StartNewLine (true, 0); // now finish this line
 
   // refresh views
-
-  for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-
-		  pmyView->addedstuff();
-	    }	
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      ((CMUSHView*)pView)->addedstuff();
     }
 
 }
 
-void CMUSHclientDoc::MoveWorldWindowX(long Left, 
-                                      long Top, 
-                                      long Width, 
+void CMUSHclientDoc::MoveWorldWindowX(long Left,
+                                      long Top,
+                                      long Width,
                                       long Height, 
                                       short Which) 
 {
-int i = 0;
-
-  for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
+  POSITION pos = GetFirstViewPosition();
+  int i = 0;
+  while (pos != NULL)
     {
     CView* pView = GetNextView(pos);
-
     if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
       {
-      CSendView* pmyView = (CSendView*)pView;
-
-      i++;
-
-      if (i != Which)
-        continue;   // wrong one
-
-      pmyView->GetParentFrame ()->MoveWindow (Left, Top, Width, Height);
-
-      break;
-
+      ++i;
+      if (i == Which)
+        ((CSendView*)pView)->GetParentFrame ()->MoveWindow (Left, Top, Width, Height);
       }	
     }
-
 }
 
 // warning - different in Lua
 BSTR CMUSHclientDoc::GetWorldWindowPositionX(short Which) 
 {
-CString strResult;
-int i = 0;
+  CString strResult;
+  int i = 0;
 
-  CWindowPlacement wp;
-
-  for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
     {
     CView* pView = GetNextView(pos);
 
     if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
       {
-      CSendView* pmyView = (CSendView*)pView;
-
       i++;
-
-      if (i != Which)
-        continue;   // wrong one
-
-      pmyView->GetParentFrame ()->GetWindowPlacement(&wp); 
-    	windowPositionHelper (strResult, wp.rcNormalPosition);
-
-      break;
-
+      if (i == Which)
+        {
+        CWindowPlacement wp;
+        ((CSendView*)pView)->GetParentFrame ()->GetWindowPlacement(&wp); 
+        windowPositionHelper (strResult, wp.rcNormalPosition);
+        }
       }	
     }
 
-	return strResult.AllocSysString();
+  return strResult.AllocSysString();
 }
 
 
 void CMUSHclientDoc::SetEntity(LPCTSTR Name, LPCTSTR Contents) 
 {
-  if (strlen (Contents) == 0)
+  if (Contents[0] == '\0')
     m_CustomEntityMap.RemoveKey (Name);
   else
     m_CustomEntityMap.SetAt (Name, Contents);
- 
 }
 
 
 BSTR CMUSHclientDoc::GetXMLEntity(LPCTSTR Entity) 
 {
-	CString strResult;
   CString strEntity = Entity;
-  CXMLparser parser;
-
   try 
     {
-    strResult = parser.Get_XML_Entity (strEntity);
+    strEntity = CXMLparser().Get_XML_Entity (strEntity);
     }   // end of try
   catch(CException* e)
     {
     e->Delete ();
     } // end of catch
-
-	return strResult.AllocSysString();
+  return strEntity.AllocSysString();
 }
-
 
 
 long CMUSHclientDoc::GetUdpPort(long First, long Last) 
 {
-  CMUSHclientDoc * pDoc;
-  POSITION pos;
-
   if (First > Last || 
-      First < 1 ||
+      First < 1    ||
       Last > 65535)
     return 0;   // bad range
 
   set<long> UsedPortsSet;
   set<long>::const_iterator it;
 
-  map<int, UDPsocket *>::const_iterator i;
-
   // get all worlds
-  for (pos = App.m_pWorldDocTemplate->GetFirstDocPosition(); pos != NULL; )
+  POSITION pos = App.m_pWorldDocTemplate->GetFirstDocPosition();;
+  CMUSHclientDoc * pDoc = NULL;
+  map<int, UDPsocket *>::const_iterator i;
+  while (pos != NULL)
     {
     pDoc = (CMUSHclientDoc *) App.m_pWorldDocTemplate->GetNextDoc(pos);
 
     // remember all UDP ports used by this world
-    for (i = pDoc->m_UDPsocketMap.begin ();
-         i != pDoc->m_UDPsocketMap.end ();
-         i++)
+    for (i = pDoc->m_UDPsocketMap.begin (); i != pDoc->m_UDPsocketMap.end (); ++i)
       UsedPortsSet.insert (i->first);
-
     }      // end of looping through each world
 
   // now UsedPortsSet contains an entry for every world - find the first free one
 
-  long result;
+  long result = 0; // default if can't be found
+  for (result = First; result < Last; ++result)
+    if (UsedPortsSet.find (result) == UsedPortsSet.end ())
+      break;    // this one wasn't used
 
-  for (result = First; result < Last; result++)
-    {
-    it = UsedPortsSet.find (result);
-    if (it == UsedPortsSet.end ())
-      return result;    // this one wasn't used
-    }
-
-  return 0;   // couldn't find one
+  return result;
 }
 
 
 void CMUSHclientDoc::SetClipboard(LPCTSTR Text) 
 {
-putontoclipboard (Text);
+  putontoclipboard (Text);
 }
 
 
@@ -11118,24 +9981,23 @@ long CMUSHclientDoc::BroadcastPlugin(long Message, LPCTSTR Text)
 {
   CPlugin * pSavedPlugin = m_CurrentPlugin;
   m_CurrentPlugin = NULL;
-  long iCount = 0;
 
-  CString strCurrentID;
-  CString strCurrentName;
-
+  CString strCurrentID, strCurrentName;
   if (pSavedPlugin)
     {
-     strCurrentID = pSavedPlugin->m_strID;
+     strCurrentID   = pSavedPlugin->m_strID;
      strCurrentName = pSavedPlugin->m_strName;
     }
 
   // tell a plugin the message
-  for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+  POSITION pluginpos = m_PluginList.GetHeadPosition();
+  CPlugin * pPlugin = NULL;
+  long iCount = 0;
+  while (pluginpos != NULL)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+    pPlugin = m_PluginList.GetNext (pluginpos);
 
-
-    if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+    if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
 
     // see what the plugin makes of this,
@@ -11147,19 +10009,17 @@ long CMUSHclientDoc::BroadcastPlugin(long Message, LPCTSTR Text)
                                   Text); 
 
     if (pPlugin->m_dispid_plugin_broadcast != DISPID_UNKNOWN)
-      iCount++;
-
+      ++iCount;
     }   // end of doing each plugin
 
   m_CurrentPlugin = pSavedPlugin;
 
-	return iCount;
+  return iCount;
 }
 
 
 long CMUSHclientDoc::PickColour(long Suggested) 
 {
-
   CColourPickerDlg dlg;
 
   if (Suggested != -1)
@@ -11168,11 +10028,7 @@ long CMUSHclientDoc::PickColour(long Suggested)
     dlg.m_bPickColour = true;
     }
 
-
-  if (dlg.DoModal () != IDOK)
-    return -1;
-
-  return dlg.GetColor ();
+  return (dlg.DoModal () == IDOK) ? dlg.GetColor () : -1;
 }
 
 
@@ -11180,21 +10036,18 @@ extern int_flags_pair error_descriptions [];
 
 BSTR CMUSHclientDoc::ErrorDesc(long Code) 
 {
-	CString strResult;
-  
+  CString strResult;
   strResult.Format ("%ld", Code);
 	
-  const int_flags_pair *p;
-  for(p = error_descriptions; p->val != NULL; p++) 
-    {
+  const int_flags_pair *p = NULL;
+  for(p = error_descriptions; p->val != NULL; ++p) 
     if (p->key == Code)
       {
       strResult = Translate (p->val);
       break;
       }
-    } 
 
-	return strResult.AllocSysString();
+  return strResult.AllocSysString();
 }
 
 
@@ -11202,62 +10055,62 @@ extern const char * sFunctions [1];
 
 void CMUSHclientDoc::Help(LPCTSTR Name) 
 {
-map<string, string> lua_specials;
+  static map<string, string> lua_specials;
+  static bool static_done = false;
+  if (!static_done)
+    {
+    // special Lua help
+    lua_specials ["lua"]   = "lua";
+    lua_specials ["lua b"] = "lua_base";
+    lua_specials ["lua c"] = "lua_coroutines";
+    lua_specials ["lua d"] = "lua_debug";
+    lua_specials ["lua i"] = "lua_io";
+    lua_specials ["lua m"] = "lua_math";
+    lua_specials ["lua o"] = "lua_os";
+    lua_specials ["lua p"] = "lua_package";
+    lua_specials ["lua r"] = "lua_rex";
+    lua_specials ["lua s"] = "lua_string";
+    lua_specials ["lua t"] = "lua_tables";
+    lua_specials ["lua u"] = "lua_utils";
 
-// special Lua help
-  lua_specials ["lua"]   = "lua";
-  lua_specials ["lua b"] = "lua_base";
-  lua_specials ["lua c"] = "lua_coroutines";
-  lua_specials ["lua d"] = "lua_debug";
-  lua_specials ["lua i"] = "lua_io";
-  lua_specials ["lua m"] = "lua_math";
-  lua_specials ["lua o"] = "lua_os";
-  lua_specials ["lua p"] = "lua_package";
-  lua_specials ["lua r"] = "lua_rex";
-  lua_specials ["lua s"] = "lua_string";
-  lua_specials ["lua t"] = "lua_tables";
-  lua_specials ["lua u"] = "lua_utils";
+    static_done = true;
+    }
 
-CString m_strFilter = Name;
-
-  m_strFilter.MakeLower ();
-  m_strFilter.TrimLeft ();
-  m_strFilter.TrimRight ();
+  CString strName = Name;
+  // trim spaces, make lowercase
+  CheckObjectName(strName, false);
 
   // a special case - b is used twice
-  if (m_strFilter == "lua bc")
+  if (strName == "lua bc")
     {
     ShowHelp ("DOC_", "lua_bc"); 
     return;
     }
 
-  CString strFunction;
-
-  string sFirst5 = m_strFilter.Left (5);
-
-  map<string, string>::const_iterator it = lua_specials.find (sFirst5);
-
+  map<string, string>::const_iterator it = lua_specials.find ((LPCTSTR)strName.Left (5));
   if (it != lua_specials.end ())
     {
     ShowHelp ("DOC_", it->second.c_str ()); 
     return;
     }
-  else if (!m_strFilter.IsEmpty ())
+  
+  if (!strName.IsEmpty ())
     {
     // first find direct match on a Lua function
-    if (LuaFunctionsSet.find ((LPCTSTR) m_strFilter) != LuaFunctionsSet.end ())
+    if (LuaFunctionsSet.find ((LPCTSTR) strName) != LuaFunctionsSet.end ())
       {
-      ShowHelp ("LUA_", m_strFilter);   
+      ShowHelp ("LUA_", strName);   
       return;
       }
 
+    CString strFunction;
     // then try a world function
-    for (int i = 0; sFunctions [i] [0]; i++)
+    for (int i = 0; sFunctions [i] [0]; ++i)
       {
       strFunction = sFunctions [i];
       strFunction.MakeLower ();
 
-      if (strFunction == m_strFilter)
+      if (strFunction.MakeLower() == strName)
         {
         ShowHelp ("FNC_", sFunctions [i]);   // back to proper capitalization
         return;
@@ -11271,7 +10124,7 @@ CString m_strFilter = Name;
     bLua = true;
 
   // not exact match, show list matching filter
- ShowFunctionslist (m_strFilter, bLua);
+  ShowFunctionslist (strName, bLua);
 }
 
 
@@ -11279,29 +10132,28 @@ CString m_strFilter = Name;
 
 void CMUSHclientDoc::Simulate(LPCTSTR Text) 
 {
-   DisplayMsg(Text, strlen (Text), 0);
+  DisplayMsg(Text, strlen (Text), 0);
 }
 
 // resets the IP address, forcing a name-lookup
 
 void CMUSHclientDoc::ResetIP() 
 {
-  ZeroMemory (&m_sockAddr, sizeof m_sockAddr);
+  ZeroMemory (&m_sockAddr,  sizeof m_sockAddr);
   ZeroMemory (&m_ProxyAddr, sizeof m_ProxyAddr);
 }
 
 
 long CMUSHclientDoc::AddSpellCheckWord(LPCTSTR OriginalWord, LPCTSTR ActionCode, LPCTSTR ReplacementWord) 
 {
-
-const char sFunction [] = "spellcheck_add_word";
+  static const char sFunction [] = "spellcheck_add_word";
 
   // make sure we enabled spell check
   if (!App.m_bSpellCheckOK)
     return eSpellCheckNotActive;
 
   // word to match on should be supplied
-  if (strlen (OriginalWord) <= 0 || strlen (OriginalWord) > 63)
+  if (OriginalWord[0] == '\0' || strlen (OriginalWord) > 63)
     return eBadParameter;
 
   // replacement word is optional
@@ -11312,10 +10164,8 @@ const char sFunction [] = "spellcheck_add_word";
   if (strlen (ActionCode) != 1)
     return eUnknownOption;
 
-unsigned char cAction = ActionCode [0];
-
   // validate action code
-  switch (cAction)
+  switch ((unsigned char) ActionCode [0])
     {
     case 'a':
     case 'A':
@@ -11329,79 +10179,65 @@ unsigned char cAction = ActionCode [0];
       return eUnknownOption;
     }
 
+  if (!App.m_SpellChecker_Lua)
+    return eSpellCheckNotActive;
 
-  if (App.m_SpellChecker_Lua)
-    {
+  lua_settop(App.m_SpellChecker_Lua, 0);   // clear stack
+  // L: -
 
-    lua_settop(App.m_SpellChecker_Lua, 0);   // clear stack
+  lua_getglobal (App.m_SpellChecker_Lua, sFunction);
+  if (!lua_isfunction (App.m_SpellChecker_Lua, -1))
+    return eSpellCheckNotActive;  // cannot spell check string
+  // L: func
 
-    lua_getglobal (App.m_SpellChecker_Lua, sFunction);  
-    if (!lua_isfunction (App.m_SpellChecker_Lua, -1))
-      return eSpellCheckNotActive;  // cannot spell check string
-
-    lua_pushstring (App.m_SpellChecker_Lua, OriginalWord);      // word to be added
-    lua_pushstring (App.m_SpellChecker_Lua, ActionCode);        // action
-    lua_pushstring (App.m_SpellChecker_Lua, ReplacementWord);   // replacement
-
-    int narg = lua_gettop(App.m_SpellChecker_Lua) - 1;  // all but the function
-    int error = CallLuaWithTraceBack (App.m_SpellChecker_Lua, narg, 1);
+  lua_pushstring (App.m_SpellChecker_Lua, OriginalWord);      // word to be added
+  lua_pushstring (App.m_SpellChecker_Lua, ActionCode);        // action
+  lua_pushstring (App.m_SpellChecker_Lua, ReplacementWord);   // replacement
+  // L: func, OriginalWord, ActionCode, ReplacementWord
   
-    if (error)
-      {
-      LuaError (App.m_SpellChecker_Lua, "Run-time error", sFunction, "world.AddSpellCheckWord", "", this);
-      return eSpellCheckNotActive;  // cannot spell check string - syntax error
-      }  
+  if (CallLuaWithTraceBack (App.m_SpellChecker_Lua, 3, 1))
+    {
+    LuaError (App.m_SpellChecker_Lua, "Run-time error", sFunction, "world.AddSpellCheckWord", "", this);
+    return eSpellCheckNotActive;  // cannot spell check string - syntax error
+    }
+  // L: result
 
-    // if it returns false, there was a problem
-    if (lua_type (App.m_SpellChecker_Lua, -1) == LUA_TBOOLEAN)
-      {
-      int ok = lua_toboolean (App.m_SpellChecker_Lua, -1);
-      if (!ok)
-        return eBadParameter;
-      }
+  // if it returns false, there was a problem
+  if (lua_type (App.m_SpellChecker_Lua, -1) == LUA_TBOOLEAN)
+    if (!lua_toboolean (App.m_SpellChecker_Lua, -1))
+      return eBadParameter;
 
-    return eOK;
-    }   // end custom spell check
-
-
-  return eSpellCheckNotActive;
-
+  return eOK;
 }
 
 long CMUSHclientDoc::OpenBrowser(LPCTSTR URL) 
 {
-CString strAction = URL;
+  CString strURL = URL;
 
-    if (strAction.IsEmpty ())
-      return eBadParameter;
+  if (strURL.IsEmpty ())
+    return eBadParameter;
 
-    // don't let them slip in arbitrary OS commands
-    if (strAction.Left (7).CompareNoCase ("http://") != 0 &&
-        strAction.Left (8).CompareNoCase ("https://") != 0 &&
-        strAction.Left (7).CompareNoCase ("mailto:") != 0)
-      return eBadParameter;
+  // don't let them slip in arbitrary OS commands
+  if (strURL.Left (7).CompareNoCase ("http://")  != 0 &&
+      strURL.Left (8).CompareNoCase ("https://") != 0 &&
+      strURL.Left (7).CompareNoCase ("mailto:")  != 0)
+    return eBadParameter;
 
-    if ((long) ShellExecute (Frame, _T("open"), strAction, NULL, NULL, SW_SHOWNORMAL) <= 32)
-      return eCouldNotOpenFile;
-
-	return eOK;
+  if ((long) ShellExecute (Frame, _T("open"), strURL, NULL, NULL, SW_SHOWNORMAL) <= 32)
+    return eCouldNotOpenFile;
+  
+  return eOK;
 }
 
 void CMUSHclientDoc::DeleteLines(long Count) 
 {
-
-POSITION pos;
-
-/*
-
+  /*
   I can't delete lines when in send-to-script, please don't try to make me. ;)
 
   The problem is that in ProcessPreviousLine we have established the start and end line
   of the paragraph we are processing, if that is deleted by a trigger in the middle, all 
   hell breaks loose.
-
   */
-
   if (m_bInSendToScript)
     return;   // can't do it
 
@@ -11410,32 +10246,32 @@ POSITION pos;
 
   // if we have the empty line at the end of the buffer, delete that too
   if (m_pCurrentLine && m_pCurrentLine->len == 0)
-    Count++;
+    ++Count;
 
-// delete all lines in this set
-  for (pos = m_LineList.GetTailPosition (); Count > 0 && pos; Count--)
-   {
-   // if this particular line was added to the line positions array, then make it null
+  // delete all lines in this set
+  POSITION pos = m_LineList.GetTailPosition ();
+  while (Count > 0 && pos != NULL)
+    {
+    // if this particular line was added to the line positions array, then make it null
     if (m_LineList.GetCount () % JUMP_SIZE == 1)
-          m_pLinePositions [m_LineList.GetCount () / JUMP_SIZE] = NULL;
+      m_pLinePositions [m_LineList.GetCount () / JUMP_SIZE] = NULL;
 
-    delete m_LineList.GetTail (); // delete contents of tail iten -- version 3.85
-    m_LineList.RemoveTail ();   // get rid of the line
-    m_total_lines--;            // don't count as received
+    delete m_LineList.RemoveTail (); // delete tail iten -- version 3.85
+    --m_total_lines;            // don't count as received
 
-   if (m_LineList.IsEmpty ())  // give up if buffer is empty
-     break;
+    if (m_LineList.IsEmpty ())  // give up if buffer is empty
+      break;
 
-   m_LineList.GetPrev (pos);
-   }
+    m_LineList.GetPrev (pos);
+    --Count;
+    }
 
   // try to allow world.tells to span omitted lines
   if (!m_LineList.IsEmpty ())
     {
     m_pCurrentLine = m_LineList.GetTail ();
-    if ((m_pCurrentLine->flags & COMMENT == 0) ||
-        m_pCurrentLine->hard_return)
-        m_pCurrentLine = NULL;
+    if ((m_pCurrentLine->flags & COMMENT) == 0 || m_pCurrentLine->hard_return)
+      m_pCurrentLine = NULL;
     }
   else
     m_pCurrentLine = NULL;
@@ -11444,103 +10280,88 @@ POSITION pos;
     {
     // restart with a blank line at the end of the list
     m_pCurrentLine = new CLine (++m_total_lines, 
-                                m_nWrapColumn,
-                                m_iFlags,
-                                m_iForeColour,
-                                m_iBackColour,
-                                m_bUTF_8);
+        m_nWrapColumn,
+        m_iFlags,
+        m_iForeColour,
+        m_iBackColour,
+        m_bUTF_8);
+
     pos = m_LineList.AddTail (m_pCurrentLine);
 
     if (m_LineList.GetCount () % JUMP_SIZE == 1)
       m_pLinePositions [m_LineList.GetCount () / JUMP_SIZE] = pos;
     }
 
-
-// notify view to invalidate this part
-
-  for(pos = GetFirstViewPosition(); pos != NULL; )
+  // notify view to invalidate this part
+  pos = GetFirstViewPosition();
+  CView* pView = NULL;
+  while (pos != NULL)
     {
-  	CView* pView = GetNextView(pos);
-	
+  	pView = GetNextView(pos);
   	if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-  		CMUSHView* pmyView = (CMUSHView*)pView;
-
-  		pmyView->Invalidate ();
-  		}	  // end of being an output view
+      ((CMUSHView*)pView)->Invalidate ();
   	}   // end of doing each view
-
 }  // end of DeleteLines
 
 
 BOOL CMUSHclientDoc::NotepadSaveMethod(LPCTSTR Title, short Method) 
 {
-CTextDocument * pTextDoc = FindNotepad (Title);
-
+  CTextDocument * pTextDoc = FindNotepad (Title);
   if (!pTextDoc)
     return false;  // can't find it
 
   switch (Method)
     {
     case 0: pTextDoc->m_iSaveOnChange = eNotepadSaveDefault; break;
-    case 1: pTextDoc->m_iSaveOnChange = eNotepadSaveAlways; break;
-    case 2: pTextDoc->m_iSaveOnChange = eNotepadSaveNever; break;
+    case 1: pTextDoc->m_iSaveOnChange = eNotepadSaveAlways;  break;
+    case 2: pTextDoc->m_iSaveOnChange = eNotepadSaveNever;   break;
     default: return false;  // bad selector
     }
 
-	return true;
+  return true;
 }   // end of NotepadSaveMethod
 
 long CMUSHclientDoc::ChangeDir(LPCTSTR Path) 
 {
-  if (_chdir(Path) == 0)
-    {
-    // find the new working directory
+  if (_chdir(Path) != 0)
+    return false;
 
-    _getdcwd (0, working_dir, sizeof (working_dir) - 1);
+  // find the new working directory
+  _getdcwd (0, working_dir, sizeof (working_dir) - 1);
 
-    // make sure directory name ends in a slash
+  // make sure directory name ends in a slash
+  working_dir [sizeof (working_dir) - 2] = 0;
 
-    working_dir [sizeof (working_dir) - 2] = 0;
-
-    if (working_dir [strlen (working_dir) - 1] != '\\')
-      strcat (working_dir, "\\");
+  if (working_dir [strlen (working_dir) - 1] != '\\')
+    strcat (working_dir, "\\");
     
-    return true;  // did it OK
-    }
-
-	return false;
+  return true;  // did it OK
 }    // end of ChangeDir
 
 long CMUSHclientDoc::SendPkt(LPCTSTR Packet) 
 {
-
   if (m_iConnectPhase != eConnectConnectedToMud)
     return eWorldClosed;             
 
   SendPacket (Packet, strlen (Packet));
-	return eOK;
+  return eOK;
 }
 
 
 BSTR CMUSHclientDoc::Metaphone(LPCTSTR Word, short Length) 
 {
+  // char buf [60];
+  //  metaphone (Word, buf, Length);
 
-// char buf [60];
-//  metaphone (Word, buf, Length);
 
-  MString m (Word, Length);
-
+  MString m = MString(Word, Length);
   CString str1, str2;
-
   m.DoubleMetaphone (str1, str2);
 
-	CString strResult (str1);
-
   if (!str2.IsEmpty ())
-    strResult += "," + str2;
+    str1 += "," + str2;
 
-	return strResult.AllocSysString();
+  return str1.AllocSysString();
 }
 
 long CMUSHclientDoc::EditDistance(LPCTSTR Source, LPCTSTR Target) 
@@ -11550,15 +10371,11 @@ long CMUSHclientDoc::EditDistance(LPCTSTR Source, LPCTSTR Target)
 
 long CMUSHclientDoc::FlushLog() 
 {
-  
-  if (m_logfile)
-    {
-    fflush (m_logfile);
-    return eOK;
-    }
+  if (!m_logfile)
+    return eLogFileNotOpen;
 
-	return eLogFileNotOpen;
-
+  fflush (m_logfile);
+  return eOK;
 }
 
 
@@ -11569,50 +10386,43 @@ BOOL CMUSHclientDoc::Transparency(long Key, short Amount)
   else if (Amount > MWT_MAX_FACTOR)
     Amount = MWT_MAX_FACTOR;
 
-  return MakeWindowTransparent (App.m_pMainWnd->m_hWnd, Key, Amount);
+  return MakeWindowTransparent (App.m_pMainWnd->m_hWnd, Key, (unsigned char) Amount);
 }
 
 
 void CMUSHclientDoc::SetWorldWindowStatus(short Parameter) 
 {
+  CFrameWnd* pParent = NULL;
 
-CFrameWnd* pParent = NULL;
-
-  for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
     {
     CView* pView = GetNextView(pos);
-
     if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
       {
-      CSendView* pmyView = (CSendView*)pView;
-
-      pParent = pmyView->GetParentFrame ();
-
+      pParent = ((CSendView*)pView)->GetParentFrame ();
       break;
-
       }	
     }
 
   if (pParent)
-    {
     switch (Parameter)
       {
       case 1: pParent->ShowWindow(SW_SHOWMAXIMIZED); break;
-      case 2: pParent->ShowWindow(SW_MINIMIZE); break;
-      case 3: pParent->ShowWindow(SW_RESTORE); break;
-      case 4: pParent->ShowWindow(SW_SHOWNORMAL); break;
+      case 2: pParent->ShowWindow(SW_MINIMIZE);      break;
+      case 3: pParent->ShowWindow(SW_RESTORE);       break;
+      case 4: pParent->ShowWindow(SW_SHOWNORMAL);    break;
       } // end of switch
-    } // have parent
 }
 
 
 BSTR CMUSHclientDoc::GetCustomColourName(short WhichColour) 
 {
-	CString strResult;
+  CString strResult;
   if (WhichColour >= 1 && WhichColour <= MAX_CUSTOM)
     strResult = m_strCustomColourName [WhichColour - 1];
 
-	return strResult.AllocSysString();
+  return strResult.AllocSysString();
 }
 
 long CMUSHclientDoc::SetCustomColourName(short WhichColour, LPCTSTR Name) 
@@ -11620,7 +10430,7 @@ long CMUSHclientDoc::SetCustomColourName(short WhichColour, LPCTSTR Name)
   if (WhichColour < 1 || WhichColour > MAX_CUSTOM)
     return eOptionOutOfRange;  
 
-  if (strlen (Name) <= 0)
+  if (Name[0] == '\0')
     return eNoNameSpecified;
 
   if (strlen (Name) > 30)
@@ -11628,84 +10438,78 @@ long CMUSHclientDoc::SetCustomColourName(short WhichColour, LPCTSTR Name)
 
   if (m_strCustomColourName [WhichColour - 1] != Name)
     SetModifiedFlag (TRUE);   // document has changed
-
+  
   m_strCustomColourName [WhichColour - 1] = Name;
-
-	return eOK;
+  return eOK;
 }
-
 
 
 VARIANT CMUSHclientDoc::GetNotepadList(BOOL All) 
 {
   COleSafeArray sa;   // for list
 
+  // count number of notepads
+  POSITION pos = App.m_pNormalDocTemplate->GetFirstDocPosition();
   CTextDocument * pTextDoc;
   long iCount = 0;
-  POSITION pos;
-
-  // count number of notepads
-  for (pos = App.m_pNormalDocTemplate->GetFirstDocPosition(); pos != NULL; )
+  while (pos != NULL)
     {
     pTextDoc = (CTextDocument *) App.m_pNormalDocTemplate->GetNextDoc(pos);
-
     if (All || (pTextDoc->m_pRelatedWorld == this &&
-       pTextDoc->m_iUniqueDocumentNumber == m_iUniqueDocumentNumber))
-      iCount++;
-
+        pTextDoc->m_iUniqueDocumentNumber == m_iUniqueDocumentNumber))
+      ++iCount;
     }
 
-  if (iCount) // cannot create empty array dimension
+  if (iCount > 0) // cannot create empty array dimension
     {
     sa.CreateOneDim (VT_VARIANT, iCount);
   
     // put the worlds into the array
-    for (iCount = 0, pos = App.m_pNormalDocTemplate->GetFirstDocPosition(); pos != NULL; )
+    pos = App.m_pNormalDocTemplate->GetFirstDocPosition();
+    iCount = 0;
+    while (pos != NULL)
       {
       pTextDoc = (CTextDocument *) App.m_pNormalDocTemplate->GetNextDoc(pos);
-
       // ignore unrelated worlds
-      if (!All)
-        if (pTextDoc->m_pRelatedWorld != this ||
-           pTextDoc->m_iUniqueDocumentNumber != m_iUniqueDocumentNumber)
-           continue;
-
-      // the array must be a bloody array of variants, or VBscript kicks up
-      COleVariant v (pTextDoc->m_strTitle);
-      sa.PutElement (&iCount, &v);
-
-      iCount++;
+      if (All || (pTextDoc->m_pRelatedWorld == this &&
+          pTextDoc->m_iUniqueDocumentNumber == m_iUniqueDocumentNumber))
+        {
+        // the array must be a bloody array of variants, or VBscript kicks up
+        sa.PutElement (&iCount, &((COleVariant)pTextDoc->m_strTitle));
+        ++iCount;
+        }
       }      // end of looping through each notepad
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 }
 
 long CMUSHclientDoc::TranslateDebug(LPCTSTR Message) 
 {
-
   // no good without a script
-	if (App.m_Translator_Lua == NULL)
+  if (App.m_Translator_Lua == NULL)
     return 1;   // no script
 
   lua_settop (App.m_Translator_Lua, 0); // pop everything from last time
+  // L: -
 
   // look for Debug function
   lua_getglobal (App.m_Translator_Lua, "Debug");
   if (!lua_isfunction (App.m_Translator_Lua, -1))
     return 2;   // no Debug function
+  // L: func
 
   // argument
   lua_pushstring (App.m_Translator_Lua, Message);
+  // L: func, Message
 
   // call with 1 argument and no result
   if (lua_pcall (App.m_Translator_Lua, 1, 0, 0))
     return 3;   // run-time error
 
   // wow! finished ok
-	return 0;   // ok exit
+  return 0;
 }
-
 
 
 VARIANT CMUSHclientDoc::GetGlobalOption(LPCTSTR Name) 
@@ -11734,22 +10538,21 @@ VARIANT CMUSHclientDoc::GetGlobalOptionList()
 
 // test: /print (PlaySound (9, "/Program Files/Mushclient/sounds/battle/battle01.wav", true, 100))
 
-long CMUSHclientDoc::PlaySoundHelper(short Buffer, LPCTSTR FileName, BOOL Loop, double Volume, double Pan, LPCTSTR MemoryBuffer, size_t MemLen) 
+long CMUSHclientDoc::PlaySoundHelper(short Buffer, CString FileName, BOOL Loop, double Volume, double Pan, LPCTSTR MemoryBuffer, size_t MemLen) 
 {
-int i;
-
   // no sound object? can't do it
   if (!App.m_pDirectSoundObject || !App.m_pDirectSoundPrimaryBuffer)
     return eCannotPlaySound ;
 
+  int i;
   // first release sound buffers for sounds that are not playing or are lost
-  for (i = 0; i < MAX_SOUND_BUFFERS; i++)
+  for (i = 0; i < MAX_SOUND_BUFFERS; ++i)
     if (m_pDirectSoundSecondaryBuffer [i])
       {
       DWORD iStatus;
       if (SUCCEEDED (m_pDirectSoundSecondaryBuffer [i]->GetStatus (&iStatus)) &&
-          (((iStatus & (DSBSTATUS_PLAYING | DSBSTATUS_LOOPING)) == 0) ||
-          (iStatus & DSBSTATUS_BUFFERLOST ) ) )
+          ((iStatus & (DSBSTATUS_PLAYING | DSBSTATUS_LOOPING)) == 0 ||
+          (iStatus & DSBSTATUS_BUFFERLOST)))
         {  
         m_pDirectSoundSecondaryBuffer [i]->Release ();
         m_pDirectSoundSecondaryBuffer [i] = NULL;
@@ -11760,28 +10563,26 @@ int i;
   // -------------------------- convert volume from percent into db * 100 ----------------------------
 
   // Force volume into range
-  if (Volume > 0 || Volume < (-100.0))
+  if (Volume > 0.0 || Volume < -100.0)
     Volume = 0.0;
 
-  long iVolume = - (Volume / 100) * DSBVOLUME_MIN;
-
+  long iVolume = (long) (-Volume/100 * DSBVOLUME_MIN);
 
   // -------------------------- convert pan from percent into +/- db * 100 ----------------------------
 
   // Force Pan into range
-  if (Pan > 100.0 || Pan < (-100))
+  if (Pan > 100.0 || Pan < -100.0)
     Pan = 0;
 
-  long iPan = (Pan / 100) * DSBPAN_RIGHT;
+  long iPan = (long) (Pan/100 * DSBPAN_RIGHT);
 
 
   // ---------------------- if no filename, attempt to adjust existing sound ---------------------
-
   if (MemoryBuffer == NULL)
     {
-    if (Buffer >= 1 && Buffer <= MAX_SOUND_BUFFERS && strlen (FileName) == 0)
+    if (Buffer >= 1 && Buffer <= MAX_SOUND_BUFFERS && FileName[0] == '\0')
       {
-      Buffer--;   // make zero-relative
+      --Buffer;   // make zero-relative
 
       // can't if not there
       if (m_pDirectSoundSecondaryBuffer [Buffer] == NULL)
@@ -11793,19 +10594,15 @@ int i;
           (iStatus & DSBSTATUS_PLAYING) == 0)
         return eCannotPlaySound;
 
-        // set requested panning
       m_pDirectSoundSecondaryBuffer [Buffer]->SetPan (iPan);
-      // set requested volume
       m_pDirectSoundSecondaryBuffer [Buffer]->SetVolume (iVolume);
-      // set requested looping
-      m_pDirectSoundSecondaryBuffer [Buffer]->Play( 0, 0, Loop ? DSBPLAY_LOOPING : 0);
+      m_pDirectSoundSecondaryBuffer [Buffer]->Play (0, 0, Loop ? DSBPLAY_LOOPING : 0);
 
       return eOK;
-
       }
 
     // no file name AND no buffer number? can't do much
-    if  (strlen (FileName) < 2)  // later I test the 1st and 2nd characters
+    if (strlen (FileName) < 2)  // later I test the 1st and 2nd characters
       return eBadParameter;
 
     } // have a file name (not memory file)
@@ -11816,20 +10613,20 @@ int i;
 
   if (Buffer == 0)
     {
-    for (i = 0; i < (MAX_SOUND_BUFFERS / 2); i++)
+    for (i = 0; i < MAX_SOUND_BUFFERS / 2; ++i)
       if (m_pDirectSoundSecondaryBuffer [i] == NULL)
         {
         Buffer = i + 1;
         break;
         } // end of found an unused slot
+
+    // no free buffers? re-use buffer #1
+    if (Buffer == 0)
+      Buffer = 1;  
     }  // end of no buffer specifed
 
-  // no free buffers? re-use buffer #1
-  if (Buffer == 0)
-    Buffer = 1;  
-
   // Make buffer zero-relative
-  Buffer--;
+  --Buffer;
   
   // Buffer must be in range
   if (Buffer < 0 || Buffer >= MAX_SOUND_BUFFERS)
@@ -11839,39 +10636,26 @@ int i;
   // ------------------- we have a buffer now -------------------------------
 
   CString strName;
-
   if (MemoryBuffer == NULL)
     {
-
     // ---------- if not absolute path, use MUSHclient.exe / sounds / filename 
-
-    strName = FileName;
-
-    strName.Replace ("/", "\\");  // convert forward to backslash
+    FileName.Replace ("/", "\\");  // convert forward to backslash
 
     // without a full pathname, assume in sounds directory under MUSHclient.exe
-    if (!(
-        isalpha ((unsigned char) strName [0]) &&
-        strName [1] == ':'               // eg. c: blah
-        ) &&      
-        strName [0] != '\\')          // eg. \mydir\blah or \\server\blah
-      strName = ExtractDirectory (App.m_strMUSHclientFileName) + "sounds\\" + strName;
+    if ((!isalpha (FileName [0]) || FileName [1] != ':') && // eg. c: blah
+        FileName [0] != '\\')          // eg. \mydir\blah or \\server\blah
+      FileName = ExtractDirectory (App.m_strMUSHclientFileName) + "sounds\\" + FileName;
 
     if (strName.GetLength () > 127)
       return eBadParameter;
-
     } // have a file name (not memory file)
-
 
 
   // ---------- open multimedia file ----------------------------
 
-  HMMIO          mmioWave ;
-  MMCKINFO       mmckinfoParent, mmckinfoSubchunk ;
-  WAVEFORMATEX   wfPCM ;
   MMIOINFO mmioInfo;
   memset(&mmioInfo, 0, sizeof(MMIOINFO));
-
+  HMMIO          mmioWave ;
   // Open the wave data using the mm functions
   if (MemoryBuffer == NULL)
     {
@@ -11892,18 +10676,19 @@ int i;
    return eFileNotFound;
 
   // now that we know we have a file there, release the sound buffer if possible
-
-  // buffer currently in use? release it
   if (m_pDirectSoundSecondaryBuffer [Buffer])
     {
     DWORD iStatus;
     if (SUCCEEDED (m_pDirectSoundSecondaryBuffer [Buffer]->GetStatus (&iStatus)) &&
-        (iStatus & DSBSTATUS_PLAYING))
+        (iStatus & DSBSTATUS_PLAYING) != 0)
       m_pDirectSoundSecondaryBuffer [Buffer]->Stop ();
 
     m_pDirectSoundSecondaryBuffer [Buffer]->Release ();
     m_pDirectSoundSecondaryBuffer [Buffer] = NULL;
     }
+
+  MMCKINFO mmckinfoParent;
+  MMCKINFO mmckinfoSubchunk;
 
   // Descend to find a "WAVE" block, if this fails then the data is not
   // WAV data.
@@ -11925,65 +10710,65 @@ int i;
 
   // This line actually reads the data from the "fmt " chunk, this data
   // should be in the form of a WAVEFORMATEX structure
-  if ( mmioRead( mmioWave, (char *) &wfPCM, mmckinfoSubchunk.cksize ) == -1 )
-   {
+  WAVEFORMATEX wfPCM ;
+  if (mmioRead( mmioWave, (char *) &wfPCM, mmckinfoSubchunk.cksize ) == -1 )
+    {
     mmioClose( mmioWave, 0 ) ;
     return eCannotPlaySound ;
-   }
+    }
 
   // Step out a layer... think of the mm functions as step in and out of
   // hierarchies of "chunks" of information
-  mmioAscend( mmioWave, &mmckinfoSubchunk, 0 ) ;
+  mmioAscend( mmioWave, &mmckinfoSubchunk, 0 );
 
   // Find the "data" subchunk
   mmckinfoSubchunk.ckid = mmioFOURCC( 'd', 'a', 't', 'a' ) ;
-  if ( mmioDescend( mmioWave, &mmckinfoSubchunk, &mmckinfoParent, 
-                    MMIO_FINDCHUNK ) ) 
-   {
+  if (mmioDescend(mmioWave, &mmckinfoSubchunk, &mmckinfoParent, MMIO_FINDCHUNK))
+    {
     mmioClose( mmioWave, 0 ) ;
     return eCannotPlaySound ;
-   }
+    }
 
- HRESULT        hr ;
- LPBYTE         lpvAudio1 ;
- LPBYTE         lpvAudio2 ;
- DWORD          dwWriteBytes1 ;
- DWORD          dwWriteBytes2 ;
- DSBUFFERDESC   bd ;   
- 
- // At this point we have succeeded in finding the data for the WAV file so
- // we need to create a DirectSoundBuffer 
+  DSBUFFERDESC bd;
+  // At this point we have succeeded in finding the data for the WAV file so
+  // we need to create a DirectSoundBuffer 
   // Set up bd structure for a static secondary buffer.       
-  bd.dwSize = sizeof( bd ) ;       
-  bd.dwFlags = (DSBCAPS_CTRLPAN | DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLFREQUENCY) | DSBCAPS_STATIC ;  
-  // Buffer size retrieved from the mmckinfo structure for the data 
+  bd.dwSize  = sizeof(bd);
+  bd.dwFlags = (DSBCAPS_CTRLPAN | DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLFREQUENCY) | DSBCAPS_STATIC;
+  // Buffer size retrieved from the mmckinfo structure for the data
   // portion of the wav
-  bd.dwBufferBytes = mmckinfoSubchunk.cksize ; 
-  bd.dwReserved = 0 ;
-  bd.lpwfxFormat = &wfPCM ; 
+  bd.dwBufferBytes = mmckinfoSubchunk.cksize;
+  bd.dwReserved    = 0;
+  bd.lpwfxFormat   = &wfPCM;
 
   // Create buffer.    
   if ( FAILED( App.m_pDirectSoundObject->CreateSoundBuffer( &bd, 
                &m_pDirectSoundSecondaryBuffer [Buffer], NULL ) ) )
-   {
+    {
     mmioClose( mmioWave, 0 ) ;
     return eCannotPlaySound ;
-   }
+    }
  
 #define WRAP_UP_FAILED_SOUND \
-    m_pDirectSoundSecondaryBuffer [Buffer]->Release ();  \
-    m_pDirectSoundSecondaryBuffer [Buffer] = NULL;  \
-    mmioClose( mmioWave, 0 ) ;  \
+    m_pDirectSoundSecondaryBuffer [Buffer]->Release (); \
+    m_pDirectSoundSecondaryBuffer [Buffer] = NULL; \
+    mmioClose( mmioWave, 0 ); \
     return eCannotPlaySound;
 
- // make copy to save a bit of typing
- LPDIRECTSOUNDBUFFER lpdsBuffer = m_pDirectSoundSecondaryBuffer [Buffer];
+  // make copy to save a bit of typing
+  LPDIRECTSOUNDBUFFER lpdsBuffer = m_pDirectSoundSecondaryBuffer [Buffer];
 
- // Lock the buffer for the DirectSoundBuffer object
- hr = lpdsBuffer->Lock( 0, 0, (void **) &lpvAudio1, &dwWriteBytes1, 
-               (void **) &lpvAudio2, &dwWriteBytes2, DSBLOCK_ENTIREBUFFER ) ;
- if ( hr == DSERR_BUFFERLOST )
-   {
+  LPBYTE       lpvAudio1;
+  LPBYTE       lpvAudio2;
+  DWORD        dwWriteBytes1;
+  DWORD        dwWriteBytes2;
+
+  // Lock the buffer for the DirectSoundBuffer object
+  HRESULT hr = lpdsBuffer->Lock( 0, 0, (void **) &lpvAudio1, &dwWriteBytes1, 
+      (void **) &lpvAudio2, &dwWriteBytes2, DSBLOCK_ENTIREBUFFER);
+
+  if ( hr == DSERR_BUFFERLOST )
+    {
     // If the buffer was lost try restoring it and lock again
     lpdsBuffer->Restore() ;
     hr = lpdsBuffer->Lock( 0, 0, (void **) &lpvAudio1, &dwWriteBytes1, 
@@ -12003,8 +10788,7 @@ int i;
     }
 
   // Read the data directly into the locked buffer
-  if ( mmioRead( mmioWave, ( char* ) lpvAudio1, mmckinfoSubchunk.cksize ) 
-      == -1 )
+  if ( mmioRead( mmioWave, (char*) lpvAudio1, mmckinfoSubchunk.cksize ) == -1 )
     {
     lpdsBuffer->Unlock( (void *) lpvAudio1, dwWriteBytes1, 
                         (void *) lpvAudio2, dwWriteBytes2 );
@@ -12013,7 +10797,7 @@ int i;
 
   // Unlock the buffer
   if ( FAILED( lpdsBuffer->Unlock( (void *) lpvAudio1, dwWriteBytes1, 
-                                  (void *) lpvAudio2, dwWriteBytes2 ) ) )
+      (void *) lpvAudio2, dwWriteBytes2 ) ) )
     {
     WRAP_UP_FAILED_SOUND;   // couldn't unlock
     }
@@ -12021,25 +10805,23 @@ int i;
   // Close the multimedia object
   mmioClose( mmioWave, 0 ) ;
 
-  // set requested panning
   lpdsBuffer->SetPan (iPan);
-  // set requested volume
   lpdsBuffer->SetVolume (iVolume);
 
- if (FAILED (lpdsBuffer->Play( 0, 0, Loop ? DSBPLAY_LOOPING : 0) ))
-   {
+  if (FAILED (lpdsBuffer->Play( 0, 0, Loop ? DSBPLAY_LOOPING : 0) ))
+    {
     m_pDirectSoundSecondaryBuffer [Buffer]->Release ();
     m_pDirectSoundSecondaryBuffer [Buffer] = NULL;
     return eCannotPlaySound;
-   }
+    }
 
   return eOK;
 } // end of CMUSHclientDoc::PlaySoundHelper
 
 long CMUSHclientDoc::PlaySound(short Buffer, LPCTSTR FileName, BOOL Loop, double Volume, double Pan) 
-  {
+{
   return PlaySoundHelper (Buffer, FileName, Loop, Volume, Pan, NULL, 0);
-  }  // end of  CMUSHclientDoc::PlaySound
+}  // end of  CMUSHclientDoc::PlaySound
 
 
 // stop the sound in the numbered Buffer from playing
@@ -12050,23 +10832,23 @@ long CMUSHclientDoc::StopSound(short Buffer)
   if (Buffer == 0)
     {
     // stop sounds playing, release sound buffers
-    for (int i = 0; i < MAX_SOUND_BUFFERS; i++)
+    for (int i = 0; i < MAX_SOUND_BUFFERS; ++i)
       if (m_pDirectSoundSecondaryBuffer [i])
         {
         DWORD iStatus;
         if (SUCCEEDED (m_pDirectSoundSecondaryBuffer [i]->GetStatus (&iStatus)) &&
-            (iStatus & DSBSTATUS_PLAYING))
+            (iStatus & DSBSTATUS_PLAYING) != 0)
           m_pDirectSoundSecondaryBuffer [i]->Stop ();
 
         m_pDirectSoundSecondaryBuffer [i]->Release ();
         m_pDirectSoundSecondaryBuffer [i] = NULL;
 
         }
-      return eOK;
+    return eOK;
     }
 
   // Make buffer zero-relative
-  Buffer--;
+  --Buffer;
   
   // Buffer must be in range
   if (Buffer < 0 || Buffer >= MAX_SOUND_BUFFERS)
@@ -12077,14 +10859,14 @@ long CMUSHclientDoc::StopSound(short Buffer)
     {
     DWORD iStatus;
     if (SUCCEEDED (m_pDirectSoundSecondaryBuffer [Buffer]->GetStatus (&iStatus)) &&
-        (iStatus & DSBSTATUS_PLAYING))
+        (iStatus & DSBSTATUS_PLAYING) != 0)
       m_pDirectSoundSecondaryBuffer [Buffer]->Stop ();
 
     m_pDirectSoundSecondaryBuffer [Buffer]->Release ();
     m_pDirectSoundSecondaryBuffer [Buffer] = NULL;
     }
 
-	return eOK;
+  return eOK;
 }
 
 // set the status of the sound buffer
@@ -12097,13 +10879,12 @@ long CMUSHclientDoc::StopSound(short Buffer)
 
 long CMUSHclientDoc::GetSoundStatus(short Buffer) 
 {
-
   // no sound object? can't do it
   if (!App.m_pDirectSoundObject || !App.m_pDirectSoundPrimaryBuffer)
     return -3;
 
   // Make buffer zero-relative
-  Buffer--;
+  --Buffer;
   
   // Buffer must be in range
   if (Buffer < 0 || Buffer >= MAX_SOUND_BUFFERS)
@@ -12112,58 +10893,51 @@ long CMUSHclientDoc::GetSoundStatus(short Buffer)
   if (!m_pDirectSoundSecondaryBuffer [Buffer])
     return -2;
 
-  DWORD iStatus = 0;
-
+  DWORD iStatus;
   if (FAILED (m_pDirectSoundSecondaryBuffer [Buffer]->GetStatus (&iStatus)))
     return 0;  // can't get status, presume no sound
 
-  if (iStatus & DSBSTATUS_PLAYING)
+  if ((iStatus & DSBSTATUS_PLAYING) != 0)
     return 1;
-
-  if (iStatus & DSBSTATUS_LOOPING)
+  else if ((iStatus & DSBSTATUS_LOOPING) != 0)
     return 2;
 
-	return 0;  // not playing
+  return 0;  // not playing
 }
 
-CChildFrame * CMUSHclientDoc::GetChildFrame (void)
-  {
+CChildFrame * CMUSHclientDoc::GetChildFrame ()
+{
   CChildFrame * pFrame = NULL;
 
   // find the child frame
-  for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
     {
     CView* pView = GetNextView(pos);
-
     if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
       {
-      CSendView* pmyView = (CSendView*)pView;
-
-      pFrame = pmyView->m_owner_frame;
+      pFrame = ((CSendView*)pView)->m_owner_frame;
       break;
       }	  // end of being a CSendView
     }
-  
-  return pFrame;
 
-  } // end of CMUSHclientDoc::GetChildFrame
+  return pFrame;
+} // end of CMUSHclientDoc::GetChildFrame
 
 // set the height of the command window
 long CMUSHclientDoc::SetCommandWindowHeight(short Height) 
 {
-	
   if (Height < 0)
     return eBadParameter;
 
   CChildFrame * pFrame = GetChildFrame ();
-
   // fail if we can't find one
   if (pFrame == NULL)
     return eBadParameter;
 
-	CRect rectInside;
-	pFrame->m_wndSplitter.GetClientRect(rectInside);
-	rectInside.InflateRect(-9, -9); // allow for borders and splitter bar
+  CRect rectInside;
+  pFrame->m_wndSplitter.GetClientRect(rectInside);
+  rectInside.InflateRect(-9, -9); // allow for borders and splitter bar
 
   // we have to root around like this, because recalclayout lays out the top
   // view first, and allocates the rest (possibly nothing) to the bottom view.
@@ -12171,57 +10945,50 @@ long CMUSHclientDoc::SetCommandWindowHeight(short Height)
   // you are going to type. Thus I work out how much the maxmimum top view
   // can be.
 
-  int iRoom = rectInside.bottom - rectInside.top - Height 
+  int cyCurTop = rectInside.bottom - rectInside.top - Height 
       + 7;    // 7 pixels for the splitter bar
-
-  int cyCurTop = iRoom;
-
   if (cyCurTop < 20)
     return eBadParameter;  // too small, want to see a line at least
 
   // set the info for the top view
   pFrame->m_wndSplitter.SetRowInfo (OUTPUT_PANE, cyCurTop, 20);
-
   // set the info for the bottom view
   pFrame->m_wndSplitter.SetRowInfo (COMMAND_PANE, Height, 9);
-
   // recalculate it all
   pFrame->m_wndSplitter.RecalcLayout ();
 
-
-	return eOK;
+  return eOK;
 }   // end of CMUSHclientDoc::SetCommandWindowHeight
 
 // move a toolbar
 long CMUSHclientDoc::SetToolBarPosition(short Which, BOOL Float, short Side, long Top, long Left) 
 {
-CMyToolBar * pToolBar = NULL;
-
+  CMyToolBar * pToolBar = NULL;
   Frame.RecalcLayout(TRUE);
 
   switch (Which)
     {
-    case 1: pToolBar = &Frame.m_wndToolBar; break;  // main toolbar
-    case 2: pToolBar = &Frame.m_wndGameToolBar; break;  // world toolbar
-    case 3: pToolBar = &Frame.m_wndActivityToolBar; break;  // activity toolbar
-    case 4: pToolBar = (CMyToolBar *) &Frame.m_wndInfoBar; break;  // info toolbar
-    default: return eBadParameter;
+    case 1: pToolBar = &Frame.m_wndToolBar;               break;  // main toolbar
+    case 2: pToolBar = &Frame.m_wndGameToolBar;           break;  // world toolbar
+    case 3: pToolBar = &Frame.m_wndActivityToolBar;       break;  // activity toolbar
+    case 4: pToolBar = (CMyToolBar *)&Frame.m_wndInfoBar; break;  // info toolbar
     } // end of switch
 
   if (!pToolBar || !pToolBar->m_hWnd)
-      return eBadParameter;  // oops - no window
+    return eBadParameter;  // oops - no window
 
-	CRect rectBar;
-	pToolBar->GetWindowRect(&rectBar);
+  CRect rectBar;
+  pToolBar->GetWindowRect(&rectBar);
 
   if (Float)
     {
-    DWORD dwStyle;
-    CPoint point (Left, Top);
+    CPoint point = CPoint(Left, Top);
     Frame.ClientToScreen (&point);
+
+    DWORD dwStyle;
     switch (Side)
       {
-      case 1: dwStyle = CBRS_ALIGN_TOP ; break;
+      case 1: dwStyle = CBRS_ALIGN_TOP;  break;
       case 3: dwStyle = CBRS_ALIGN_LEFT; break;
       default: return eBadParameter;
       }
@@ -12229,9 +10996,12 @@ CMyToolBar * pToolBar = NULL;
     }
   else
     {
-    UINT nDockBarID;
-    CRect rect (Left, Top, Left + rectBar.right - rectBar.left, Top + rectBar.bottom - rectBar.top);
+    CRect rect = CRect(Left, Top,
+        Left + rectBar.right  - rectBar.left, // right
+        Top  + rectBar.bottom - rectBar.top); // bottom
     Frame.ClientToScreen (rect);
+
+    UINT nDockBarID;
     switch (Side)
       {
       case 0: break;   // zero is OK
@@ -12244,14 +11014,14 @@ CMyToolBar * pToolBar = NULL;
     Frame.DockControlBar (pToolBar, nDockBarID, rect);
     }
 
-	return eOK;
+  return eOK;
 }    // end of CMUSHclientDoc::SetToolBarPosition
 
 
 // add an item for shift+tab completion
 long CMUSHclientDoc::ShiftTabCompleteItem(LPCTSTR Item) 
 {
-  if (strlen (Item) <= 0 || strlen (Item) > 30)
+  if (Item[0] == '\0' || strlen (Item) > 30)
     return eBadParameter;  // need a string
 
   if (strcmp (Item, "<clear>") == 0)
@@ -12262,37 +11032,33 @@ long CMUSHclientDoc::ShiftTabCompleteItem(LPCTSTR Item)
     m_bTabCompleteFunctions = false;
   else
     {
-    if (!IsValidName (Item))    // must be alphanumeric, dot, hyphen, underscore
+    if (!IsValidName (Item)) // must be alphanumeric, dot, hyphen, underscore
       return eBadParameter;  // need a string
     m_ExtraShiftTabCompleteItems.insert (Item);
     }
 
-	return eOK;
+  return eOK;
 }    // end of CMUSHclientDoc::ShiftTabCompleteItem
 
 // make a notepad read-only
 long CMUSHclientDoc::NotepadReadOnly(LPCTSTR Title, BOOL ReadOnly) 
 {
-CTextDocument * pTextDoc = FindNotepad (Title);
-
+  CTextDocument * pTextDoc = FindNotepad (Title);
   if (!pTextDoc)
     return false;
 
   pTextDoc->SetReadOnly (ReadOnly);
-
-	return true;
+  return true;
 }   // end of CMUSHclientDoc::NotepadReadOnly
 
 
 // add a  new font from a file
 long CMUSHclientDoc::AddFont(LPCTSTR PathName) 
 {
-
-  if (strlen (PathName) <= 0)
+  if (PathName[0] == '\0')
     return eBadParameter;  // need a string
 
   return AddSpecialFont (PathName);
-
 }  // end of  CMUSHclientDoc::AddFont
 
 /* modes: 
@@ -12335,6 +11101,7 @@ long CMUSHclientDoc::AddFont(LPCTSTR PathName)
 // set main window background image
 long CMUSHclientDoc::SetBackgroundImage(LPCTSTR FileName, short Mode) 
 {
+  CString strFileName = FileName;
 
   if (Mode < 0 || Mode > 13)
     return eBadParameter; 
@@ -12346,15 +11113,11 @@ long CMUSHclientDoc::SetBackgroundImage(LPCTSTR FileName, short Mode)
 
   UpdateAllViews (NULL);
 
-  CString strFileName = FileName;
-
   strFileName.TrimLeft ();
   strFileName.TrimRight ();
-
   // no file name means get rid of image
   if (strFileName.IsEmpty ())
     return eOK;
-
   // have to be long enough to have x.bmp
   if (strFileName.GetLength () < 5)
     return eBadParameter;
@@ -12364,50 +11127,37 @@ long CMUSHclientDoc::SetBackgroundImage(LPCTSTR FileName, short Mode)
   // handle PNG files separately
   if (strFileName.Right (4).CompareNoCase (".png") == 0)
     {
-    long result =  LoadPng (FileName, hBmp);
-
+    long result = LoadPng (strFileName, hBmp);
     if (result != eOK) 
       return result;
-
     }    // png file
   else
     {
-
-    // must be .bmp or .png file
+    // must be .bmp
     if (strFileName.Right (4).CompareNoCase (".bmp") != 0)
       return eBadParameter;
 
-    hBmp = (HBITMAP)::LoadImage(
-                    NULL,
-                    FileName,
-                    IMAGE_BITMAP,
-                    0,
-                    0,
-                    LR_LOADFROMFILE|LR_CREATEDIBSECTION
-                    );
+    hBmp = (HBITMAP) ::LoadImage(NULL, strFileName, IMAGE_BITMAP, 0, 0,
+        LR_LOADFROMFILE|LR_CREATEDIBSECTION);
     }  // bmp file
 
-   if (hBmp) 
-     {
-      m_BackgroundBitmap.Attach (hBmp);
-      m_iBackgroundMode = Mode;
-      m_strBackgroundImageName = FileName;
-    	return eOK;
-     }  // end of having a bitmap loaded
+  if (!hBmp)
+    return (GetLastError () == 2) ? eFileNotFound : eCouldNotOpenFile;
 
+  m_BackgroundBitmap.Attach (hBmp);
+  m_iBackgroundMode = Mode;
+  m_strBackgroundImageName = strFileName;
 
-   if (GetLastError () == 2)
-     return eFileNotFound;
-
-   return eCouldNotOpenFile;
-  
-  } // end of CMUSHclientDoc::SetBackgroundImage
+  return eOK;
+} // end of CMUSHclientDoc::SetBackgroundImage
 
 // set main window foreground image
 long CMUSHclientDoc::SetForegroundImage(LPCTSTR FileName, short Mode) 
 {
+  CString strFileName = FileName;
+
   if (Mode < 0 || Mode > 13)
-    return eBadParameter;  
+    return eBadParameter;
 
   if ((HBITMAP) m_ForegroundBitmap)
     m_ForegroundBitmap.DeleteObject ();
@@ -12416,73 +11166,50 @@ long CMUSHclientDoc::SetForegroundImage(LPCTSTR FileName, short Mode)
 
   UpdateAllViews (NULL);
 
-  CString strFileName = FileName;
-
   strFileName.TrimLeft ();
   strFileName.TrimRight ();
-
   // no file name means get rid of image
   if (strFileName.IsEmpty ())
     return eOK;
-
   // have to be long enough to have x.bmp
   if (strFileName.GetLength () < 5)
     return eBadParameter;
 
   HBITMAP hBmp;
-
   // handle PNG files separately
   if (strFileName.Right (4).CompareNoCase (".png") == 0)
     {
-    long result =  LoadPng (FileName, hBmp);
-
+    long result = LoadPng (strFileName, hBmp);
     if (result != eOK) 
       return result;
-
     }    // png file
   else
     {
-
-    // must be .bmp or .png file
+    // must be .bmp
     if (strFileName.Right (4).CompareNoCase (".bmp") != 0)
       return eBadParameter;
 
-    hBmp = (HBITMAP)::LoadImage(
-                    NULL,
-                    FileName,
-                    IMAGE_BITMAP,
-                    0,
-                    0,
-                    LR_LOADFROMFILE|LR_CREATEDIBSECTION
-                    );
+    hBmp = (HBITMAP) ::LoadImage(NULL, strFileName, IMAGE_BITMAP, 0, 0,
+        LR_LOADFROMFILE|LR_CREATEDIBSECTION);
     }  // bmp file
 
-   if (hBmp) 
-     {
-      m_ForegroundBitmap.Attach (hBmp);
-      m_iForegroundMode = Mode;
-      m_strForegroundImageName = FileName;
-    	return eOK;
-     }  // end of having a bitmap loaded
+  if (!hBmp)
+    return (GetLastError () == 2) ? eFileNotFound : eCouldNotOpenFile;
 
+  m_ForegroundBitmap.Attach (hBmp);
+  m_iForegroundMode = Mode;
+  m_strForegroundImageName = strFileName;
 
-   if (GetLastError () == 2)
-     return eFileNotFound;
-
-   return eCouldNotOpenFile;
-  
+  return eOK;
 }   // end of CMUSHclientDoc::SetForegroundImage
 
 // set main window background colour
 long CMUSHclientDoc::SetBackgroundColour(long Colour) 
 {
   long oldColour = m_iBackgroundColour;
-
   m_iBackgroundColour = Colour;
-
   UpdateAllViews (NULL);
-
-	return oldColour;
+  return oldColour;
 }   // end of CMUSHclientDoc::SetBackgroundColour
 
 /* positions: 
@@ -12526,18 +11253,15 @@ long CMUSHclientDoc::WindowCreate(LPCTSTR Name,
                                   short Position, 
                                   long Flags, 
                                   long BackgroundColour) 
-  {
-
-  if (strlen (Name) == 0) 
+{
+  if (Name[0] == '\0') 
     return eNoNameSpecified;    // empty name throws out various things
 
   if (Width < 0 || Height < 0)
     return eBadParameter;
 
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-
   CMiniWindow * pMiniWindow = NULL;
-
   if (it == m_MiniWindows.end ())
     {
     pMiniWindow = new CMiniWindow ();
@@ -12547,27 +11271,24 @@ long CMUSHclientDoc::WindowCreate(LPCTSTR Name,
     pMiniWindow = it->second;
 
   pMiniWindow->Create (Left, Top, Width, Height,
-                       Position, Flags, 
-                       BackgroundColour);
+    Position, Flags, BackgroundColour);
 
   UpdateAllViews (NULL);
 
-	return eOK;
+  return eOK;
 }     // end of CMUSHclientDoc::WindowCreate
 
 // set/clear the show flag so the window becomes visible
 long CMUSHclientDoc::WindowShow(LPCTSTR Name, BOOL Show) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
   it->second->Show (Show);
-
   UpdateAllViews (NULL);
 
-	return eOK;
+  return eOK;
 }     // end of CMUSHclientDoc::WindowShow
 
 /*
@@ -12578,7 +11299,7 @@ See: http://www.functionx.com/win32/Lesson11.htm
   for some nice examples of what they look like
 ------------------------------------------------------------------------------------
 
-  */
+*/
 
 // various rectangle operations
 long CMUSHclientDoc::WindowRectOp(LPCTSTR Name, short Action, 
@@ -12586,14 +11307,10 @@ long CMUSHclientDoc::WindowRectOp(LPCTSTR Name, short Action,
                                   long Colour1, long Colour2) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
-  return it->second->RectOp (Action, 
-                             Left, Top, Right, Bottom, 
-                             Colour1, Colour2);
-
+  return it->second->RectOp (Action, Left, Top, Right, Bottom, Colour1, Colour2);
 }   // end of CMUSHclientDoc::WindowRectOp
 
 
@@ -12604,20 +11321,17 @@ long CMUSHclientDoc::WindowCircleOp(LPCTSTR Name, short Action,
                                     long BrushColour, long BrushStyle, 
                                     long Extra1, long Extra2, long Extra3, long Extra4) 
 {
-  if (strlen (Name) == 0) 
+  if (Name[0] == '\0') 
     return eNoNameSpecified;    // empty name throws out various things
 
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
-  return it->second->CircleOp (Action, 
-                               Left, Top, Right, Bottom, 
-                               PenColour, PenStyle, PenWidth, 
-                               BrushColour, BrushStyle,
-                               Extra1, Extra2, Extra3, Extra4);
-
+  return it->second->CircleOp (Action, Left, Top, Right, Bottom, 
+      PenColour, PenStyle, PenWidth, 
+      BrushColour, BrushStyle,
+      Extra1, Extra2, Extra3, Extra4);
 }     // end of CMUSHclientDoc::WindowCircleOp 
 
 
@@ -12631,14 +11345,12 @@ long CMUSHclientDoc::WindowFont(LPCTSTR Name,        // which window
                                 short PitchAndFamily) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
-  return it->second->Font (FontId, FontName,
-                           Size, 
-                           Bold, Italic, Underline, Strikeout, 
-                           Charset, PitchAndFamily);
+  return it->second->Font (FontId, FontName, Size, 
+      Bold, Italic, Underline, Strikeout, 
+      Charset, PitchAndFamily);
 }    // end of CMUSHclientDoc::WindowFont
 
 // output text, ordinary or UTF8 - returns length of text
@@ -12649,11 +11361,10 @@ long CMUSHclientDoc::WindowText(LPCTSTR Name,      // which window
                                 long Colour,       // colour to show it in
                                 BOOL Unicode)      // true if UTF8
 {
-  if (strlen (Name) == 0) 
+  if (Name[0] == '\0') 
     return -1;    // empty name throws out various things
 
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return -1;
 
@@ -12664,7 +11375,6 @@ long CMUSHclientDoc::WindowText(LPCTSTR Name,      // which window
 long CMUSHclientDoc::WindowTextWidth(LPCTSTR Name, LPCTSTR FontId, LPCTSTR Text, BOOL Unicode) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return -1;
 
@@ -12674,19 +11384,14 @@ long CMUSHclientDoc::WindowTextWidth(LPCTSTR Name, LPCTSTR FontId, LPCTSTR Text,
 // return info about the select font
 VARIANT CMUSHclientDoc::WindowFontInfo(LPCTSTR Name, LPCTSTR FontId, long InfoType) 
 {
-
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
-  vaResult.vt = VT_EMPTY;  
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
-  if (it == m_MiniWindows.end ())
-  	return vaResult;
+  if (it != m_MiniWindows.end ())
+  	it->second->FontInfo (FontId, InfoType, vaResult);
 
-  it->second->FontInfo (FontId, InfoType, vaResult);
-	return vaResult;
+  return vaResult;
 }    // end of CMUSHclientDoc::WindowFontInfo
 
 // draws a straight line
@@ -12695,7 +11400,6 @@ long CMUSHclientDoc::WindowLine(LPCTSTR Name,
                                 long PenColour, long PenStyle, long PenWidth) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
@@ -12706,16 +11410,16 @@ long CMUSHclientDoc::WindowLine(LPCTSTR Name,
 // draws an arc
 long CMUSHclientDoc::WindowArc(LPCTSTR Name, 
                                long Left, long Top, long Right, long Bottom, 
-                               long x1, long y1, 
-                               long x2, long y2, 
+                               long x1, long y1, long x2, long y2,
                                long PenColour, long PenStyle, long PenWidth) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
-  return it->second->Arc (Left, Top, Right, Bottom, x1, y1, x2, y2, PenColour, PenStyle, PenWidth);
+  return it->second->Arc (Left, Top, Right, Bottom,
+      x1, y1, x2, y2,
+      PenColour, PenStyle, PenWidth);
 }      // end of CMUSHclientDoc::WindowArc
 
 
@@ -12723,61 +11427,47 @@ long CMUSHclientDoc::WindowArc(LPCTSTR Name,
 VARIANT CMUSHclientDoc::WindowList() 
 {
   COleSafeArray sa;   // for array list
-
-  long iCount = 0;
   
   // put the arrays into the array
   if (!m_MiniWindows.empty ())    // cannot create empty dimension
     {
     sa.CreateOneDim (VT_VARIANT, m_MiniWindows.size ());
 
+    long iCount = 0;
     for (MiniWindowMapIterator it = m_MiniWindows.begin (); 
          it != m_MiniWindows.end ();
-         it++)
-           {
-            // the array must be a bloody array of variants, or VBscript kicks up
-            COleVariant v (it->first.c_str ());
-            sa.PutElement (&iCount, &v);
-            iCount++;
-           }
-
+         ++it, ++iCount)
+      // the array must be a bloody array of variants, or VBscript kicks up
+      sa.PutElement (&iCount, &((COleVariant)it->first.c_str ()));
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 }    // end of CMUSHclientDoc::WindowList
 
 // return list of fonts created for this window
 VARIANT CMUSHclientDoc::WindowFontList(LPCTSTR Name) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
-  vaResult.vt = VT_EMPTY;  
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
-  if (it == m_MiniWindows.end ())
-  	return vaResult;
+  if (it != m_MiniWindows.end ())
+    it->second->FontList (vaResult);
 
-  it->second->FontList (vaResult);
-	return vaResult;
+  return vaResult;
 }    // end of CMUSHclientDoc::WindowFontList
 
 // information about a window
 VARIANT CMUSHclientDoc::WindowInfo(LPCTSTR Name, long InfoType) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
-  vaResult.vt = VT_EMPTY;  
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
-  if (it == m_MiniWindows.end ())
-  	return vaResult;
+  if (it != m_MiniWindows.end ())
+    it->second->Info (InfoType, vaResult);
 
-  it->second->Info (InfoType, vaResult);
-	return vaResult;
+  return vaResult;
 }   // end of CMUSHclientDoc::WindowInfo
 
 // load an image from disk
@@ -12786,7 +11476,6 @@ long CMUSHclientDoc::WindowLoadImage(LPCTSTR Name,
                                      LPCTSTR FileName) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
@@ -12801,7 +11490,6 @@ long CMUSHclientDoc::WindowLoadImageMemory(LPCTSTR Name,
                                            const bool bAlpha) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
@@ -12812,7 +11500,6 @@ long CMUSHclientDoc::WindowLoadImageMemory(LPCTSTR Name,
 long CMUSHclientDoc::WindowWrite(LPCTSTR Name, LPCTSTR FileName) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
@@ -12828,47 +11515,38 @@ long CMUSHclientDoc::WindowDrawImage(LPCTSTR Name,
                                      long SrcLeft, long SrcTop, long SrcRight, long SrcBottom) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
-  return it->second->DrawImage (ImageId, Left, Top, Right, Bottom, Mode, 
-                                SrcLeft,   SrcTop,   SrcRight,   SrcBottom);
+  return it->second->DrawImage (ImageId, Left, Top, Right, Bottom,
+      Mode, SrcLeft, SrcTop, SrcRight, SrcBottom);
 }     // end of CMUSHclientDoc::WindowDrawImage
 
 // list loaded images
 VARIANT CMUSHclientDoc::WindowImageList(LPCTSTR Name) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
-  vaResult.vt = VT_EMPTY;  
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
-  if (it == m_MiniWindows.end ())
-  	return vaResult;
+  if (it != m_MiniWindows.end ())
+    it->second->ImageList (vaResult);
 
-  it->second->ImageList (vaResult);
-	return vaResult;
+  return vaResult;
 }   // end of CMUSHclientDoc::WindowImageList
 
 
 // info about an image
 VARIANT CMUSHclientDoc::WindowImageInfo(LPCTSTR Name, LPCTSTR ImageId, long InfoType) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
-  vaResult.vt = VT_EMPTY;  
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
-  if (it == m_MiniWindows.end ())
-  	return vaResult;
+  if (it != m_MiniWindows.end ())
+  	it->second->ImageInfo (ImageId, InfoType, vaResult);
 
-  it->second->ImageInfo (ImageId, InfoType, vaResult);
-	return vaResult;
+  return vaResult;
 }  // end of CMUSHclientDoc::WindowImageInfo
 
 /*
@@ -12922,7 +11600,7 @@ VARIANT CMUSHclientDoc::WindowImageInfo(LPCTSTR Name, LPCTSTR ImageId, long Info
 // get device capabilites
 long CMUSHclientDoc::GetDeviceCaps(long Index) 
 {
-CDC dc;
+  CDC dc;
   dc.CreateCompatibleDC (NULL);
   return dc.GetDeviceCaps (Index);
 }   // end of CMUSHclientDoc::GetDeviceCaps
@@ -12933,7 +11611,6 @@ long CMUSHclientDoc::WindowBezier(LPCTSTR Name,
                                   long PenColour, long PenStyle, long PenWidth) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
@@ -12944,13 +11621,12 @@ long CMUSHclientDoc::WindowBezier(LPCTSTR Name,
 // draw an open or closed polygon
 long CMUSHclientDoc::WindowPolygon(LPCTSTR Name, 
                                    LPCTSTR Points, 
-                                   long PenColour, long PenStyle, long PenWidth, 
+                                   long PenColour, short PenStyle, long PenWidth, 
                                    long BrushColour, long BrushStyle,
                                    BOOL Close,       // close the polygon
                                    BOOL Winding)     // ALTERNATE or WINDING fill
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
@@ -12965,17 +11641,13 @@ long CMUSHclientDoc::WindowPosition(LPCTSTR Name,
                                     long Flags) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
   long status = it->second->Position (Left, Top, Position, Flags);
-
   if (status == eOK)
     UpdateAllViews (NULL);
-
   return status;
-
 }    // end of CMUSHclientDoc::WindowPosition
 
 
@@ -13002,46 +11674,37 @@ long CMUSHclientDoc::WindowPosition(LPCTSTR Name,
 
 // add a hotspot for handling mouse-over, mouse up/down events
 long CMUSHclientDoc::WindowAddHotspot(LPCTSTR Name, 
-                                     LPCTSTR HotspotId, 
-                                     long Left, long Top, long Right, long Bottom, 
-                                     LPCTSTR MouseOver, 
-                                     LPCTSTR CancelMouseOver, 
-                                     LPCTSTR MouseDown, 
-                                     LPCTSTR CancelMouseDown, 
-                                     LPCTSTR MouseUp, 
-                                     LPCTSTR TooltipText, 
-                                     long Cursor, 
-                                     long Flags) 
+                                      LPCTSTR HotspotId, 
+                                      long Left, long Top, long Right, long Bottom, 
+                                      LPCTSTR MouseOver, 
+                                      LPCTSTR CancelMouseOver, 
+                                      LPCTSTR MouseDown, 
+                                      LPCTSTR CancelMouseDown, 
+                                      LPCTSTR MouseUp, 
+                                      LPCTSTR TooltipText, 
+                                      long Cursor, 
+                                      long Flags) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
   string sPluginID;
-
   if (m_CurrentPlugin)                            
     sPluginID = m_CurrentPlugin->m_strID;
 
-  return it->second->AddHotspot (this, 
-                               HotspotId, 
-                               sPluginID,
-                               Left, Top, Right, Bottom, 
-                               MouseOver, 
-                               CancelMouseOver, 
-                               MouseDown, 
-                               CancelMouseDown, 
-                               MouseUp,
-                               TooltipText,
-                               Cursor,
-                               Flags);
+  return it->second->AddHotspot (this,
+      HotspotId, sPluginID,
+      Left, Top, Right, Bottom, 
+      MouseOver, CancelMouseOver, 
+      MouseDown, CancelMouseDown, MouseUp,
+      TooltipText, Cursor, Flags);
 }  // end of CMUSHclientDoc::WindowHotspot
 
 // remove a previously-installed hotspot
 long CMUSHclientDoc::WindowDeleteHotspot(LPCTSTR Name, LPCTSTR HotspotId) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
@@ -13051,25 +11714,20 @@ long CMUSHclientDoc::WindowDeleteHotspot(LPCTSTR Name, LPCTSTR HotspotId)
 // return list of all hotspots in this miniwindow
 VARIANT CMUSHclientDoc::WindowHotspotList(LPCTSTR Name) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
-  vaResult.vt = VT_EMPTY;  
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
-  if (it == m_MiniWindows.end ())
-  	return vaResult;
+  if (it != m_MiniWindows.end ())
+    it->second->HotspotList (vaResult);
 
-  it->second->HotspotList (vaResult);
-	return vaResult;
+  return vaResult;
 }    // end of CMUSHclientDoc::WindowHotspotList
 
 // delete all hotspots
 long CMUSHclientDoc::WindowDeleteAllHotspots(LPCTSTR Name) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
@@ -13080,18 +11738,14 @@ long CMUSHclientDoc::WindowDeleteAllHotspots(LPCTSTR Name)
 // get information about a hotspot
 VARIANT CMUSHclientDoc::WindowHotspotInfo(LPCTSTR Name, LPCTSTR HotspotId, long InfoType) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
-  vaResult.vt = VT_EMPTY;  
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
-  if (it == m_MiniWindows.end ())
-  	return vaResult;
+  if (it != m_MiniWindows.end ())
+  	it->second->HotspotInfo (HotspotId, InfoType, vaResult);
 
-  it->second->HotspotInfo (HotspotId, InfoType, vaResult);
-	return vaResult;
+  return vaResult;
 }      // end of CMUSHclientDoc::WindowHotspotInfo
 
 
@@ -13101,31 +11755,31 @@ long CMUSHclientDoc::WindowImageOp(LPCTSTR Name, short Action,
                                    long BrushColour,  // 0-bits are drawn in this colour
                                    LPCTSTR ImageId, 
                                    long EllipseWidth, long EllipseHeight) 
-  {
+{
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
   return it->second->ImageOp (Action, Left, Top, Right, Bottom, 
-                              PenColour, PenStyle, PenWidth, 
-                              BrushColour, ImageId, 
-                              EllipseWidth, EllipseHeight);
+      PenColour, PenStyle, PenWidth, 
+      BrushColour, ImageId, 
+      EllipseWidth, EllipseHeight);
 }    // end of CMUSHclientDoc::WindowImageOp
 
 long CMUSHclientDoc::WindowCreateImage(LPCTSTR Name, LPCTSTR ImageId, 
-                                       long Row1, long Row2, long Row3, long Row4, long Row5, long Row6, long Row7, long Row8) 
+                                       long Row1, long Row2, long Row3, long Row4,
+                                       long Row5, long Row6, long Row7, long Row8)
 {
-
-  if (strlen (Name) == 0) 
+  if (Name[0] == '\0') 
     return eNoNameSpecified;    // empty name throws out various things
 
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
-  return it->second->CreateImage (ImageId, Row1, Row2, Row3, Row4, Row5, Row6, Row7, Row8);
+  return it->second->CreateImage (ImageId,
+      Row1, Row2, Row3, Row4,
+      Row5, Row6, Row7, Row8);
 }     // end of CMUSHclientDoc::WindowCreateImage
 
 
@@ -13135,25 +11789,24 @@ long CMUSHclientDoc::WindowBlendImage(LPCTSTR Name, LPCTSTR ImageId,
                                       long SrcLeft, long SrcTop, long SrcRight, long SrcBottom) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
-  return it->second->BlendImage (ImageId, Left, Top, Right, Bottom, Mode, Opacity, SrcLeft, SrcTop, SrcRight, SrcBottom);
+  return it->second->BlendImage (ImageId, Left, Top, Right, Bottom,
+      Mode, Opacity,
+      SrcLeft, SrcTop, SrcRight, SrcBottom);
 }   // end of CMUSHclientDoc::WindowBlendImage
 
 
 long CMUSHclientDoc::WindowImageFromWindow(LPCTSTR Name, LPCTSTR ImageId, LPCTSTR SourceWindow) 
-  {
+{
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
   CMiniWindow * pDestWindow = it->second;
 
   it = m_MiniWindows.find (SourceWindow);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
@@ -13167,17 +11820,13 @@ void CMUSHclientDoc::Repaint()
 {
   UpdateAllViews (NULL);
 
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-      pmyView->UpdateWindow ();
-	    }	  // end of being a CMUSHView
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      ((CMUSHView*)pView)->UpdateWindow ();
     }   // end of loop through views
-
 }    // end of CMUSHclientDoc::Repaint
 
 
@@ -13187,38 +11836,30 @@ long CMUSHclientDoc::TextRectangle(long Left, long Top, long Right, long Bottom,
                                    long BorderColour, long BorderWidth, 
                                    long OutsideFillColour, long OutsideFillStyle) 
 {
-
-
   CBrush br;
-
   if (ValidateBrushStyle (OutsideFillStyle, BorderColour, OutsideFillColour, br) != eOK)
     return eBrushStyleNotValid;
 
   m_TextRectangle = CRect (Left, Top, Right, Bottom);
-
-  m_TextRectangleBorderOffset =       BorderOffset;      
-  m_TextRectangleBorderColour =       BorderColour;        
-  m_TextRectangleBorderWidth =        BorderWidth;         
-  m_TextRectangleOutsideFillColour =  OutsideFillColour;
-  m_TextRectangleOutsideFillStyle =   OutsideFillStyle;    
+  m_TextRectangleBorderOffset      = BorderOffset;      
+  m_TextRectangleBorderColour      = BorderColour;        
+  m_TextRectangleBorderWidth       = BorderWidth;         
+  m_TextRectangleOutsideFillColour = OutsideFillColour;
+  m_TextRectangleOutsideFillStyle  = OutsideFillStyle;    
 
   // refresh views  - get scroll bars right
-
-  for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-
-		  pmyView->addedstuff();
-	    }	
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      ((CMUSHView*)pView)->addedstuff();
     }
 
   SendWindowSizes (m_nWrapColumn);  // notify of different window height
   Redraw ();
-	return eOK;
+
+  return eOK;
 }   // end of CMUSHclientDoc::TextRectangle
   
 
@@ -13229,13 +11870,11 @@ long CMUSHclientDoc::WindowGradient(LPCTSTR Name,
                                     short Mode) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
   return it->second->Gradient (Left, Top, Right, Bottom, 
-                                    StartColour, EndColour, 
-                                    Mode);
+      StartColour, EndColour, Mode);
 }    // end of CMUSHclientDoc::WindowGradient
 
   
@@ -13243,19 +11882,17 @@ long CMUSHclientDoc::WindowFilter(LPCTSTR Name, long Left, long Top, long Right,
                                   short Operation, double Options) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
-  return it->second->Filter (Left, Top, Right, Bottom, 
-                                    Operation, Options);
+  return it->second->Filter (Left, Top, Right, Bottom,
+      Operation, Options);
 }    // CMUSHclientDoc::WindowFilter
                                        
 
 long CMUSHclientDoc::WindowSetPixel(LPCTSTR Name, long x, long y, long Colour) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
@@ -13266,7 +11903,6 @@ long CMUSHclientDoc::WindowSetPixel(LPCTSTR Name, long x, long y, long Colour)
 long CMUSHclientDoc::WindowGetPixel(LPCTSTR Name, long x, long y) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return -2;
 
@@ -13278,290 +11914,249 @@ long CMUSHclientDoc::WindowGetPixel(LPCTSTR Name, long x, long y)
 
 long CMUSHclientDoc::FilterPixel(long Pixel, short Operation, double Options) 
 {
-long r = GetRValue (Pixel),
-     g = GetGValue (Pixel),
-     b = GetBValue (Pixel);
+  long r = GetRValue (Pixel),
+       g = GetGValue (Pixel),
+       b = GetBValue (Pixel);
 
-   switch (Operation)
-     {
-     case 1:        // Noise
-       {
-       double threshold = Options / 100.0;
-       r += (128 - genrand () * 256) * threshold;
-       g += (128 - genrand () * 256) * threshold;
-       b += (128 - genrand () * 256) * threshold;
-       break;
-       }
+  switch (Operation)
+    {
+    case 1:        // Noise
+      {
+      double threshold = Options / 100.0;
+      r += (long) ((128 - genrand () * 256) * threshold);
+      g += (long) ((128 - genrand () * 256) * threshold);
+      b += (long) ((128 - genrand () * 256) * threshold);
+      break;
+      }
 
-     case 2:    // MonoNoise
-       {
-       double threshold = Options / 100.0;
-       long j = (128 - genrand () * 256) * threshold;
-       r += j;
-       g += j;
-       b += j;
-       break;
-       }
+    case 2:    // MonoNoise
+      {
+      double threshold = Options / 100.0;
+      long j = (long) ((128 - genrand () * 256) * threshold);
+      r += j;
+      g += j;
+      b += j;
+      break;
+      }
 
+    case  7: // Brightness     
+      {
+      r += (long) Options;
+      g += (long) Options;
+      b += (long) Options;
+      break;
+      }
 
-     case  7: // Brightness     
-        {
-        r += Options;
-        g += Options;
-        b += Options;
-        break;
-        }
+    case  8: // Contrast        
+      {
+      double c;
 
+      c = r - 128;   // center on zero
+      c *= Options;  // multiply by contrast
+      r = (long) (c + 128);   // put back
 
-     case  8: // Contrast        
-        {
-        double c;
+      c = g - 128;   // center on zero
+      c *= Options;  // multiply by contrast
+      g = (long) (c + 128);   // put back
 
-        c = r - 128;   // center on zero
-        c *= Options;  // multiply by contrast
-        r = c + 128;   // put back
+      c = b - 128;   // center on zero
+      c *= Options;  // multiply by contrast
+      b = (long) (c + 128);   // put back
 
-        c = g - 128;   // center on zero
-        c *= Options;  // multiply by contrast
-        g = c + 128;   // put back
+      break;
+      }
 
-        c = b - 128;   // center on zero
-        c *= Options;  // multiply by contrast
-        b = c + 128;   // put back
+    case  9: // Gamma         
+      {
+      double c;
 
-        break;
-        }
+      if (Options < 0.0)
+        Options = 0.0;
 
+      c = ( (double) r) / 255.0;  // normalize it
+      c = pow (c, Options);
+      r = (long) (c * 255.0);
 
-     case  9: // Gamma         
-        {
-        double c;
+      c = ( (double) g) / 255.0;  // normalize it
+      c = pow (c, Options);
+      g = (long) (c * 255.0);
 
-        if (Options < 0.0)
-          Options = 0.0;
+      c = ( (double) b) / 255.0;  // normalize it
+      c = pow (c, Options);
+      b = (long) (c * 255.0);
 
-        c = ( (double) r) / 255.0;  // normalize it
-        c = pow (c, Options);
-        r = c * 255.0;
+      break;
+      }
 
-        c = ( (double) g) / 255.0;  // normalize it
-        c = pow (c, Options);
-        g = c * 255.0;
+    case  10: // ColourBrightness - red     
+      r += (long) Options;
+      break;
 
-        c = ( (double) b) / 255.0;  // normalize it
-        c = pow (c, Options);
-        b = c * 255.0;
+    case  11: // ColourContrast - red        
+      {
+      double c;
 
-        break;
-        }
+      c = r - 128;   // center on zero
+      c *= Options;  // multiply by contrast
+      r = (long) (c + 128);   // put back
 
-     case  10: // ColourBrightness - red     
-        {
-        r += Options;
-        break;
-        }
+      break;
+      }
 
-     case  11: // ColourContrast - red        
-        {
-        double c;
+    case  12: // ColourGamma - red         
+      {
+      double c;
 
-        c = r - 128;   // center on zero
-        c *= Options;  // multiply by contrast
-        r = c + 128;   // put back
+      if (Options < 0.0)
+        Options = 0.0;
 
-        break;
-        }
+      c = ( (double) r) / 255.0;  // normalize it
+      c = pow (c, Options);
+      r = (long) (c * 255.0);
 
-     case  12: // ColourGamma - red         
-        {
-        double c;
+      break;
+      }
 
-        if (Options < 0.0)
-          Options = 0.0;
+    case  13: // ColourBrightness - green     
+      g += (long) Options;
+      break;
 
-        c = ( (double) r) / 255.0;  // normalize it
-        c = pow (c, Options);
-        r = c * 255.0;
+    case  14: // ColourContrast - green        
+      {
+      double c;
 
-        break;
-        }
+      c = g - 128;   // center on zero
+      c *= Options;  // multiply by contrast
+      g = (long) (c + 128);   // put back
 
-     case  13: // ColourBrightness - green     
-        {
-        g += Options;
-        break;
-        }
+      break;
+      }
 
-     case  14: // ColourContrast - green        
-        {
-        double c;
+    case  15: // ColourGamma - green         
+      {
+      double c;
 
-        c = g - 128;   // center on zero
-        c *= Options;  // multiply by contrast
-        g = c + 128;   // put back
+      if (Options < 0.0)
+        Options = 0.0;
 
-        break;
-        }
+      c = ( (double) g) / 255.0;  // normalize it
+      c = pow (c, Options);
+      g = (long) (c * 255.0);
 
-     case  15: // ColourGamma - green         
-        {
-        double c;
+      break;
+      }
 
-        if (Options < 0.0)
-          Options = 0.0;
+    case  16: // ColourBrightness - blue     
+      b += (long) Options;
+      break;
 
-        c = ( (double) g) / 255.0;  // normalize it
-        c = pow (c, Options);
-        g = c * 255.0;
+    case  17: // ColourContrast - blue        
+      {
+      double c;
 
-        break;
-        }
+      c = b - 128;   // center on zero
+      c *= Options;  // multiply by contrast
+      b = (long) (c + 128);   // put back
 
-     case  16: // ColourBrightness - blue     
-        {
-        b += Options;
-        break;
-        }
+      break;
+      }
 
-     case  17: // ColourContrast - blue        
-        {
-        double c;
+    case  18: // ColourGamma - blue         
+      {
+      double c;
 
-        c = b - 128;   // center on zero
-        c *= Options;  // multiply by contrast
-        b = c + 128;   // put back
+      if (Options < 0.0)
+        Options = 0.0;
 
-        break;
-        }
+      c = ( (double) b) / 255.0;  // normalize it
+      c = pow (c, Options);
+      b = (long) (c * 255.0);
 
-     case  18: // ColourGamma - blue         
-        {
-        double c;
+      break;
+      }
 
-        if (Options < 0.0)
-          Options = 0.0;
+    case 19: // MakeGreyscale  - linear
+      {
+      double c = (r+g+b) / 3.0;
+      r = g = b = (long) c;
+      break;
+      }
 
-        c = ( (double) b) / 255.0;  // normalize it
-        c = pow (c, Options);
-        b = c * 255.0;
+    case 20: // MakeGreyscale  - perceptual
+      {
+      double c;
+      c = (b * 0.11 + // blue
+           g * 0.59 + // green
+           r * 0.30); // red
+      c /= 3.0;
+      r = g = b = (long) c;
+      break;
+      }
 
-        break;
-        }
+    case  21: // Brightness - multiplicative    
+      r *= (long) Options;
+      g *= (long) Options;
+      b *= (long) Options;
+      break;
 
-     case 19: // MakeGreyscale  - linear
-       {
-        double c;
-        c =  r + g + b;
-        c /= 3;
-        r = c;
-        g = c;
-        b = c;
-        break;
-       }
+    case  22: // Brightness - multiplicative - red    
+      r *= (long) Options;
+      break;
 
-     case 20: // MakeGreyscale  - perceptual
-       {
-        double c;
-        c = b * 0.11 + // blue   (perceptual)
-            g * 0.59 + // green
-            r * 0.30;  // red
-        c /= 3;
-        r = c;
-        g = c;
-        b = c;
-        break;
-       }
+    case  23: // Brightness - multiplicative - green    
+      g *= (long) Options;
+      break;
 
-     case  21: // Brightness - multiplicative    
-        {
-        r *= Options;
-        g *= Options;
-        b *= Options;
-        break;
-        }
+    case  24: // Brightness - multiplicative - blue    
+      b *= (long) Options;
+      break;
 
-     case  22: // Brightness - multiplicative - red    
-        {
-        r *= Options;
-        break;
-        }
+    case 27:  // Average (of 1 pixel is itself)
+      break;
 
-     case  23: // Brightness - multiplicative - green    
-        {
-        g *= Options;
-        break;
-        }
+    default:
+      return -1;
+    } // end of switch
 
-     case  24: // Brightness - multiplicative - blue    
-        {
-        b *= Options;
-        break;
-        }
-
-
-     case 27:  // Average (of 1 pixel is itself)
-       break;
-
-     default: return -1;
-
-     } // end of switch
-
-
-	return RGB (CLAMP (r), CLAMP (g), CLAMP (b));
+  return RGB (CLAMP (r), CLAMP (g), CLAMP (b));
 }   // end of CMUSHclientDoc::FilterPixel
 
 #define Blend_It(Op) \
-   do \
-      if (Opacity < 1.0) \
-        {  \
-          r =  Blend_Opacity (rA, rB, Op, Opacity);\
-          g =  Blend_Opacity (gA, gB, Op, Opacity);\
-          b =  Blend_Opacity (bA, bB, Op, Opacity);\
-        }  \
-      else\
-        {  \
-          r = Op (rA, rB);\
-          g = Op (gA, gB);\
-          b = Op (bA, bB);\
-        }  \
-   while (false)
-
+  do \
+    if (Opacity < 1.0) \
+      {  \
+      r =  Blend_Opacity (rA, rB, Op, Opacity);\
+      g =  Blend_Opacity (gA, gB, Op, Opacity);\
+      b =  Blend_Opacity (bA, bB, Op, Opacity);\
+      }  \
+    else\
+      {  \
+      r = Op (rA, rB);\
+      g = Op (gA, gB);\
+      b = Op (bA, bB);\
+      }  \
+  while (false)
 
 #define Colour_Op(fR,fG,fB) \
-   do \
-     {  \
-      if (Opacity < 1.0) \
-          {  \
-          r = Simple_Opacity (rB, fR, Opacity); \
-          g = Simple_Opacity (gB, fG, Opacity); \
-          b = Simple_Opacity (bB, fB, Opacity); \
-          }\
-      else\
-          {\
-          r = fR;  \
-          g = fG;  \
-          b = fB;  \
-          }\
-       }\
+  do \
+    if (Opacity < 1.0) \
+      {  \
+      r = Simple_Opacity (rB, fR, Opacity); \
+      g = Simple_Opacity (gB, fG, Opacity); \
+      b = Simple_Opacity (bB, fB, Opacity); \
+      }\
+    else\
+      {\
+      r = fR;  \
+      g = fG;  \
+      b = fB;  \
+      }\
    while (false)
-
 
 // see also: CMiniWindow::BlendImage
 
 long CMUSHclientDoc::BlendPixel(long Blend, long Base, short Mode, double Opacity) 
 {
-long rA = GetRValue (Blend),
-     gA = GetGValue (Blend),
-     bA = GetBValue (Blend);
-long rB = GetRValue (Base),
-     gB = GetGValue (Base),
-     bB = GetBValue (Base);
-
-long r, g, b;
-
-  if (Opacity < 0.0 || Opacity > 1.0)
-    return -2;
-
   // precompute cos table
   static unsigned char cos_table [256];
   static bool bTableComputed = false;
@@ -13578,68 +12173,78 @@ long r, g, b;
     bTableComputed = true;
     } // table needs computing
 
+  if (Opacity < 0.0 || Opacity > 1.0)
+    return -2;
+
+  long rA = GetRValue (Blend),
+       gA = GetGValue (Blend),
+       bA = GetBValue (Blend);
+  long rB = GetRValue (Base),
+       gB = GetGValue (Base),
+       bB = GetBValue (Base);
+  long r, g, b;
+
   switch (Mode)
     {
-
     // normal modes
-    case  1: Blend_It (Blend_Normal);     break;
-    case  2: Blend_It (Blend_Average);    break;
+    case  1: Blend_It (Blend_Normal);       break;
+    case  2: Blend_It (Blend_Average);      break;
     case  3: Blend_It (Blend_Interpolate);  break;
 
     case  4:  // dissolve - randomly choose pixels based on opacity
       {
-       double rnd = genrand ();
+      double rnd = genrand ();
 
-        r = (rnd < Opacity) ? rA : rB;
-        g = (rnd < Opacity) ? gA : gB;
-        b = (rnd < Opacity) ? bA : bB;
-      }
+      r = (rnd < Opacity) ? rA : rB;
+      g = (rnd < Opacity) ? gA : gB;
+      b = (rnd < Opacity) ? bA : bB;
+
       break;
-
+      }
 
     // darkening modes
-    case  5: Blend_It (Blend_Darken);     break;
-    case  6: Blend_It (Blend_Multiply);   break;
-    case  7: Blend_It (Blend_ColorBurn);  break;
-    case  8: Blend_It (Blend_LinearBurn); break;
+    case  5: Blend_It (Blend_Darken);            break;
+    case  6: Blend_It (Blend_Multiply);          break;
+    case  7: Blend_It (Blend_ColorBurn);         break;
+    case  8: Blend_It (Blend_LinearBurn);        break;
     case  9: Blend_It (Blend_InverseColorBurn);  break;
-    case 10: Blend_It (Blend_Subtract);   break;
+    case 10: Blend_It (Blend_Subtract);          break;
     
     // lightening modes
-    case 11: Blend_It (Blend_Lighten);    break;
-    case 12: Blend_It (Blend_Screen);     break;
-    case 13: Blend_It (Blend_ColorDodge); break;
-    case 14: Blend_It (Blend_LinearDodge);break;
+    case 11: Blend_It (Blend_Lighten);            break;
+    case 12: Blend_It (Blend_Screen);             break;
+    case 13: Blend_It (Blend_ColorDodge);         break;
+    case 14: Blend_It (Blend_LinearDodge);        break;
     case 15: Blend_It (Blend_InverseColorDodge);  break;
-    case 16: Blend_It (Blend_Add);        break;
+    case 16: Blend_It (Blend_Add);                break;
       
     // soft/hard light etc.
-    case 17: Blend_It (Blend_Overlay);    break;
-    case 18: Blend_It (Blend_SoftLight);  break;
-    case 19: Blend_It (Blend_HardLight);  break;
-    case 20: Blend_It (Blend_VividLight); break;
-    case 21: Blend_It (Blend_LinearLight);break;
-    case 22: Blend_It (Blend_PinLight);   break;
-    case 23: Blend_It (Blend_HardMix);    break;
+    case 17: Blend_It (Blend_Overlay);     break;
+    case 18: Blend_It (Blend_SoftLight);   break;
+    case 19: Blend_It (Blend_HardLight);   break;
+    case 20: Blend_It (Blend_VividLight);  break;
+    case 21: Blend_It (Blend_LinearLight); break;
+    case 22: Blend_It (Blend_PinLight);    break;
+    case 23: Blend_It (Blend_HardMix);     break;
 
     // difference modes
     case 24: Blend_It (Blend_Difference); break;
     case 25: Blend_It (Blend_Exclusion);  break;
 
     // glow modes
-    case 26: Blend_It (Blend_Reflect);    break;
-    case 27: Blend_It (Blend_Glow);       break;
-    case 28: Blend_It (Blend_Freeze);     break;
-    case 29: Blend_It (Blend_Heat);       break;
+    case 26: Blend_It (Blend_Reflect); break;
+    case 27: Blend_It (Blend_Glow);    break;
+    case 28: Blend_It (Blend_Freeze);  break;
+    case 29: Blend_It (Blend_Heat);    break;
         
-    case 30: Blend_It (Blend_Negation);   break;
-    case 31: Blend_It (Blend_Phoenix);    break;
-    case 32: Blend_It (Blend_Stamp);      break;
+    case 30: Blend_It (Blend_Negation); break;
+    case 31: Blend_It (Blend_Phoenix);  break;
+    case 32: Blend_It (Blend_Stamp);    break;
 
     // logical modes
-    case 33: Blend_It (Blend_Xor);      break;
-    case 34: Blend_It (Blend_And);      break;
-    case 35: Blend_It (Blend_Or);       break;
+    case 33: Blend_It (Blend_Xor); break;
+    case 34: Blend_It (Blend_And); break;
+    case 35: Blend_It (Blend_Or);  break;
 
     // the follow modes take one colour from the blend and retain 2 from the base
     case 36: Colour_Op (rA, gB, bB); break;  // red  
@@ -13683,82 +12288,87 @@ long r, g, b;
 
     case 60:           // Hue mode
       {
-          CColor cA, cB;    // A = blend, B = base
+      CColor cA, cB;    // A = blend, B = base
 
-          cA.SetRGB (rA, gA, bA);
-          cB.SetRGB (rB, gB, bB);
+      cA.SetRGB (rA, gA, bA);
+      cB.SetRGB (rB, gB, bB);
 
-          cB.SetHue (cA.GetHue ());  // hue of blend image, others from base image
-          r = Simple_Opacity (rB, cB.GetRed (), Opacity); 
-          g = Simple_Opacity (gB, cB.GetGreen (), Opacity); 
-          b = Simple_Opacity (bB, cB.GetBlue (), Opacity); 
-       }
+      cB.SetHue (cA.GetHue ());  // hue of blend image, others from base image
+
+      r = Simple_Opacity (rB, cB.GetRed (),   Opacity); 
+      g = Simple_Opacity (gB, cB.GetGreen (), Opacity); 
+      b = Simple_Opacity (bB, cB.GetBlue (),  Opacity); 
+
       break;
+      }
 
     case 61:           // Saturation mode
-        {
-          CColor cA, cB;    // A = blend, B = base
+      {
+      CColor cA, cB;    // A = blend, B = base
 
-          cA.SetRGB (rA, gA, bA);
-          cB.SetRGB (rB, gB, bB);
+      cA.SetRGB (rA, gA, bA);
+      cB.SetRGB (rB, gB, bB);
 
-          cB.SetSaturation (cA.GetSaturation ());  // saturation of blend image, others from base image
-          r = Simple_Opacity (rB, cB.GetRed (), Opacity); 
-          g = Simple_Opacity (gB, cB.GetGreen (), Opacity); 
-          b = Simple_Opacity (bB, cB.GetBlue (), Opacity); 
-       }
+      cB.SetSaturation (cA.GetSaturation ());  // saturation of blend image, others from base image
+
+      r = Simple_Opacity (rB, cB.GetRed (),   Opacity); 
+      g = Simple_Opacity (gB, cB.GetGreen (), Opacity); 
+      b = Simple_Opacity (bB, cB.GetBlue (),  Opacity); 
+
       break;
+      }
 
     case 62:           // Colour mode
       {
-          CColor cA, cB;    // A = blend, B = base
+      CColor cA, cB;    // A = blend, B = base
 
-          cA.SetRGB (rA, gA, bA);
-          cB.SetRGB (rB, gB, bB);
+      cA.SetRGB (rA, gA, bA);
+      cB.SetRGB (rB, gB, bB);
 
-          cB.SetHue (cA.GetHue ());  // hue of blend image, 
-          cB.SetSaturation (cA.GetSaturation ());  // saturation of blend image, luminance from base image
-          r = Simple_Opacity (rB, cB.GetRed (), Opacity); 
-          g = Simple_Opacity (gB, cB.GetGreen (), Opacity); 
-          b = Simple_Opacity (bB, cB.GetBlue (), Opacity); 
-       }
+      cB.SetHue (cA.GetHue ());  // hue of blend image, 
+      cB.SetSaturation (cA.GetSaturation ());  // saturation of blend image, luminance from base image
+
+      r = Simple_Opacity (rB, cB.GetRed (),   Opacity); 
+      g = Simple_Opacity (gB, cB.GetGreen (), Opacity); 
+      b = Simple_Opacity (bB, cB.GetBlue (),  Opacity); 
+
       break;
-
+      }
 
     case 63:           // Luminance mode
       {
-          CColor cA, cB;    // A = blend, B = base
+      CColor cA, cB;    // A = blend, B = base
 
-          cA.SetRGB (rA, gA, bA);
-          cB.SetRGB (rB, gB, bB);
+      cA.SetRGB (rA, gA, bA);
+      cB.SetRGB (rB, gB, bB);
 
-          cB.SetLuminance (cA.GetLuminance ());  // luminance from blend image, others from base image
+      cB.SetLuminance (cA.GetLuminance ());  // luminance from blend image, others from base image
 
-          r = Simple_Opacity (rB, cB.GetRed (), Opacity); 
-          g = Simple_Opacity (gB, cB.GetGreen (), Opacity); 
-          b = Simple_Opacity (bB, cB.GetBlue (), Opacity); 
+      r = Simple_Opacity (rB, cB.GetRed (),   Opacity); 
+      g = Simple_Opacity (gB, cB.GetGreen (), Opacity); 
+      b = Simple_Opacity (bB, cB.GetBlue (),  Opacity); 
 
-       }
       break;
+      }
 
     case 64:           // HSL (hue to red, saturation to green, luminance to blue)
-        {
-          CColor cA, cB;    // A = blend, B = base
-          cA.SetRGB (rA, gA, bA);
+      {
+      CColor cA, cB;    // A = blend, B = base
 
-          r = Simple_Opacity (rB, cB.GetRed (), Opacity); 
-          g = Simple_Opacity (gB, cB.GetGreen (), Opacity); 
-          b = Simple_Opacity (bB, cB.GetBlue (), Opacity); 
+      cA.SetRGB (rA, gA, bA);
 
-         }
+      r = Simple_Opacity (rB, cB.GetRed (),   Opacity); 
+      g = Simple_Opacity (gB, cB.GetGreen (), Opacity); 
+      b = Simple_Opacity (bB, cB.GetBlue (),  Opacity); 
+
       break;
+      }
 
-     default: return -1;
+    default:
+      return -1;
+    } // end of switch
 
-     } // end of switch
-
-
-	return RGB (CLAMP (r), CLAMP (g), CLAMP (b));
+  return RGB (CLAMP (r), CLAMP (g), CLAMP (b));
 } // end of CMUSHclientDoc::BlendPixel
 
 
@@ -13770,84 +12380,71 @@ long CMUSHclientDoc::WindowMergeImageAlpha(LPCTSTR Name,
                                            long SrcLeft, long SrcTop, long SrcRight, long SrcBottom) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
-  return it->second->MergeImageAlpha (ImageId, MaskId, Left, Top, Right, Bottom, Mode, Opacity, SrcLeft, SrcTop, SrcRight, SrcBottom);
+  return it->second->MergeImageAlpha (ImageId, MaskId,
+      Left, Top, Right, Bottom,
+      Mode, Opacity,
+      SrcLeft, SrcTop, SrcRight, SrcBottom);
 }    // end of CMUSHclientDoc::WindowMergeImageAlpha
 
 
 long CMUSHclientDoc::WindowDelete(LPCTSTR Name) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
   delete it->second;
-
   m_MiniWindows.erase (it);
 
   UpdateAllViews (NULL);
 
-	return eOK;
+  return eOK;
 }    // end of CMUSHclientDoc::WindowDelete
 
 
 BSTR CMUSHclientDoc::WindowMenu(LPCTSTR Name, long Left, long Top, LPCTSTR Items) 
 {
-
-  CString strResult;
-
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-
-	CView* pView = NULL;
   
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  pView = GetNextView(pos);
-
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+  POSITION pos = GetFirstViewPosition();
+  CView * pView = NULL;
+  while (pos != NULL)
+    {
+    pView = GetNextView(pos);
+    if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
       break;
-
     }
 
-  if (pView && it != m_MiniWindows.end ())
-    strResult = it->second->Menu (Left, Top, Items, (CMUSHView *) pView);
-
-	return strResult.AllocSysString();
-
+  CString strResult;
+  if (pView != NULL && it != m_MiniWindows.end ())
+    strResult = it->second->Menu (Left, Top, Items, (CMUSHView*) pView);
+  return strResult.AllocSysString();
 }   // end of CMUSHclientDoc::WindowMenu
 
 
 long CMUSHclientDoc::SetCommandSelection(long First, long Last) 
 {
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-  	  {
-		  CSendView* pmyView = (CSendView*)pView;
-      pmyView->GetEditCtrl().SetSel(First - 1, Last, FALSE);
-
-	    }	  // end of being a CSendView
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+      ((CSendView*)pView)->GetEditCtrl().SetSel(First - 1, Last, FALSE);
     }   // end of loop through views
 
-	return eOK;
-
+  return eOK;
 }  // end of CMUSHclientDoc::SetCommandSelection
 
 long CMUSHclientDoc::WindowDragHandler(LPCTSTR Name, LPCTSTR HotspotId, LPCTSTR MoveCallback, LPCTSTR ReleaseCallback, long Flags) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
   string sPluginID;
-
   if (m_CurrentPlugin)                            
     sPluginID = m_CurrentPlugin->m_strID;
 
@@ -13903,29 +12500,23 @@ long CMUSHclientDoc::SetCursor(long Cursor)
 long CMUSHclientDoc::DatabaseOpen(LPCTSTR Name, LPCTSTR Filename, long Flags) 
 {
   tDatabaseMapIterator it = m_Databases.find (Name);
-
   tDatabase * pDatabase = NULL;
-
   if (it == m_Databases.end ())
     {
-    pDatabase = new tDatabase;
+    pDatabase = new tDatabase();
 
-    pDatabase->db = NULL;
-    pDatabase->pStmt = NULL;
+    pDatabase->db        = NULL;
+    pDatabase->pStmt     = NULL;
     pDatabase->bValidRow = false;
-    pDatabase->db_name = Filename;
-    pDatabase->iColumns = 0;
-
+    pDatabase->db_name   = Filename;
+    pDatabase->iColumns  = 0;
     }
-  else 
-    {
-    if (it->second->db_name == Filename)
-      return SQLITE_OK;      // OK to re-use same database
-    else
-      return -6;   // database already exists under this id but a different disk name
-    }
+  else if (it->second->db_name != Filename)
+    return -6;   // database already exists under this id but a different disk name
+  else
+    return SQLITE_OK;      // OK to re-use same database
 
-	int rc = sqlite3_open_v2 (Filename, &pDatabase->db, Flags, NULL);
+  int rc = sqlite3_open_v2 (Filename, &pDatabase->db, Flags, NULL);
 
   // add to map if opened OK
   if (rc == SQLITE_OK && pDatabase->db != NULL)
@@ -13940,20 +12531,16 @@ long CMUSHclientDoc::DatabaseOpen(LPCTSTR Name, LPCTSTR Filename, long Flags)
 long CMUSHclientDoc::DatabaseClose(LPCTSTR Name) 
 {
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
     return -1;              // database not found
-
-  if  (it->second->db == NULL)
+  else if (it->second->db == NULL)
     return -2;              // database not open
 
   if (it->second->pStmt)        // finalize any outstanding statement
     sqlite3_finalize(it->second->pStmt);
 
   int rc = sqlite3_close(it->second->db);
-
   delete it->second;       // free up memory used by structure
-
   m_Databases.erase (it);  // remove from map
 
   return rc;               // return code from close
@@ -13962,21 +12549,17 @@ long CMUSHclientDoc::DatabaseClose(LPCTSTR Name)
 long CMUSHclientDoc::DatabasePrepare(LPCTSTR Name, LPCTSTR Sql) 
 {
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
     return -1;                  // database not found
-
-  if  (it->second->db == NULL)
+  else if (it->second->db == NULL)
     return -2;                  // database not open
-
-  if  (it->second->pStmt != NULL)
+  else if (it->second->pStmt != NULL)
     return -3;                  // already have prepared statement
-
-  const char *pzTail;
 
   it->second->bValidRow = false;  // no valid row yet
   it->second->iColumns = 0;
 
+  const char *pzTail = NULL;
   int rc = sqlite3_prepare_v2 (it->second->db, Sql, -1, &it->second->pStmt, &pzTail);
 
   // for future validation that columns are in range
@@ -13984,30 +12567,25 @@ long CMUSHclientDoc::DatabasePrepare(LPCTSTR Name, LPCTSTR Sql)
      it->second->iColumns = sqlite3_column_count(it->second->pStmt);
 
   return rc;
-
 }   // end of CMUSHclientDoc::DatabasePrepare
 
 long CMUSHclientDoc::DatabaseFinalize(LPCTSTR Name) 
 {
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
     return -1;                // database not found
-
-  if  (it->second->db == NULL)
+  else if (it->second->db == NULL)
     return -2;               // database not open
-
-  if  (it->second->pStmt == NULL)
+  else if (it->second->pStmt == NULL)
     return -4;               // do not have prepared statement
 
   int rc = sqlite3_finalize(it->second->pStmt);  // finished with statement
 
-  it->second->pStmt = NULL;     // show not in use
+  it->second->pStmt     = NULL;     // show not in use
   it->second->bValidRow = false;  // no valid row
-  it->second->iColumns = 0;   // no columns
+  it->second->iColumns  = 0;   // no columns
 
-
-	return rc;
+  return rc;
 }    // end of CMUSHclientDoc::DatabaseFinalize
 
 
@@ -14015,168 +12593,133 @@ long CMUSHclientDoc::DatabaseFinalize(LPCTSTR Name)
 long CMUSHclientDoc::DatabaseColumns(LPCTSTR Name) 
 {
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
     return -1;                // database not found
-
-  if  (it->second->db == NULL)
+  else if  (it->second->db == NULL)
     return -2;               // database not open
-
-  if  (it->second->pStmt == NULL)
+  else if (it->second->pStmt == NULL)
     return -4;               // do not have prepared statement
 
   return sqlite3_column_count(it->second->pStmt);  // column count
-
 }   // end of CMUSHclientDoc::DatabaseColumns
 
 
 long CMUSHclientDoc::DatabaseStep(LPCTSTR Name) 
 {
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
     return -1;                // database not found
-
-  if  (it->second->db == NULL)
+  else if (it->second->db == NULL)
     return -2;               // database not open
-
-  if  (it->second->pStmt == NULL)
+  else if  (it->second->pStmt == NULL)
     return -4;               // do not have prepared statement
 
   int rc = sqlite3_step (it->second->pStmt);  // step into next row
-
-  it->second->bValidRow = rc == SQLITE_ROW;   // show if we have a row or not
-
+  it->second->bValidRow = (rc == SQLITE_ROW); // show if we have a row or not
   return rc;
 }    // end of CMUSHclientDoc::DatabaseStep
 
 BSTR CMUSHclientDoc::DatabaseError(LPCTSTR Name) 
 {
-	CString strResult;
+  CString strResult;
 
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
-    strResult = "database id not found";           // database not found
+    strResult = "database id not found";   // database not found
   else if (it->second->db == NULL)
     strResult = "database not open";       // database not open
   else
-    {
     switch (sqlite3_errcode (it->second->db))
       {
-      case SQLITE_ROW: strResult = "row ready"; break;
-      case SQLITE_DONE: strResult = "finished"; break;
-      default:
-          strResult = sqlite3_errmsg (it->second->db);
-          break;
-      } // end of switch
-    }
+      case SQLITE_ROW:  strResult = "row ready"; break;
+      case SQLITE_DONE: strResult = "finished";  break;
 
-	return strResult.AllocSysString();
+      default: strResult = sqlite3_errmsg (it->second->db); break;
+      } // end of switch
+
+  return strResult.AllocSysString();
 }   // end of CMUSHclientDoc::DatabaseError
 
 
 // note: don't need to step first, the prepare gives us the names
 BSTR CMUSHclientDoc::DatabaseColumnName(LPCTSTR Name, long Column) 
 {
-	CString strResult;
+  CString strResult;
 
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
-  if (it != m_Databases.end () &&    // database exists
-      it->second->db != NULL &&      // and is open
+  if (it != m_Databases.end ()  &&   // database exists
+      it->second->db != NULL    &&   // and is open
       it->second->pStmt != NULL &&   // and we have a prepared statement
-      Column >= 1 &&
-      Column <= it->second->iColumns)
+      Column >= 1 && Column <= it->second->iColumns)
     {
     const char * p = sqlite3_column_name (it->second->pStmt, Column - 1);
-
     if (p)
       strResult = p;
     }
 
-	return strResult.AllocSysString();
+  return strResult.AllocSysString();
 }  // end of CMUSHclientDoc::DatabaseColumnName
 
 
 BSTR CMUSHclientDoc::DatabaseColumnText(LPCTSTR Name, long Column) 
 {
-	CString strResult;
+  CString strResult;
 
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
-  if (it != m_Databases.end () &&    // database exists
-      it->second->db != NULL &&      // and is open
+  if (it != m_Databases.end ()  &&   // database exists
+      it->second->db != NULL    &&   // and is open
       it->second->pStmt != NULL &&   // and we have a prepared statement
-      it->second->bValidRow &&       // and we stepped to a valid row
-      Column >= 1 &&
-      Column <= it->second->iColumns)
+      it->second->bValidRow     &&   // and we stepped to a valid row
+      Column >= 1 && Column <= it->second->iColumns)
     {
     const unsigned char * p = sqlite3_column_text (it->second->pStmt, Column - 1);
-
     if (p)
       strResult = p;
     }
 
-	return strResult.AllocSysString();
+  return strResult.AllocSysString();
 }   // end of CMUSHclientDoc::DatabaseColumnText
 
 VARIANT CMUSHclientDoc::DatabaseColumnValue(LPCTSTR Name, long Column) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
+  VARIANT vaResult;
+  VariantInit(&vaResult);
   vaResult.vt = VT_NULL;
 
   tDatabaseMapIterator it = m_Databases.find (Name);
-
-  if (it != m_Databases.end () &&    // database exists
-      it->second->db != NULL &&      // and is open
+  if (it != m_Databases.end ()  &&   // database exists
+      it->second->db != NULL    &&   // and is open
       it->second->pStmt != NULL &&   // and we have a prepared statement
-      it->second->bValidRow &&       // and we stepped to a valid row
-      Column >= 1 &&
-      Column <= it->second->iColumns)
+      it->second->bValidRow     &&   // and we stepped to a valid row
+      Column >= 1 && Column <= it->second->iColumns)
     {
-    int iType = sqlite3_column_type(it->second->pStmt, Column - 1);
-
-    switch (iType)
+    switch (sqlite3_column_type(it->second->pStmt, Column - 1))
       {
-      case SQLITE3_TEXT:
-      case SQLITE_BLOB:
-      default:
-        {
-        CString strResult;
-        const unsigned char * p = sqlite3_column_text (it->second->pStmt, Column - 1);
-        if (p)
-          strResult = p;
-        SetUpVariantString (vaResult, strResult); 
-        }
-        break;
-
       case SQLITE_NULL:
         vaResult.vt = VT_EMPTY;
         break;
 
       case SQLITE_INTEGER:
-        {
-        int iResult =  sqlite3_column_int  (it->second->pStmt, Column - 1);
-        SetUpVariantLong (vaResult, iResult); 
-        }
+        SetUpVariantLong (vaResult, sqlite3_column_int  (it->second->pStmt, Column - 1)); 
         break;
 
       case SQLITE_FLOAT:
-        {
-        double fResult =  sqlite3_column_double (it->second->pStmt, Column - 1);
-        SetUpVariantDouble (vaResult, fResult); 
-        }
+        SetUpVariantDouble (vaResult, sqlite3_column_double (it->second->pStmt, Column - 1)); 
         break;
 
+      case SQLITE3_TEXT:
+      case SQLITE_BLOB:
+      default:
+        {
+        const unsigned char * p = sqlite3_column_text (it->second->pStmt, Column - 1);
+        if (p)
+          SetUpVariantString (vaResult, p);
+        break;
+        }
       }  // end of switch
-
     }  // end of something valid
 
-
-
-	return vaResult;
+  return vaResult;
 }     // end of CMUSHclientDoc::DatabaseColumnValue
 
 
@@ -14191,20 +12734,15 @@ VARIANT CMUSHclientDoc::DatabaseColumnValue(LPCTSTR Name, long Column)
 long CMUSHclientDoc::DatabaseColumnType(LPCTSTR Name, long Column) 
 {
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
     return -1;                // database not found
-
-  if  (it->second->db == NULL)
+  else if  (it->second->db == NULL)
     return -2;               // database not open
-
-  if  (it->second->pStmt == NULL)
+  else if  (it->second->pStmt == NULL)
     return -4;               // do not have prepared statement
-
-  if  (!it->second->bValidRow)
+  else if  (!it->second->bValidRow)
     return -5;               // do not have a valid row
-
-  if  (Column < 1 || Column > it->second->iColumns)
+  else if  (Column < 1 || Column > it->second->iColumns)
     return -7;               // column count out of valid range
 
   return sqlite3_column_type(it->second->pStmt, Column - 1);  // column type
@@ -14214,26 +12752,21 @@ long CMUSHclientDoc::DatabaseColumnType(LPCTSTR Name, long Column)
 long CMUSHclientDoc::DatabaseTotalChanges(LPCTSTR Name) 
 {
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
     return -1;                // database not found
-
-  if  (it->second->db == NULL)
+  else if  (it->second->db == NULL)
     return -2;               // database not open
 
-  return sqlite3_total_changes(it->second->db); 
-
+  return sqlite3_total_changes(it->second->db);
 }    // end of CMUSHclientDoc::DatabaseTotalChanges
 
 
 long CMUSHclientDoc::DatabaseChanges(LPCTSTR Name) 
 {
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
     return -1;                // database not found
-
-  if  (it->second->db == NULL)
+  else if  (it->second->db == NULL)
     return -2;               // database not open
 
   return sqlite3_changes(it->second->db); 
@@ -14242,94 +12775,69 @@ long CMUSHclientDoc::DatabaseChanges(LPCTSTR Name)
 
 BSTR CMUSHclientDoc::DatabaseLastInsertRowid(LPCTSTR Name) 
 {
-	CString strResult;
+  CString strResult;
 
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
-  if (it != m_Databases.end () &&    // database exists
-      it->second->db != NULL)
-    {
-    sqlite3_int64 last_id = sqlite3_last_insert_rowid(it->second->db);
+  if (it != m_Databases.end () && it->second->db != NULL) // database exists
+    strResult.Format("%I64", sqlite3_last_insert_rowid(it->second->db));
 
-    char buf [30];
-    sprintf (buf, "%I64d", last_id);
-
-    strResult = buf;
-    }
-
-	return strResult.AllocSysString();
+  return strResult.AllocSysString();
 }    // end of CMUSHclientDoc::DatabaseLastInsertRowid
 
 VARIANT CMUSHclientDoc::DatabaseList() 
 {
   COleSafeArray sa;   // for array list
-
-  long iCount = 0;
   
   // put the databases into the array
   if (!m_Databases.empty ())    // cannot create empty dimension
     {
     sa.CreateOneDim (VT_VARIANT, m_Databases.size ());
 
-    for (tDatabaseMapIterator it = m_Databases.begin (); 
-         it != m_Databases.end ();
-         it++)
-           {
-            // the array must be a bloody array of variants, or VBscript kicks up
-            COleVariant v (it->first.c_str ());
-            sa.PutElement (&iCount, &v);
-            iCount++;
-           }
-
+    tDatabaseMapIterator it = m_Databases.begin ();
+    long iCount = 0;
+    for (long iCount = 0; it != m_Databases.end (); ++it, ++iCount)
+      // the array must be a bloody array of variants, or VBscript kicks up
+      sa.PutElement (&iCount, &((COleVariant)it->first.c_str ()));
     } // end of having at least one
 
-	return sa.Detach ();
+  return sa.Detach ();
 }    // end of CMUSHclientDoc::DatabaseList
 
 
 VARIANT CMUSHclientDoc::DatabaseInfo(LPCTSTR Name, long InfoType) 
 {
-	VARIANT vaResult;
-	VariantInit(&vaResult);
-
-  vaResult.vt = VT_EMPTY;  
+  VARIANT vaResult;
+  VariantInit(&vaResult);
 
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
   	return vaResult;
 
   tDatabase * pDatabase = it->second;
-
   switch (InfoType)
     {
-    case 1:  SetUpVariantString  (vaResult, pDatabase->db_name.c_str ()); break; // disk name
-    case 2:  SetUpVariantBool    (vaResult, pDatabase->pStmt != NULL);   break;  // valid prepared statement
-    case 3:  SetUpVariantBool    (vaResult, pDatabase->bValidRow);       break;  // valid row returned from last step
-    case 4:  SetUpVariantLong    (vaResult, pDatabase->iColumns);        break;  // number of columns 
+    case 1: SetUpVariantString (vaResult, pDatabase->db_name.c_str ()); break; // disk name
+    case 2: SetUpVariantBool   (vaResult, pDatabase->pStmt != NULL);    break; // valid prepared statement
+    case 3: SetUpVariantBool   (vaResult, pDatabase->bValidRow);        break; // valid row returned from last step
+    case 4: SetUpVariantLong   (vaResult, pDatabase->iColumns);         break; // number of columns 
 
     default:
       vaResult.vt = VT_NULL;
       break;
-
     } // end of switch
 
-
-	return vaResult;
+  return vaResult;
 }   // end of CMUSHclientDoc::DatabaseInfo
 
 
 long CMUSHclientDoc::DatabaseExec(LPCTSTR Name, LPCTSTR Sql) 
 {
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
     return -1;                  // database not found
-
-  if  (it->second->db == NULL)
+  else if (it->second->db == NULL)
     return -2;                  // database not open
-
-  if  (it->second->pStmt != NULL)
+  else if (it->second->pStmt != NULL)
     return -3;                  // already have prepared statement
 
   it->second->bValidRow = false;  // no valid row yet
@@ -14343,37 +12851,25 @@ VARIANT CMUSHclientDoc::DatabaseColumnNames(LPCTSTR Name)
 {
   COleSafeArray sa;   // for array list
 
- 
   tDatabaseMapIterator it = m_Databases.find (Name);
-
-  if (it != m_Databases.end () &&    // database exists
-      it->second->db != NULL &&      // and is open
-      it->second->pStmt != NULL)  // and we have a prepared statement
+  if (it != m_Databases.end ()  &&   // database exists
+      it->second->db != NULL    &&   // and is open
+      it->second->pStmt != NULL &&   // and we have a prepared statement
+      it->second->iColumns > 0)      // cannot create empty dimension
     {
+    sa.CreateOneDim (VT_VARIANT, it->second->iColumns);
     // put the column names into the array
-    if (it->second->iColumns > 0)    // cannot create empty dimension
+    for (long i = 0; i < it->second->iColumns; ++i)
       {
-      sa.CreateOneDim (VT_VARIANT, it->second->iColumns);
-
-      for (long i = 0; i < it->second->iColumns; i++)
-         {
-
-         CString strResult;
-
-         const char * p = sqlite3_column_name (it->second->pStmt, i);
-
-         if (p)
-           strResult = p;
-
-         COleVariant v (strResult);
-         sa.PutElement (&i, &v);
-         }
-
-      } // end of having at least one
-
+      CString strResult;
+      const char * p = sqlite3_column_name (it->second->pStmt, i);
+      if (p)
+        strResult = p;
+      sa.PutElement (&i, &((COleVariant)strResult));
+      }
     }
 
-	return sa.Detach ();
+  return sa.Detach ();
 }  // end of CMUSHclientDoc::DatabaseColumnNames
 
 // returns an array of column values
@@ -14383,97 +12879,76 @@ VARIANT CMUSHclientDoc::DatabaseColumnValues(LPCTSTR Name)
 
  
   tDatabaseMapIterator it = m_Databases.find (Name);
-
-  if (it != m_Databases.end () &&    // database exists
-      it->second->db != NULL &&      // and is open
+  if (it != m_Databases.end ()  &&   // database exists
+      it->second->db != NULL    &&   // and is open
       it->second->pStmt != NULL &&   // and we have a prepared statement
-      it->second->bValidRow)         // and have a valid row
+      it->second->bValidRow     &&   // and have a valid row
+      it->second->iColumns > 0)      // cannot create empty dimension
     {
+    sa.CreateOneDim (VT_VARIANT, it->second->iColumns);
+
     // put the column values into the array
-    if (it->second->iColumns > 0)    // cannot create empty dimension
+    for (long i = 0; i < it->second->iColumns; i++)
       {
-      sa.CreateOneDim (VT_VARIANT, it->second->iColumns);
-
-      for (long i = 0; i < it->second->iColumns; i++)
-         {
-
-        int iType = sqlite3_column_type(it->second->pStmt, i);
-        COleVariant v ;
-
-        switch (iType)
+      COleVariant v;
+      switch (sqlite3_column_type(it->second->pStmt, i))
+        {
+        case SQLITE3_TEXT:
+        case SQLITE_BLOB:
+        default:
           {
-          case SQLITE3_TEXT:
-          case SQLITE_BLOB:
-          default:
-            {
-            CString strResult;
-            const unsigned char * p = sqlite3_column_text (it->second->pStmt, i);
-            if (p)
-              strResult = p;
-            v = strResult; 
-            }
-            break;
+          CString strResult;
+          const unsigned char * p = sqlite3_column_text (it->second->pStmt, i);
+          if (p)
+            strResult = p;
+          v = strResult;
+          break;
+          }
 
-          case SQLITE_NULL:
-            v.ChangeType (VT_NULL);
-            break;
+        case SQLITE_NULL:
+          v.ChangeType (VT_NULL);
+          break;
 
-          case SQLITE_INTEGER:
-            {
-            long iResult =  sqlite3_column_int  (it->second->pStmt, i);
-            v = iResult; 
-            }
-            break;
+        case SQLITE_INTEGER:
+          v = (long) sqlite3_column_int  (it->second->pStmt, i);
+          break;
 
-          case SQLITE_FLOAT:
-            {
-            double fResult =  sqlite3_column_double (it->second->pStmt, i);
-            v = fResult; 
-            }
-            break;
+        case SQLITE_FLOAT:
+          v = sqlite3_column_double (it->second->pStmt, i); 
+          break;
 
-          }  // end of switch
-         sa.PutElement (&i, &v);
-
-         }
-
-      } // end of having at least one
-
+        }  // end of switch
+      sa.PutElement (&i, &v);
+      }
     }
 
-	return sa.Detach ();
+  return sa.Detach ();
 }  // end of  CMUSHclientDoc::DatabaseColumnNames
 
 
 long CMUSHclientDoc::DatabaseReset(LPCTSTR Name) 
 {
   tDatabaseMapIterator it = m_Databases.find (Name);
-    
   if (it == m_Databases.end ())
     return -1;                // database not found
-
-  if  (it->second->db == NULL)
+  else if (it->second->db == NULL)
     return -2;               // database not open
-
-  if  (it->second->pStmt == NULL)
+  else if (it->second->pStmt == NULL)
     return -4;               // do not have prepared statement
 
   return sqlite3_reset(it->second->pStmt);  // reset statement
-
 }  // end of  CMUSHclientDoc::DatabaseReset
 
 
 void CMUSHclientDoc::FlashIcon() 
 {
-Frame.FlashWindow (TRUE);
+  Frame.FlashWindow (TRUE);
 }    // end of CMUSHclientDoc::FlashIcon
 
 
 long CMUSHclientDoc::WindowHotspotTooltip(LPCTSTR Name, LPCTSTR HotspotId, LPCTSTR TooltipText) 
 {
-
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
   	return eNoSuchWindow;
 
@@ -14483,13 +12958,12 @@ long CMUSHclientDoc::WindowHotspotTooltip(LPCTSTR Name, LPCTSTR HotspotId, LPCTS
 long CMUSHclientDoc::WindowDrawImageAlpha(LPCTSTR Name, LPCTSTR ImageId, long Left, long Top, long Right, long Bottom, double Opacity, long SrcLeft, long SrcTop) 
 {
   MiniWindowMapIterator it = m_MiniWindows.find (Name);
-    
   if (it == m_MiniWindows.end ())
     return eNoSuchWindow;
 
-  return it->second->DrawImageAlpha (ImageId, Left, Top, Right, Bottom, Opacity, 
-                                    SrcLeft,   SrcTop);
-
+  return it->second->DrawImageAlpha (ImageId,
+      Left, Top, Right, Bottom,
+      Opacity, SrcLeft, SrcTop);
 }  // end of CMUSHclientDoc::WindowDrawImageAlpha
 
 

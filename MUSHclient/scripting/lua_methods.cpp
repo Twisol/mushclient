@@ -187,7 +187,6 @@ string concatArgs (lua_State *L, const char * delimiter = "", const int first = 
 {
   // L: ...
   int n = lua_gettop(L);  /* number of arguments */
-
   lua_getglobal(L, "tostring"); // L: ... tostring
   luaL_Buffer buf;
   luaL_buffinit(L, &buf); // L: ... tostring, <buf> ...
@@ -323,7 +322,6 @@ LUALIB_API lua_Integer my_optinteger (lua_State *L, int narg, lua_Integer def)
 #define checkDoc(L) doc (L)
 
 //-------------- end of special checks --------------------
-
 
 
 const bool optboolean (lua_State *L, const int narg, const int def) 

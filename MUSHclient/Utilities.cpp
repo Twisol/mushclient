@@ -1537,7 +1537,7 @@ void MakeTableItem (lua_State *L, const char * name, const string & str)
   }
 
 // make number table item
-void MakeTableItem (lua_State *L, const char * name, const int n)
+void MakeTableItem (lua_State *L, const char * name, const lua_Integer n)
   {
   lua_pushstring (L, name);
   lua_pushnumber (L, n);
@@ -1557,6 +1557,13 @@ void MakeTableItemBool (lua_State *L, const char * name, const bool b)
   {
   lua_pushstring (L, name);
   lua_pushboolean (L, b != 0);
+  lua_rawset(L, -3);
+  }
+
+void MakeTableItemReal (lua_State *L, const char * name, const lua_Number n)
+  {
+  lua_pushstring (L, name);
+  lua_pushnumber (L, n);
   lua_rawset(L, -3);
   }
 

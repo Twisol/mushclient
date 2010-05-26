@@ -213,518 +213,519 @@ string concatArgs (lua_State *L, const char * delimiter = "", const int first = 
 } // end of concatArgs
 
 static void GetVariableListHelper (lua_State *L, CMUSHclientDoc *pDoc)
-  {
-  lua_newtable(L);                                                            
+{
+  lua_newtable(L); // L: ... tbl
 
-  for (POSITION pos = pDoc->GetVariableMap ().GetStartPosition(); pos; )
+  POSITION pos = pDoc->GetVariableMap ().GetStartPosition();
+  CString strVariableName;
+  CVariable * variable_item = NULL;
+  while (pos != NULL)
     {
-    CString strVariableName;
-    CVariable * variable_item;
-
     pDoc->GetVariableMap ().GetNextAssoc (pos, strVariableName, variable_item);
 
-    lua_pushstring (L, strVariableName);
-    lua_pushstring (L, variable_item->strContents);
-    lua_rawset(L, -3);
+    lua_pushstring (L, strVariableName);  // L: ... tbl, name
+    lua_pushstring (L, variable_item->strContents); // L: ... tbl, name, contents
+    lua_rawset(L, -3); // L: ... tbl
     }      // end of looping through each Variable
+  // L: ... tbl
+} // end of GetVariableListHelper
 
-  } // end of GetVariableListHelper
 
 //----- My checking routines that do not witter on about "bad self" -----
 
-
-LUALIB_API int my_argerror (lua_State *L, int narg, const char *extramsg) {
+LUALIB_API int my_argerror (lua_State *L, int narg, const char *extramsg)
+{
   lua_Debug ar;
   if (!lua_getstack(L, 0, &ar))  /* no stack frame? */
     return luaL_error(L, "bad argument #%d (%s)", narg, extramsg);
+
   lua_getinfo(L, "n", &ar);
   if (ar.name == NULL)
     ar.name = "?";
+
   return luaL_error(L, "bad argument #%d to " LUA_QS " (%s)",
-                        narg, ar.name, extramsg);
+      narg, ar.name, extramsg);
 }
 
-LUALIB_API int my_typerror (lua_State *L, int narg, const char *tname) {
-  const char *msg = lua_pushfstring(L, "%s expected, got %s",
-                                    tname, luaL_typename(L, narg));
-  return my_argerror(L, narg, msg);
+LUALIB_API int my_typerror (lua_State *L, int narg, const char *tname)
+{
+  return my_argerror(L, narg, lua_pushfstring(L, "%s expected, got %s",
+      tname, luaL_typename(L, narg)));
 }
 
 
-static void my_tag_error (lua_State *L, int narg, int tag) {
+static inline void my_tag_error (lua_State *L, int narg, int tag)
+{
   my_typerror(L, narg, lua_typename(L, tag));
 }
 
-LUALIB_API const char *my_checklstring (lua_State *L, int narg, size_t *len) {
+LUALIB_API const char *my_checklstring (lua_State *L, int narg, size_t *len)
+{
   const char *s = lua_tolstring(L, narg, len);
-  if (!s) my_tag_error(L, narg, LUA_TSTRING);
+  if (!s)
+    my_tag_error(L, narg, LUA_TSTRING);
+
   return s;
 }
 
-
 LUALIB_API const char *my_optlstring (lua_State *L, int narg,
-                                        const char *def, size_t *len) {
+                                      const char *def, size_t *len)
+{
   if (lua_isnoneornil(L, narg)) {
     if (len)
       *len = (def ? strlen(def) : 0);
     return def;
   }
-  else return my_checklstring(L, narg, len);
+
+  return my_checklstring(L, narg, len);
 }
 
 
-LUALIB_API lua_Number my_checknumber (lua_State *L, int narg) {
+LUALIB_API lua_Number my_checknumber (lua_State *L, int narg)
+{
   lua_Number d = lua_tonumber(L, narg);
   if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
     my_tag_error(L, narg, LUA_TNUMBER);
+
   return d;
 }
 
-
-LUALIB_API lua_Number my_optnumber (lua_State *L, int narg, lua_Number def) {
+LUALIB_API lua_Number my_optnumber (lua_State *L, int narg, lua_Number def)
+{
   return luaL_opt(L, my_checknumber, narg, def);
 }
 
 
-LUALIB_API lua_Integer my_checkinteger (lua_State *L, int narg) {
+LUALIB_API lua_Integer my_checkinteger (lua_State *L, int narg)
+{
   lua_Integer d = lua_tointeger(L, narg);
   if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
     my_tag_error(L, narg, LUA_TNUMBER);
+
   return d;
 }
 
-
-LUALIB_API lua_Integer my_optinteger (lua_State *L, int narg,
-                                                      lua_Integer def) {
+LUALIB_API lua_Integer my_optinteger (lua_State *L, int narg, lua_Integer def)
+{
   return luaL_opt(L, my_checkinteger, narg, def);
 }
 
+
 #define my_checkstring(L,n)	(my_checklstring(L, (n), NULL))
 #define my_optstring(L,n,d)	(my_optlstring(L, (n), (d), NULL))
-#define my_checkint(L,n)	((int)my_checkinteger(L, (n)))
-#define my_optint(L,n,d)	((int)my_optinteger(L, (n), (d)))
-#define my_checklong(L,n)	((long)my_checkinteger(L, (n)))
-#define my_optlong(L,n,d)	((long)my_optinteger(L, (n), (d)))
+#define my_checkint(L,n)	((int)my_checknumber(L, (n)))
+#define my_optint(L,n,d)	((int)my_optnumber(L, (n), (d)))
+#define my_checklong(L,n)	((long)my_checknumber(L, (n)))
+#define my_optlong(L,n,d)	((long)my_optnumber(L, (n), (d)))
+#define my_checkshort(L,n)  ((short)my_checknumber(L, (n)))
+#define my_optshort(L,n,d)  ((short)my_optnumber(L, (n), (d)))
+
+#define checkDoc(L) doc (L)
 
 //-------------- end of special checks --------------------
 
 
 
 const bool optboolean (lua_State *L, const int narg, const int def) 
-  {
-  // that argument not present, take default
-  if (lua_gettop (L) < narg)
-    return def;
-
-  // nil will default to the default
-  if (lua_isnil (L, narg))
+{
+  if (lua_gettop (L) < narg || // that argument is not present, take default
+      lua_isnil (L, narg))     // nil will default to the default
     return def;
 
   // try to convert boolean
   if (lua_isboolean (L, narg))
     return lua_toboolean (L, narg);
 
-  return my_checknumber (L, narg) != 0;
+  return (my_checknumber (L, narg) != 0);
 }
 
 //----------------------------------------
 //  world.Accelerator
 //----------------------------------------
 static int L_Accelerator (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
+{
+  CMUSHclientDoc * pDoc = doc (L);
   lua_pushnumber (L, pDoc->Accelerator (
-        my_checkstring (L, 1),       // Key
-        my_checkstring (L, 2)        // Send
-        ));
+      my_checkstring (L, 1), // Key
+      my_checkstring (L, 2)  // Send
+      ));
   return 1;  // number of result fields
-  } // end of L_Accelerator
+} // end of L_Accelerator
 
 //----------------------------------------
 //  world.AcceleratorTo
 //----------------------------------------
 static int L_AcceleratorTo (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
+{
+  CMUSHclientDoc * pDoc = doc (L);
   lua_pushnumber (L, pDoc->AcceleratorTo (
-        my_checkstring (L, 1),       // Key
-        my_checkstring (L, 2),       // Send
-        my_checknumber (L, 3)        // SendTo
-        ));
+      my_checkstring (L, 1), // Key
+      my_checkstring (L, 2), // Send
+      my_checkshort  (L, 3)  // SendTo
+      ));
   return 1;  // number of result fields
-  } // end of L_AcceleratorTo
+} // end of L_AcceleratorTo
 
 //----------------------------------------
 //  world.AcceleratorList
 //----------------------------------------
 static int L_AcceleratorList (lua_State *L)
-  {
-  VARIANT v = doc (L)->AcceleratorList ();
-  return pushVariant (L, v);
-  } // end of L_AcceleratorList
+{
+  CMUSHclientDoc * pDoc = doc (L);
+  return pushVariant (L, pDoc->AcceleratorList ());
+} // end of L_AcceleratorList
 
 //----------------------------------------
 //  world.Activate
 //----------------------------------------
 static int L_Activate (lua_State *L)
-  {
-  doc (L)->Activate ();
+{
+  CMUSHclientDoc * pDoc = doc (L);
+  pDoc->Activate ();
   return 0;  // number of result fields
-  } // end of L_Activate
+} // end of L_Activate
 
 //----------------------------------------
 //  world.ActivateClient
 //----------------------------------------
 static int L_ActivateClient (lua_State *L)
-  {
-  doc (L)->ActivateClient ();
+{
+  CMUSHclientDoc * pDoc = doc (L);
+  pDoc->ActivateClient ();
   return 0;  // number of result fields
-  } // end of L_ActivateClient
+} // end of L_ActivateClient
 
 
 //----------------------------------------
 //  world.ActivateNotepad
 //----------------------------------------
 static int L_ActivateNotepad (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
+{
+  CMUSHclientDoc * pDoc = doc (L);
   lua_pushboolean (L, pDoc->ActivateNotepad (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ActivateNotepad
+} // end of L_ActivateNotepad
 
 
 //----------------------------------------
 //  world.AddAlias
 //----------------------------------------
 static int L_AddAlias (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
+{
+  CMUSHclientDoc * pDoc = doc (L);
   lua_pushnumber (L, pDoc->AddAlias (
-                  my_checkstring (L, 1),  // AliasName
-                  my_checkstring (L, 2),  // MatchText  
-                  my_checkstring (L, 3),  // ResponseText
-                  my_checknumber (L, 4),  // Flags
-                  my_optstring (L, 5, "")   // ScriptName - optional
-                  ));
+      my_checkstring (L, 1),  // AliasName
+      my_checkstring (L, 2),  // MatchText  
+      my_checkstring (L, 3),  // ResponseText
+      my_checklong   (L, 4),  // Flags
+      my_optstring (L, 5, "") // ScriptName - optional
+      ));
   return 1;  // number of result fields
-  } // end of L_AddAlias
+} // end of L_AddAlias
 
 //----------------------------------------
 //  world.AddFont
 //----------------------------------------
 static int L_AddFont (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
+{
+  CMUSHclientDoc * pDoc = doc (L);
   lua_pushnumber (L, pDoc->AddFont (
-                  my_checkstring (L, 1)  // PathName
-                  ));
+      my_checkstring (L, 1) // PathName
+      ));
   return 1;  // number of result fields
-  } // end of L_AddFont
+} // end of L_AddFont
 
 //----------------------------------------
 //  world.AddMapperComment
 //----------------------------------------
 static int L_AddMapperComment (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
+{
+  CMUSHclientDoc * pDoc = doc (L);
   lua_pushnumber (L, pDoc->AddMapperComment (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_AddMapperComment
+} // end of L_AddMapperComment
 
 
 //----------------------------------------
 //  world.AddSpellCheckWord
 //----------------------------------------
 static int L_AddSpellCheckWord (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L,  pDoc->AddSpellCheckWord (
-              my_checkstring (L, 1), // Original word
-              my_checkstring (L, 2), // Action
-              my_optstring (L, 3, "") // Replacement word - optional
-              ));
+{
+  CMUSHclientDoc * pDoc = doc (L);
+  lua_pushnumber (L, pDoc->AddSpellCheckWord (
+      my_checkstring (L, 1),  // Original word
+      my_checkstring (L, 2),  // Action
+      my_optstring (L, 3, "") // Replacement word - optional
+      ));
   return 1;  // number of result fields
-  } // end of L_AddSpellCheckWord
+} // end of L_AddSpellCheckWord
 
 //----------------------------------------
 //  world.AddTimer
 //----------------------------------------
 static int L_AddTimer (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
+{
+  CMUSHclientDoc * pDoc = doc (L);
   lua_pushnumber (L, pDoc->AddTimer (
-                  my_checkstring (L, 1),  // TimerName
-                  my_checknumber (L, 2),  // Hour
-                  my_checknumber (L, 3),  // Minute
-                  my_checknumber (L, 4),  // Second
-                  my_checkstring (L, 5),  // ResponseText  
-                  my_checknumber (L, 6),  // Flags
-                  my_optstring (L, 7, "")   // ScriptName - optional
-                  ));
+      my_checkstring (L, 1),  // TimerName
+      my_checkshort  (L, 2),  // Hour
+      my_checkshort  (L, 3),  // Minute
+      my_checknumber (L, 4),  // Second
+      my_checkstring (L, 5),  // ResponseText  
+      my_checklong   (L, 6),  // Flags
+      my_optstring (L, 7, "") // ScriptName - optional
+      ));
   return 1;  // number of result fields
-  } // end of L_AddTimer
+} // end of L_AddTimer
 
 
 //----------------------------------------
 //  world.AddToMapper
 //----------------------------------------
 static int L_AddToMapper (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L,  pDoc->AddToMapper (
-              my_checkstring (L, 1), // Direction
-              my_optstring (L, 2, "") // Reverse - optional
-              ));
+{
+  CMUSHclientDoc * pDoc = doc (L);
+  lua_pushnumber (L, pDoc->AddToMapper (
+      my_checkstring (L, 1),  // Direction
+      my_optstring (L, 2, "") // Reverse - optional
+      ));
   return 1;  // number of result fields
-  } // end of L_AddToMapper
+} // end of L_AddToMapper
 
 
 //----------------------------------------
 //  world.AddTrigger
 //----------------------------------------
 static int L_AddTrigger (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
+{
+  CMUSHclientDoc * pDoc = doc (L);
   lua_pushnumber (L, pDoc->AddTrigger (
-                  my_checkstring (L, 1),  // TriggerName
-                  my_checkstring (L, 2),  // MatchText
-                  my_checkstring (L, 3),  // ResponseText
-                  my_checknumber (L, 4),  // Flags  
-                  my_checknumber (L, 5),  // Colour
-                  my_checknumber (L, 6),  // Wildcard
-                  my_checkstring (L, 7),  // SoundFileName  
-                  my_optstring (L, 8, "")   // ScriptName - optional
-                  ));
+      my_checkstring (L, 1),  // TriggerName
+      my_checkstring (L, 2),  // MatchText
+      my_checkstring (L, 3),  // ResponseText
+      my_checklong   (L, 4),  // Flags  
+      my_checkshort  (L, 5),  // Colour
+      my_checkshort  (L, 6),  // Wildcard
+      my_checkstring (L, 7),  // SoundFileName  
+      my_optstring (L, 8, "") // ScriptName - optional
+      ));
   return 1;  // number of result fields
-  } // end of L_AddTrigger
+} // end of L_AddTrigger
 
 
 //----------------------------------------
 //  world.AddTriggerEx
 //----------------------------------------
 static int L_AddTriggerEx (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
+{
+  CMUSHclientDoc * pDoc = doc (L);
   lua_pushnumber (L, pDoc->AddTriggerEx (
-                  my_checkstring (L, 1),  // TriggerName
-                  my_checkstring (L, 2),  // MatchText
-                  my_checkstring (L, 3),  // ResponseText
-                  my_checknumber (L, 4),  // Flags  
-                  my_checknumber (L, 5),  // Colour
-                  my_checknumber (L, 6),  // Wildcard
-                  my_checkstring (L, 7),  // SoundFileName  
-                  my_checkstring (L, 8),  // ScriptName
-                  my_checknumber (L, 9),  // SendTo  
-                  my_optnumber (L, 10, DEFAULT_TRIGGER_SEQUENCE)   // Sequence  - optional
-                  ));
+      my_checkstring (L, 1), // TriggerName
+      my_checkstring (L, 2), // MatchText
+      my_checkstring (L, 3), // ResponseText
+      my_checklong   (L, 4), // Flags  
+      my_checkshort  (L, 5), // Colour
+      my_checkshort  (L, 6), // Wildcard
+      my_checkstring (L, 7), // SoundFileName  
+      my_checkstring (L, 8), // ScriptName
+      my_checkshort  (L, 9), // SendTo  
+      my_optshort (L, 10, DEFAULT_TRIGGER_SEQUENCE) // Sequence  - optional
+      ));
   return 1;  // number of result fields
-  } // end of L_AddTriggerEx
+} // end of L_AddTriggerEx
 
 
 //----------------------------------------
 //  world.AdjustColour
 //----------------------------------------
 static int L_AdjustColour (lua_State *L)
-  {
-  CMUSHclientDoc *pDoc = doc (L);
+{
+  CMUSHclientDoc * pDoc = doc (L);
   lua_pushnumber (L, pDoc->AdjustColour (
-                  my_checknumber (L, 1),    // Colour
-                  my_checknumber (L, 2)     // Method
-                  ));
+      my_checklong  (L, 1), // Colour
+      my_checkshort (L, 2)  // Method
+      ));
   return 1;  // number of result fields
-  } // end of L_AdjustColour
+} // end of L_AdjustColour
 
 
 //----------------------------------------
 //  world.ANSI
 //----------------------------------------
 static int L_ANSI (lua_State *L)
-  {
-  CMUSHclientDoc * pDoc = doc (L);  // must do this first
+{
+  checkDoc(L); // must do this first
 
   int n = lua_gettop(L);  /* number of arguments */
-  int i;
-  CString sOutput = "\x1B[";
 
-  for (i= 1; i <= n; i++) 
+  luaL_Buffer buf;
+  luaL_buffinit(L, &buf);
+
+  luaL_addstring(&buf, "\x1B[");
+  for (int i= 1; i <= n; ++i)
     {
-    sOutput += CFormat ("%i", (int) my_checknumber (L, i));
+    luaL_addstring(&buf, CFormat ("%i", (int) my_checknumber (L, i)));
     if (i < n)
-      sOutput += ";";
+      luaL_addchar(&buf, ';');
     }
+  luaL_addchar(&buf, 'm');
 
-  sOutput += "m";
-  lua_pushstring (L, sOutput);
+  luaL_pushresult(&buf);
   return 1;
-  } // end of L_ANSI
+} // end of L_ANSI
 
 
 //----------------------------------------
 //  world.AnsiNote
 //----------------------------------------
 static int L_AnsiNote (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
-
   pDoc->AnsiNote (concatArgs (L).c_str ());
-
-//  lua_concat (L, lua_gettop (L));
-//  pDoc->AnsiNote (my_checkstring (L, 1));
   return 0;  // number of result fields
-  } // end of L_AnsiNote
+} // end of L_AnsiNote
 
 
 //----------------------------------------
 //  world.AppendToNotepad
 //----------------------------------------
 static int L_AppendToNotepad (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
-
   lua_pushboolean (L, pDoc->AppendToNotepad (
-                    my_checkstring (L, 1), // title
-                    concatArgs (L, "", 2).c_str ()  // contents
-                    ));
-
-//  lua_concat (L, lua_gettop (L) - 1);
-//  lua_pushboolean (L, pDoc->AppendToNotepad (
-//                    my_checkstring (L, 1), // title
-//                    my_checkstring (L, 2)  // contents
-//                    ));
+      my_checkstring (L, 1),          // title
+      concatArgs (L, "", 2).c_str ()  // contents
+      ));
   return 1;  // number of result fields
-  } // end of L_AppendToNotepad
+} // end of L_AppendToNotepad
 
 
 //----------------------------------------
 //  world.ArrayClear
 //----------------------------------------
 static int L_ArrayClear (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ArrayClear (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ArrayClear
+} // end of L_ArrayClear
 
 
 //----------------------------------------
 //  world.ArrayCount
 //----------------------------------------
 static int L_ArrayCount (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->ArrayCount ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->ArrayCount ());
   return 1;  // number of result fields
-  } // end of L_ArrayCount
+} // end of L_ArrayCount
 
 
 //----------------------------------------
 //  world.ArrayCreate
 //----------------------------------------
 static int L_ArrayCreate (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ArrayCreate (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ArrayCreate
+} // end of L_ArrayCreate
 
 
 //----------------------------------------
 //  world.ArrayDelete
 //----------------------------------------
 static int L_ArrayDelete (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ArrayDelete (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ArrayDelete
+} // end of L_ArrayDelete
 
 
 //----------------------------------------
 //  world.ArrayDeleteKey
 //----------------------------------------
 static int L_ArrayDeleteKey (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ArrayDeleteKey (
-                  my_checkstring (L, 1),  // Name
-                  my_checkstring (L, 2)   // Key
-                  ));
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2)  // Key
+      ));
   return 1;  // number of result fields
-  } // end of L_ArrayDeleteKey
+} // end of L_ArrayDeleteKey
 
 
 //----------------------------------------
 //  world.ArrayExists
 //----------------------------------------
 static int L_ArrayExists (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushboolean (L,  pDoc->ArrayExists (my_checkstring (L, 1)));
+  lua_pushboolean (L, pDoc->ArrayExists (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ArrayExists
+} // end of L_ArrayExists
 
 
 //----------------------------------------
 //  world.ArrayExport
 //----------------------------------------
 static int L_ArrayExport (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->ArrayExport (
-            my_checkstring (L, 1),   // Name
-            my_optstring (L, 2, ",") // Delimiter
-            );
-  return pushVariant (L, v);
-  } // end of L_ArrayExport
+  return pushVariant (L, pDoc->ArrayExport (
+      my_checkstring (L, 1),   // Name
+      my_optstring (L, 2, ",") // Delimiter
+      ));
+} // end of L_ArrayExport
 
 
 //----------------------------------------
 //  world.ArrayExportKeys
 //----------------------------------------
 static int L_ArrayExportKeys (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->ArrayExportKeys (
-            my_checkstring (L, 1),   // Name
-            my_optstring (L, 2, ",") // Delimiter
-            );
-  return pushVariant (L, v);
-  } // end of L_ArrayExportKeys
+  return pushVariant (L, pDoc->ArrayExportKeys (
+      my_checkstring (L, 1),   // Name
+      my_optstring (L, 2, ",") // Delimiter
+      ));
+} // end of L_ArrayExportKeys
 
 
 //----------------------------------------
 //  world.ArrayGet
 //----------------------------------------
 static int L_ArrayGet (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->ArrayGet (
-            my_checkstring (L, 1),   // Name
-            my_checkstring (L, 2)    // Key
-            );
-  return pushVariant (L, v);
-  } // end of L_ArrayGet
+  return pushVariant (L, pDoc->ArrayGet (
+      my_checkstring (L, 1),   // Name
+      my_checkstring (L, 2)    // Key
+      ));
+} // end of L_ArrayGet
 
 
 //----------------------------------------
 //  world.ArrayGetFirstKey
 //----------------------------------------
 static int L_ArrayGetFirstKey (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->ArrayGetFirstKey (my_checkstring (L, 1));
-  return pushVariant (L, v);
-  } // end of L_ArrayGetFirstKey
+  return pushVariant (L, pDoc->ArrayGetFirstKey (my_checkstring (L, 1)));
+} // end of L_ArrayGetFirstKey
 
 
 //----------------------------------------
 //  world.ArrayGetLastKey
 //----------------------------------------
 static int L_ArrayGetLastKey (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->ArrayGetLastKey (my_checkstring (L, 1));
-  return pushVariant (L, v);
-  } // end of L_ArrayGetLastKey
+  return pushVariant (L, pDoc->ArrayGetLastKey (my_checkstring (L, 1)));
+} // end of L_ArrayGetLastKey
 
 
 //----------------------------------------
@@ -732,118 +733,105 @@ static int L_ArrayGetLastKey (lua_State *L)
 //  - extension - takes an optional table as 2nd argument
 //----------------------------------------
 static int L_ArrayImport (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
-
   string name = my_checkstring (L, 1);
-  const int table = 2;    // 2nd argument may be table
 
   // extension here - accept table as 2nd argument
-  if (lua_istable (L, table))
+  if (lua_istable (L, 2))
     {
-
-    tStringMapOfMaps::iterator it = pDoc->GetArrayMap ().find (name);
-                           
     // find table
-    if (it == pDoc->GetArrayMap ().end ())
+    tStringMapOfMaps::iterator it = pDoc->GetArrayMap ().find (name);
+    if (it != pDoc->GetArrayMap ().end ())
       {
-      lua_pushnumber (L, eArrayDoesNotExist);
-      return 1;
-      }
-
-    int iDuplicates = 0;
-
-    // standard Lua table iteration
-    for (lua_pushnil (L); lua_next (L, table) != 0; lua_pop (L, 1))
-      {
-      if (lua_type (L, -2) != LUA_TSTRING)
-        luaL_error (L, "table must have string keys");
-
-      // get key and value
-      string sKey = lua_tostring (L, -2);
-      string sValue = lua_tostring (L, -1);
-
-      // insert into array
-      pair<tStringToStringMap::iterator, bool> status = 
-          it->second->insert (make_pair (sKey, sValue));
-
-      // check if already there
-      if (!status.second)
+      int iDuplicates = 0;
+      // standard Lua table iteration
+      for (lua_pushnil (L); lua_next (L, 2) != 0; lua_pop (L, 1))
         {
-        status.first->second = sValue;
-        iDuplicates++;
-        }
+        if (lua_type (L, -2) != LUA_TSTRING)
+          luaL_error (L, "table must have string keys");
 
-      } // end of looping through table
+        // get key and value
+        string sKey =   lua_tostring (L, -2);
+        string sValue = lua_tostring (L, -1);
 
-    if (iDuplicates)
-      lua_pushnumber (L, eImportedWithDuplicates);
+        // insert into array
+        pair<tStringToStringMap::iterator, bool> status = 
+            it->second->insert (make_pair (sKey, sValue));
+
+        // check if already there
+        if (!status.second)
+          {
+          status.first->second = sValue;
+          ++iDuplicates;
+          }
+        } // end of looping through table
+
+      lua_pushnumber (L, (iDuplicates > 0) ? eImportedWithDuplicates : eOK);
+      }
     else
-      lua_pushnumber (L, eOK);
-    return 1; // one result, which is error code
+      lua_pushnumber (L, eArrayDoesNotExist);
+    }
+  else
+    // not a table - normal string with delimiters
+    lua_pushnumber (L, pDoc->ArrayImport (
+        name.c_str (),           // Name
+        my_checkstring (L, 2),   // Values
+        my_optstring (L, 3, ",") // Delimiter
+        ));
 
-    }   // end of table for argument 2
-
-  // not a table - normal string with delimiters
-  lua_pushnumber (L, pDoc->ArrayImport (
-                  name.c_str (),  // Name
-                  my_checkstring (L, 2),  // Values
-                  my_optstring (L, 3, ",")   // Delimiter
-                  ));
   return 1;  // number of result fields
-  } // end of L_ArrayImport
+} // end of L_ArrayImport
 
 
 //----------------------------------------
 //  world.ArrayKeyExists
 //----------------------------------------
 static int L_ArrayKeyExists (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushboolean (L,  pDoc->ArrayKeyExists (
-            my_checkstring (L, 1),      // Name
-            my_checkstring (L, 2)       // Key
-            ));
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2)  // Key
+      ));
   return 1;  // number of result fields
-  } // end of L_ArrayKeyExists
+} // end of L_ArrayKeyExists
 
 
 //----------------------------------------
 //  world.ArrayListAll
 //----------------------------------------
 static int L_ArrayListAll (lua_State *L)
-  {
-  VARIANT v = doc (L)->ArrayListAll ();
-  return pushVariant (L, v);
-  } // end of L_ArrayListAll
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->ArrayListAll ());
+} // end of L_ArrayListAll
 
 
 //----------------------------------------
 //  world.ArrayListKeys
 //----------------------------------------
 static int L_ArrayListKeys (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->ArrayListKeys (my_checkstring (L, 1));
-  return pushVariant (L, v);
-  } // end of L_ArrayListKeys
+  return pushVariant (L, pDoc->ArrayListKeys (my_checkstring (L, 1)));
+} // end of L_ArrayListKeys
 
 
 //----------------------------------------
 //  world.ArrayListValues
 //----------------------------------------
 static int L_ArrayListValues (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->ArrayListValues (my_checkstring (L, 1));
-  return pushVariant (L, v);
-  } // end of L_ArrayListValues
+  return pushVariant (L, pDoc->ArrayListValues (my_checkstring (L, 1)));
+} // end of L_ArrayListValues
 
 //----------------------------------------
 //  world.ArrayList - Lua only
 //----------------------------------------
 static int L_ArrayList (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
 
   tStringMapOfMaps::iterator it = pDoc->GetArrayMap ().find (my_checkstring (L, 1));
@@ -851,440 +839,441 @@ static int L_ArrayList (lua_State *L)
     return 0;        // not found, no results
 
   lua_newtable(L);                                                            
-  for (tStringToStringMap::iterator i = it->second->begin (); 
-       i != it->second->end ();
-       i++)
-       {
-        lua_pushstring (L, i->first.c_str ());
-        lua_pushstring (L, i->second.c_str ());
-        lua_rawset(L, -3);
-       }
+  tStringToStringMap::iterator i;
+  for (i = it->second->begin (); i != it->second->end (); ++i)
+    {
+    lua_pushstring (L, i->first.c_str ());
+    lua_pushstring (L, i->second.c_str ());
+    lua_rawset(L, -3);
+    }
+
   return 1;   // one table
-  } // end of L_ArrayList
+} // end of L_ArrayList
 
 
 //----------------------------------------
 //  world.ArraySet
 //----------------------------------------
 static int L_ArraySet (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ArraySet (
-                  my_checkstring (L, 1),  // Name
-                  my_checkstring (L, 2),  // Key
-                  my_checkstring (L, 3)   // Value
-                  ));
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // Key
+      my_checkstring (L, 3)  // Value
+      ));
   return 1;  // number of result fields
-  } // end of L_ArraySet
+} // end of L_ArraySet
 
 
 //----------------------------------------
 //  world.ArraySize
 //----------------------------------------
 static int L_ArraySize (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ArraySize (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ArraySize
+} // end of L_ArraySize
 
 
 //----------------------------------------
 //  world.Base64Decode
 //----------------------------------------
 static int L_Base64Decode (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->Base64Decode (my_checkstring (L, 1));
-  return pushVariant (L, v);
-  } // end of L_Base64Decode
+  return pushVariant (L, pDoc->Base64Decode (my_checkstring (L, 1)));
+} // end of L_Base64Decode
 
 
 //----------------------------------------
 //  world.Base64Encode
 //----------------------------------------
 static int L_Base64Encode (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->Base64Encode (
-        my_checkstring (L, 1),  // Text
-        optboolean (L, 2, 0)     // MultiLine
-        );
-  return pushVariant (L, v);
-  } // end of L_Base64Encode
+  return pushVariant (L, pDoc->Base64Encode (
+      my_checkstring (L, 1), // Text
+      optboolean (L, 2, 0)   // MultiLine
+      ));
+} // end of L_Base64Encode
 
 //----------------------------------------
 //  world.BlendPixel
 //----------------------------------------
 static int L_BlendPixel (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->BlendPixel (
-            my_checknumber (L, 1),    // Blend
-            my_checknumber (L, 2),    // Base
-            my_checknumber (L, 3),    // Mode
-            my_optnumber (L, 4, 1)    // Opacity
-            ));
+      my_checklong  (L, 1),  // Blend
+      my_checklong  (L, 2),  // Base
+      my_checkshort (L, 3),  // Mode
+      my_optnumber (L, 4, 1) // Opacity
+      ));
   return 1;  // number of result fields
-  } // end of L_BlendPixel
+} // end of L_BlendPixel
 
 //----------------------------------------
 //  world.GetBoldColour
 //----------------------------------------
 static int L_GetBoldColour (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->GetBoldColour (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->GetBoldColour (my_checkshort (L, 1)));
   return 1;  // number of result fields
-  } // end of GetBoldColour
+} // end of GetBoldColour
 
 //----------------------------------------
 //  world.SetBoldColour
 //----------------------------------------
 static int L_SetBoldColour (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->SetBoldColour (
-      my_checknumber (L, 1),  // WhichColour
-      my_checknumber (L, 2)   // nNewValue
+      my_checkshort (L, 1), // WhichColour
+      my_checklong  (L, 2)  // nNewValue
       );
   return 0;  // number of result fields
-  } // end of SetBoldColour
+} // end of SetBoldColour
 
 
 //----------------------------------------
 //  world.BroadcastPlugin
 //----------------------------------------
 static int L_BroadcastPlugin (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->BroadcastPlugin (
-                  my_checknumber (L, 1),  // PluginID
-                  my_optstring   (L, 2, "")   // Argument - optional
-                  ));
+      my_checklong (L, 1),  // PluginID
+      my_optstring (L, 2, "") // Argument - optional
+      ));
   return 1;  // number of result fields
-  } // end of L_BroadcastPlugin
+} // end of L_BroadcastPlugin
 
 
 //----------------------------------------
 //  world.CallPlugin
 //----------------------------------------
 static int L_CallPlugin (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->CallPlugin (
-                  my_checkstring (L, 1),  // PluginID
-                  my_checkstring (L, 2),  // Routine  
-                  my_optstring   (L, 3, "")   // Argument - optional
-                  ));
+      my_checkstring (L, 1),  // PluginID
+      my_checkstring (L, 2),  // Routine  
+      my_optstring (L, 3, "") // Argument - optional
+      ));
   return 1;  // number of result fields
-  } // end of L_CallPlugin
+} // end of L_CallPlugin
 
 //----------------------------------------
 //  world.ChangeDir
 //----------------------------------------
 static int L_ChangeDir (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChangeDir (
-                  my_checkstring (L, 1)   // Directory
-                  ));
+      my_checkstring (L, 1) // Directory
+      ));
   return 1;  // number of result fields
-  } // end of L_ChangeDir
+} // end of L_ChangeDir
 
 
 //----------------------------------------
 //  world.ChatAcceptCalls
 //----------------------------------------
 static int L_ChatAcceptCalls (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->ChatAcceptCalls (my_optnumber (L, 1, DEFAULT_CHAT_PORT)));
+  lua_pushnumber (L, pDoc->ChatAcceptCalls (my_optshort (L, 1, DEFAULT_CHAT_PORT)));
   return 1;  // number of result fields
-  } // end of L_ChatAcceptCalls
+} // end of L_ChatAcceptCalls
 
 
 //----------------------------------------
 //  world.ChatCall
 //----------------------------------------
 static int L_ChatCall (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChatCall (
-                  my_checkstring (L, 1),  // Server
-                  my_optnumber (L, 2, DEFAULT_CHAT_PORT)
-                  ));
+      my_checkstring (L, 1), // Server
+      my_optlong (L, 2, DEFAULT_CHAT_PORT)
+      ));
   return 1;  // number of result fields
-  } // end of L_ChatCall
+} // end of L_ChatCall
 
 
 //----------------------------------------
 //  world.ChatCallzChat
 //----------------------------------------
 static int L_ChatCallzChat (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChatCallzChat (
-                  my_checkstring (L, 1),  // Server
-                  my_optnumber (L, 2, DEFAULT_CHAT_PORT)
-                  ));
+      my_checkstring (L, 1),  // Server
+      my_optlong (L, 2, DEFAULT_CHAT_PORT)
+      ));
   return 1;  // number of result fields
-  } // end of L_ChatCallzChat
+} // end of L_ChatCallzChat
 
 
 //----------------------------------------
 //  world.ChatDisconnect
 //----------------------------------------
 static int L_ChatDisconnect (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->ChatDisconnect (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->ChatDisconnect (my_checklong (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ChatDisconnect
+} // end of L_ChatDisconnect
 
 
 //----------------------------------------
 //  world.ChatDisconnectAll
 //----------------------------------------
 static int L_ChatDisconnectAll (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChatDisconnectAll ());
   return 1;  // number of result fields
-  } // end of L_ChatDisconnectAll
+} // end of L_ChatDisconnectAll
 
 
 //----------------------------------------
 //  world.ChatEverybody
 //----------------------------------------
 static int L_ChatEverybody (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChatEverybody (
-                  my_checkstring (L, 1),  // Message
-                  optboolean (L, 2, 0)  // Emote
-                  ));
+      my_checkstring (L, 1), // Message
+      optboolean (L, 2, 0)   // Emote
+      ));
   return 1;  // number of result fields
-  } // end of L_ChatEverybody
+} // end of L_ChatEverybody
 
 
 //----------------------------------------
 //  world.ChatGetID
 //----------------------------------------
 static int L_ChatGetID (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChatGetID (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ChatGetID
+} // end of L_ChatGetID
 
 
 //----------------------------------------
 //  world.ChatGroup
 //----------------------------------------
 static int L_ChatGroup (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChatGroup (
-                  my_checkstring (L, 1),  // Group
-                  my_checkstring (L, 2),  // Message
-                  optboolean (L, 3, 0)  // Emote
-                  ));
+      my_checkstring (L, 1), // Group
+      my_checkstring (L, 2), // Message
+      optboolean (L, 3, 0)   // Emote
+      ));
   return 1;  // number of result fields
-  } // end of L_ChatGroup
+} // end of L_ChatGroup
 
 
 //----------------------------------------
 //  world.ChatID
 //----------------------------------------
 static int L_ChatID (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChatID (
-                  my_checknumber (L, 1),  // ID
-                  my_checkstring (L, 2),  // Message
-                  optboolean (L, 3, 0)  // Emote
-                  ));
+      my_checklong   (L, 1), // ID
+      my_checkstring (L, 2), // Message
+      optboolean (L, 3, 0)   // Emote
+      ));
   return 1;  // number of result fields
-  } // end of L_ChatID
+} // end of L_ChatID
 
 
 //----------------------------------------
 //  world.ChatMessage
 //----------------------------------------
 static int L_ChatMessage (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChatMessage (
-                  my_checknumber (L, 1),  // ID
-                  my_checknumber (L, 2),  // Message code
-                  my_optstring (L, 3, "")  // Text - optional
-                  ));
+      my_checklong  (L, 1),   // ID
+      my_checkshort (L, 2),   // Message code
+      my_optstring (L, 3, "") // Text - optional
+      ));
   return 1;  // number of result fields
-  } // end of L_ChatMessage
+} // end of L_ChatMessage
 
 
 //----------------------------------------
 //  world.ChatNameChange
 //----------------------------------------
 static int L_ChatNameChange (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChatNameChange (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ChatNameChange
+} // end of L_ChatNameChange
 
 
 //----------------------------------------
 //  world.ChatNote
 //----------------------------------------
 static int L_ChatNote (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->ChatNote (
-          my_checknumber (L, 1),  // NoteType
-          my_optstring (L, 2, "")   // Message - optional
-          );
+      my_checkshort (L, 1),   // NoteType
+      my_optstring (L, 2, "") // Message - optional
+      );
   return 0;  // number of result fields
-  } // end of L_ChatNote
+} // end of L_ChatNote
 
 
 //----------------------------------------
 //  world.ChatPasteEverybody
 //----------------------------------------
 static int L_ChatPasteEverybody (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->ChatPasteEverybody ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->ChatPasteEverybody ());
   return 1;  // number of result fields
-  } // end of L_ChatPasteEverybody
+} // end of L_ChatPasteEverybody
 
 
 //----------------------------------------
 //  world.ChatPasteText
 //----------------------------------------
 static int L_ChatPasteText (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->ChatPasteText (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->ChatPasteText (my_checklong (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ChatPasteText
+} // end of L_ChatPasteText
 
 
 //----------------------------------------
 //  world.ChatPeekConnections
 //----------------------------------------
 static int L_ChatPeekConnections (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->ChatPeekConnections (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->ChatPeekConnections (my_checklong (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ChatPeekConnections
+} // end of L_ChatPeekConnections
 
 
 //----------------------------------------
 //  world.ChatPersonal
 //----------------------------------------
 static int L_ChatPersonal (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChatPersonal (
-                  my_checkstring (L, 1),  // Who
-                  my_checkstring (L, 2),  // Message
-                  optboolean (L, 3, 0)  // Emote
-                  ));
+      my_checkstring (L, 1), // Who
+      my_checkstring (L, 2), // Message
+      optboolean (L, 3, 0)   // Emote
+      ));
   return 1;  // number of result fields
-  } // end of L_ChatPersonal
+} // end of L_ChatPersonal
 
 
 //----------------------------------------
 //  world.ChatPing
 //----------------------------------------
 static int L_ChatPing (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->ChatPing (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->ChatPing (my_checklong (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ChatPing
+} // end of L_ChatPing
 
 
 //----------------------------------------
 //  world.ChatRequestConnections
 //----------------------------------------
 static int L_ChatRequestConnections (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->ChatRequestConnections (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->ChatRequestConnections (my_checklong (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ChatRequestConnections
+} // end of L_ChatRequestConnections
 
 
 //----------------------------------------
 //  world.ChatSendFile
 //----------------------------------------
 static int L_ChatSendFile (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ChatSendFile (
-                  my_checknumber (L, 1),  // ID
-                  my_optstring (L, 2, "")   // FileName
-                  ));
+      my_checklong (L, 1),    // ID
+      my_optstring (L, 2, "") // FileName
+      ));
   return 1;  // number of result fields
-  } // end of L_ChatSendFile
+} // end of L_ChatSendFile
 
 
 //----------------------------------------
 //  world.ChatStopAcceptingCalls
 //----------------------------------------
 static int L_ChatStopAcceptingCalls (lua_State *L)
-  {
-  doc (L)->ChatStopAcceptingCalls ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  pDoc->ChatStopAcceptingCalls ();
   return 0;  // number of result fields
-  } // end of L_ChatStopAcceptingCalls
+} // end of L_ChatStopAcceptingCalls
 
 
 //----------------------------------------
 //  world.ChatStopFileTransfer
 //----------------------------------------
 static int L_ChatStopFileTransfer (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->ChatStopFileTransfer (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->ChatStopFileTransfer (my_checklong (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ChatStopFileTransfer
+} // end of L_ChatStopFileTransfer
 
 //----------------------------------------
 //  world.CloseLog
 //----------------------------------------
 static int L_CloseLog (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->CloseLog ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->CloseLog ());
   return 1;  // number of result fields
-  } // end of L_CloseLog
+} // end of L_CloseLog
 
 
 //----------------------------------------
 //  world.CloseNotepad
 //----------------------------------------
 static int L_CloseNotepad (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->CloseNotepad (
-                  my_checkstring (L, 1),  // Title
-                  optboolean (L, 2, 0)  // QuerySave
-                  ));
+      my_checkstring (L, 1),  // Title
+      optboolean (L, 2, 0)  // QuerySave
+      ));
   return 1;  // number of result fields
-  } // end of L_CloseNotepad
+} // end of L_CloseNotepad
 
 
 //----------------------------------------
 //  world.ColourNameToRGB
 //----------------------------------------
 static int L_ColourNameToRGB (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ColourNameToRGB (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ColourNameToRGB
+} // end of L_ColourNameToRGB
 
 
 //----------------------------------------
@@ -1292,27 +1281,27 @@ static int L_ColourNameToRGB (lua_State *L)
 // extension - takes groups of 3 arguments 
 //----------------------------------------
 static int L_ColourNote (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  int n = lua_gettop(L);  /* number of arguments */
-  int i;
-  for (i=1; i<=n; i += 3) 
+  const char *textcolour = NULL,
+             *bgcolour   = NULL,
+             *text       = NULL;
+
+  int n = lua_gettop(L);
+  for (int i = 1; i <= n; i += 3) 
     {
-    if ((i + 2) < n)    // not end of line yet
-      pDoc->ColourTell (
-            my_checkstring (L, i),       // TextColour
-            my_checkstring (L, i + 1),   // BackgroundColour
-            my_checkstring (L, i + 2)    // Text
-                          );
+    textcolour = my_checkstring (L, i);     // TextColour
+    bgcolour   = my_checkstring (L, i + 1); // BackgroundColour
+    text       = my_checkstring (L, i + 2); // Text
+
+    if (i + 2 < n)    // not end of line yet
+      pDoc->ColourTell (textcolour, bgcolour, text);
     else
-      pDoc->ColourNote (
-            my_checkstring (L, i),       // TextColour
-            my_checkstring (L, i + 1),   // BackgroundColour
-            my_checkstring (L, i + 2)    // Text
-                          );
+      pDoc->ColourNote (textcolour, bgcolour, text);
     }
+
   return 0;  // number of result fields
-  } // end of L_ColourNote
+} // end of L_ColourNote
 
 
 //----------------------------------------
@@ -1320,877 +1309,884 @@ static int L_ColourNote (lua_State *L)
 // extension - takes groups of 3 arguments 
 //----------------------------------------
 static int L_ColourTell (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  int n = lua_gettop(L);  /* number of arguments */
-  int i;
-  for (i=1; i<=n; i += 3) 
+  for (int i = 1; i <= lua_gettop(L); i += 3) 
     pDoc->ColourTell (
-          my_checkstring (L, i),       // TextColour
-          my_checkstring (L, i + 1),   // BackgroundColour
-          my_checkstring (L, i + 2)    // Text
-                      );
+        my_checkstring (L, i),     // TextColour
+        my_checkstring (L, i + 1), // BackgroundColour
+        my_checkstring (L, i + 2)  // Text
+        );
   return 0;  // number of result fields
-  } // end of L_ColourTell
+} // end of L_ColourTell
 
 
 //----------------------------------------
 //  world.Connect
 //----------------------------------------
 static int L_Connect (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->Connect ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->Connect ());
   return 1;  // number of result fields
-  } // end of L_Connect
+} // end of L_Connect
 
 
 //----------------------------------------
 //  world.CreateGUID
 //----------------------------------------
 static int L_CreateGUID (lua_State *L)
-  {
-  BSTR str = doc (L)->CreateGUID ();
-  return pushBstr (L, str);  // number of result fields
-  } // end of L_CreateGUID
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR bstrGUID = pDoc->CreateGUID ();
+  return pushBstr (L, bstrGUID);
+} // end of L_CreateGUID
 
 
 //----------------------------------------
 //  world.SetCursor
 //----------------------------------------
 static int L_SetCursor (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetCursor (
-            my_optnumber (L, 1, 0)    // Cursor
-            ));
+      my_optlong (L, 1, 0) // Cursor
+      ));
   return 1;  // number of result fields
-  } // end of L_SetCursor
+} // end of L_SetCursor
 
 //----------------------------------------
 //  world.GetCustomColourBackground
 //----------------------------------------
 static int L_GetCustomColourBackground (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->GetCustomColourBackground (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->GetCustomColourBackground (my_checkshort (L, 1)));
   return 1;  // number of result fields
-  } // end of L_GetCustomColourBackground
+} // end of L_GetCustomColourBackground
 
 //----------------------------------------
 //  world.SetCustomColourBackground
 //----------------------------------------
 static int L_SetCustomColourBackground (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->SetCustomColourBackground (
-      my_checknumber (L, 1),  // WhichColour
-      my_checknumber (L, 2)   // nNewValue
+      my_checkshort (L, 1), // WhichColour
+      my_checklong  (L, 2)  // nNewValue
       );
   return 0;  // number of result fields
-  } // end of L_SetCustomColourBackground
+} // end of L_SetCustomColourBackground
 
 
 //----------------------------------------
 //  world.GetCustomColourText
 //----------------------------------------
 static int L_GetCustomColourText (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->GetCustomColourText (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->GetCustomColourText (my_checkshort (L, 1)));
   return 1;  // number of result fields
-  } // end of L_GetCustomColourText
+} // end of L_GetCustomColourText
 
 //----------------------------------------
 //  world.SetCustomColourText
 //----------------------------------------
 static int L_SetCustomColourText (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->SetCustomColourText (
-      my_checknumber (L, 1),  // WhichColour
-      my_checknumber (L, 2)   // nNewValue
+      my_checkshort (L, 1), // WhichColour
+      my_checklong  (L, 2)  // nNewValue
       );
   return 0;  // number of result fields
-  } // end of L_SetCustomColourText
+} // end of L_SetCustomColourText
 
 
 //----------------------------------------
 //  world.DatabaseOpen
 //----------------------------------------
 static int L_DatabaseOpen (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DatabaseOpen (
-      my_checkstring (L, 1),  // Name
-      my_checkstring (L, 2),  // FileName
-      my_optnumber (L, 3, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE)  // Flags
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // FileName
+      my_optlong (L, 3, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE) // Flags
       ));
   return 1;  // number of result fields
-  } // end of L_DatabaseOpen
+} // end of L_DatabaseOpen
 
 //----------------------------------------
 //  world.DatabaseClose
 //----------------------------------------
 static int L_DatabaseClose (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DatabaseClose (
-      my_checkstring (L, 1)  // Name
+      my_checkstring (L, 1) // Name
       ));
   return 1;  // number of result fields
-  } // end of L_DatabaseClose
+} // end of L_DatabaseClose
 
 //----------------------------------------
 //  world.DatabasePrepare
 //----------------------------------------
 static int L_DatabasePrepare (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DatabasePrepare (
-      my_checkstring (L, 1),  // Name
-      my_checkstring (L, 2)   // Sql
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2)  // Sql
       ));
   return 1;  // number of result fields
-  } // end of L_DatabasePrepare
+} // end of L_DatabasePrepare
 
 //----------------------------------------
 //  world.DatabaseFinalize
 //----------------------------------------
 static int L_DatabaseFinalize (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DatabaseFinalize (
-      my_checkstring (L, 1)  // Name
+      my_checkstring (L, 1) // Name
       ));
   return 1;  // number of result fields
-  } // end of L_DatabaseFinalize
+} // end of L_DatabaseFinalize
 
 //----------------------------------------
 //  world.DatabaseReset
 //----------------------------------------
 static int L_DatabaseReset (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DatabaseReset (
-      my_checkstring (L, 1)  // Name
+      my_checkstring (L, 1) // Name
       ));
   return 1;  // number of result fields
-  } // end of L_DatabaseReset
+} // end of L_DatabaseReset
 
 //----------------------------------------
 //  world.DatabaseColumns
 //----------------------------------------
 static int L_DatabaseColumns (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DatabaseColumns (
       my_checkstring (L, 1)  // Name
       ));
   return 1;  // number of result fields
-  } // end of L_DatabaseColumns
+} // end of L_DatabaseColumns
 
 //----------------------------------------
 //  world.DatabaseStep
 //----------------------------------------
 static int L_DatabaseStep (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DatabaseStep (
       my_checkstring (L, 1)  // Name
       ));
   return 1;  // number of result fields
-  } // end of L_DatabaseStep
+} // end of L_DatabaseStep
 
 //----------------------------------------
 //  world.DatabaseError
 //----------------------------------------
 static int L_DatabaseError (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  BSTR str = pDoc->DatabaseError (my_checkstring (L, 1));
-  return pushBstr (L, str);  // number of result fields
-  } // end of L_DatabaseError
+  BSTR bstrError = pDoc->DatabaseError (my_checkstring (L, 1));
+  return pushBstr (L, bstrError);
+} // end of L_DatabaseError
 
 //----------------------------------------
 //  world.DatabaseColumnName
 //----------------------------------------
 static int L_DatabaseColumnName (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  BSTR str = pDoc->DatabaseColumnName (
-      my_checkstring (L, 1),  // Name
-      my_checknumber (L, 2)   // Column
+  BSTR bstrColumn = pDoc->DatabaseColumnName (
+      my_checkstring (L, 1), // Name
+      my_checklong   (L, 2)  // Column
       );
-  return pushBstr (L, str);  // number of result fields
-  } // end of L_DatabaseColumnName
+  return pushBstr (L, bstrColumn);
+} // end of L_DatabaseColumnName
 
 //----------------------------------------
 //  world.DatabaseColumnText
 //----------------------------------------
 static int L_DatabaseColumnText (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  BSTR str = pDoc->DatabaseColumnText (
-      my_checkstring (L, 1),  // Name
-      my_checknumber (L, 2)   // Column
+  BSTR bstrText = pDoc->DatabaseColumnText (
+      my_checkstring (L, 1), // Name
+      my_checklong   (L, 2)  // Column
       );
-  return pushBstr (L, str);  // number of result fields
-  } // end of L_DatabaseColumnText
+  return pushBstr (L, bstrText);
+} // end of L_DatabaseColumnText
 
 //----------------------------------------
 //  world.DatabaseColumnValue
 //----------------------------------------
 static int L_DatabaseColumnValue (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->DatabaseColumnValue (
-      my_checkstring (L, 1),  // Name
-      my_checknumber (L, 2)   // Column
-      );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_DatabaseColumnValue
+  return pushVariant (L, pDoc->DatabaseColumnValue (
+      my_checkstring (L, 1), // Name
+      my_checklong   (L, 2)  // Column
+      ));
+} // end of L_DatabaseColumnValue
 
 //----------------------------------------
 //  world.DatabaseColumnType
 //----------------------------------------
 static int L_DatabaseColumnType (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DatabaseColumnType (
-      my_checkstring (L, 1),  // Name
-      my_checknumber (L, 2)   // Column
+      my_checkstring (L, 1), // Name
+      my_checklong   (L, 2)  // Column
       ));
   return 1;  // number of result fields
-  } // end of L_DatabaseColumnType
+} // end of L_DatabaseColumnType
 
 //----------------------------------------
 //  world.DatabaseTotalChanges
 //----------------------------------------
 static int L_DatabaseTotalChanges (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DatabaseTotalChanges (
-      my_checkstring (L, 1)  // Name
+      my_checkstring (L, 1) // Name
       ));
   return 1;  // number of result fields
-  } // end of L_DatabaseTotalChanges
+} // end of L_DatabaseTotalChanges
 
 //----------------------------------------
 //  world.DatabaseChanges
 //----------------------------------------
 static int L_DatabaseChanges (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DatabaseChanges (
-      my_checkstring (L, 1)  // Name
+      my_checkstring (L, 1) // Name
       ));
   return 1;  // number of result fields
-  } // end of L_DatabaseChanges
+} // end of L_DatabaseChanges
 
 
 //----------------------------------------
 //  world.DatabaseLastInsertRowid
 //----------------------------------------
 static int L_DatabaseLastInsertRowid (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  BSTR str = pDoc->DatabaseLastInsertRowid (
-      my_checkstring (L, 1)  // Name
+  BSTR bstrRowid = pDoc->DatabaseLastInsertRowid (
+      my_checkstring (L, 1) // Name
       );
-  return pushBstr (L, str);  // number of result fields
-  } // end of L_DatabaseLastInsertRowid
+  return pushBstr (L, bstrRowid);
+} // end of L_DatabaseLastInsertRowid
 
 //----------------------------------------
 //  world.DatabaseList
 //----------------------------------------
 static int L_DatabaseList (lua_State *L)
-  {
-  VARIANT v = doc (L)->DatabaseList ();
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_DatabaseList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->DatabaseList ());
+} // end of L_DatabaseList
 
 //----------------------------------------
 //  world.DatabaseInfo
 //----------------------------------------
 static int L_DatabaseInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->DatabaseInfo (
-      my_checkstring (L, 1),    // Name
-      my_checknumber (L, 2)     // InfoType
-    );
-
-  return pushVariant (L, v);
-  } // end of L_DatabaseInfo
+  return pushVariant (L, pDoc->DatabaseInfo (
+      my_checkstring (L, 1), // Name
+      my_checklong (L, 2)  // InfoType
+      ));
+} // end of L_DatabaseInfo
 
 //----------------------------------------
 //  world.DatabaseExec
 //----------------------------------------
 static int L_DatabaseExec (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DatabaseExec (
       my_checkstring (L, 1),  // Name
       my_checkstring (L, 2)   // Sql
       ));
   return 1;  // number of result fields
-  } // end of L_DatabaseExec
+} // end of L_DatabaseExec
 
 //----------------------------------------
 //  world.DatabaseColumnNames
 //----------------------------------------
 static int L_DatabaseColumnNames (lua_State *L)
-  {
-  VARIANT v = doc (L)->DatabaseColumnNames (my_checkstring (L, 1));
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_DatabaseColumnNames
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->DatabaseColumnNames (my_checkstring (L, 1)));
+} // end of L_DatabaseColumnNames
 
 //----------------------------------------
 //  world.DatabaseColumnValues
 //----------------------------------------
 static int L_DatabaseColumnValues (lua_State *L)
-  {
-  VARIANT v = doc (L)->DatabaseColumnValues (my_checkstring (L, 1));
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_DatabaseColumnValues
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->DatabaseColumnValues (my_checkstring (L, 1)));
+} // end of L_DatabaseColumnValues
 
 
 //----------------------------------------
 //  world.Debug
 //----------------------------------------
 static int L_Debug (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->Debug (my_optstring (L, 1, ""));
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_Debug
+  return pushVariant (L, pDoc->Debug (my_optstring (L, 1, "")));
+} // end of L_Debug
 
 
 //----------------------------------------
 //  world.DeleteAlias
 //----------------------------------------
 static int L_DeleteAlias (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DeleteAlias (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_DeleteAlias
+} // end of L_DeleteAlias
 
 
 //----------------------------------------
 //  world.DeleteAliasGroup
 //----------------------------------------
 static int L_DeleteAliasGroup (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DeleteAliasGroup (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_DeleteAliasGroup
+} // end of L_DeleteAliasGroup
 
 
 //----------------------------------------
 //  world.DeleteAllMapItems
 //----------------------------------------
 static int L_DeleteAllMapItems (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->DeleteAllMapItems ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->DeleteAllMapItems ());
   return 1;  // number of result fields
-  } // end of L_DeleteAllMapItems
+} // end of L_DeleteAllMapItems
 
 
 //----------------------------------------
 //  world.DeleteCommandHistory
 //----------------------------------------
 static int L_DeleteCommandHistory (lua_State *L)
-  {
-  doc (L)->DeleteCommandHistory ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  pDoc->DeleteCommandHistory ();
   return 0;  // number of result fields
-  } // end of L_DeleteCommandHistory
+} // end of L_DeleteCommandHistory
 
 
 //----------------------------------------
 //  world.DeleteGroup
 //----------------------------------------
 static int L_DeleteGroup (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DeleteGroup (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_DeleteGroup
+} // end of L_DeleteGroup
 
 
 //----------------------------------------
 //  world.DeleteLastMapItem
 //----------------------------------------
 static int L_DeleteLastMapItem (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->DeleteLastMapItem ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->DeleteLastMapItem ());
   return 1;  // number of result fields
-  } // end of L_DeleteLastMapItem
+} // end of L_DeleteLastMapItem
 
 //----------------------------------------
 //  world.DeleteLines
 //----------------------------------------
 static int L_DeleteLines (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->DeleteLines (my_checknumber (L, 1));
+  pDoc->DeleteLines (my_checklong (L, 1));
   return 0;  // number of result fields
-  } // end of L_DeleteLines
+} // end of L_DeleteLines
 
 //----------------------------------------
 //  world.DeleteOutput
 //----------------------------------------
 static int L_DeleteOutput (lua_State *L)
-  {
-  doc (L)->DeleteOutput ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  pDoc->DeleteOutput ();
   return 0;  // number of result fields
-  } // end of L_DeleteOutput
+} // end of L_DeleteOutput
 
 
 //----------------------------------------
 //  world.DeleteTemporaryAliases
 //----------------------------------------
 static int L_DeleteTemporaryAliases (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->DeleteTemporaryAliases ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->DeleteTemporaryAliases ());
   return 1;  // number of result fields
-  } // end of L_DeleteTemporaryAliases
+} // end of L_DeleteTemporaryAliases
 
 
 //----------------------------------------
 //  world.DeleteTemporaryTimers
 //----------------------------------------
 static int L_DeleteTemporaryTimers (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->DeleteTemporaryTimers ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->DeleteTemporaryTimers ());
   return 1;  // number of result fields
-  } // end of L_DeleteTemporaryTimers
+} // end of L_DeleteTemporaryTimers
 
 
 //----------------------------------------
 //  world.DeleteTemporaryTriggers
 //----------------------------------------
 static int L_DeleteTemporaryTriggers (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->DeleteTemporaryTriggers ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->DeleteTemporaryTriggers ());
   return 1;  // number of result fields
-  } // end of L_DeleteTemporaryTriggers
+} // end of L_DeleteTemporaryTriggers
 
 
 //----------------------------------------
 //  world.DeleteTimer
 //----------------------------------------
 static int L_DeleteTimer (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DeleteTimer (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_DeleteTimer
+} // end of L_DeleteTimer
 
 
 //----------------------------------------
 //  world.DeleteTimerGroup
 //----------------------------------------
 static int L_DeleteTimerGroup (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DeleteTimerGroup (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_DeleteTimerGroup
+} // end of L_DeleteTimerGroup
 
 
 //----------------------------------------
 //  world.DeleteTrigger
 //----------------------------------------
 static int L_DeleteTrigger (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DeleteTrigger (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_DeleteTrigger
+} // end of L_DeleteTrigger
 
 
 //----------------------------------------
 //  world.DeleteTriggerGroup
 //----------------------------------------
 static int L_DeleteTriggerGroup (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DeleteTriggerGroup (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_DeleteTriggerGroup
+} // end of L_DeleteTriggerGroup
 
 
 //----------------------------------------
 //  world.DeleteVariable
 //----------------------------------------
 static int L_DeleteVariable (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DeleteVariable (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_DeleteVariable
+} // end of L_DeleteVariable
 
 
 //----------------------------------------
 //  world.DiscardQueue
 //----------------------------------------
 static int L_DiscardQueue (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->DiscardQueue ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->DiscardQueue ());
   return 1;  // number of result fields
-  } // end of L_DiscardQueue
+} // end of L_DiscardQueue
 
 
 //----------------------------------------
 //  world.Disconnect
 //----------------------------------------
 static int L_Disconnect (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->Disconnect ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->Disconnect ());
   return 1;  // number of result fields
-  } // end of L_Disconnect
+} // end of L_Disconnect
 
 
 //----------------------------------------
 //  world.DoAfter
 //----------------------------------------
 static int L_DoAfter (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DoAfter (
-                  my_checknumber (L, 1), // Seconds
-                  my_checkstring (L, 2)  // SendText
-                  ));
+      my_checknumber (L, 1), // Seconds
+      my_checkstring (L, 2)  // SendText
+      ));
   return 1;  // number of result fields
-  } // end of L_DoAfter
+} // end of L_DoAfter
 
 
 //----------------------------------------
 //  world.DoAfterNote
 //----------------------------------------
 static int L_DoAfterNote (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DoAfterNote (
-                  my_checknumber (L, 1), // Seconds
-                  my_checkstring (L, 2)  // NoteText
-                  ));
+      my_checknumber (L, 1), // Seconds
+      my_checkstring (L, 2)  // NoteText
+      ));
   return 1;  // number of result fields
-  } // end of L_DoAfterNote
+} // end of L_DoAfterNote
 
 
 //----------------------------------------
 //  world.DoAfterSpecial
 //----------------------------------------
 static int L_DoAfterSpecial (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DoAfterSpecial (
-                  my_checknumber (L, 1),  // Seconds
-                  my_checkstring (L, 2),  // NoteText
-                  my_checknumber (L, 3)   // SendTo
-                  ));
+      my_checknumber (L, 1), // Seconds
+      my_checkstring (L, 2), // NoteText
+      my_checkshort  (L, 3)  // SendTo
+      ));
   return 1;  // number of result fields
-  } // end of L_DoAfterSpecial
+} // end of L_DoAfterSpecial
 
 
 //----------------------------------------
 //  world.DoAfterSpeedWalk
 //----------------------------------------
 static int L_DoAfterSpeedWalk (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DoAfterSpeedWalk (
-                  my_checknumber (L, 1), // Seconds
-                  my_checkstring (L, 2)  // SendText
-                  ));
+      my_checknumber (L, 1), // Seconds
+      my_checkstring (L, 2)  // SendText
+      ));
   return 1;  // number of result fields
-  } // end of L_DoAfterSpeedWalk
+} // end of L_DoAfterSpeedWalk
 
 
 //----------------------------------------
 //  world.DoCommand
 //----------------------------------------
 static int L_DoCommand (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->DoCommand (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_DoCommand
+} // end of L_DoCommand
 
 
 //----------------------------------------
 //  world.GetEchoInput
 //----------------------------------------
 static int L_GetEchoInput (lua_State *L)
-  {
-  lua_pushboolean (L, doc (L)->GetEchoInput ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushboolean (L, pDoc->GetEchoInput ());
   return 1;  // number of result fields
-  } // end of L_GetEchoInput
+} // end of L_GetEchoInput
 
 //----------------------------------------
 //  world.SetEchoInput
 //----------------------------------------
 static int L_SetEchoInput (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->SetEchoInput (optboolean (L, 1, 1));  // defaults to yes
   return 0;  // number of result fields
-  } // end of L_SetEchoInput
+} // end of L_SetEchoInput
 
 //----------------------------------------
 //  world.EditDistance
 //----------------------------------------
 static int L_EditDistance (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->EditDistance (
-      my_checkstring (L, 1),   // source
-      my_checkstring (L, 2)    // target
+      my_checkstring (L, 1), // source
+      my_checkstring (L, 2)  // target
       ));
   return 1;  // number of result fields
-  } // end of L_EditDistance
+} // end of L_EditDistance
 
 
 //----------------------------------------
 //  world.EnableAlias
 //----------------------------------------
 static int L_EnableAlias (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->EnableAlias (
-      my_checkstring (L, 1),    // alias
-      optboolean (L, 2, 1)    // enabled flag, defaults to true
+      my_checkstring (L, 1), // alias
+      optboolean (L, 2, 1)   // enabled flag, defaults to true
       ));
   return 1;  // number of result fields
-  } // end of L_EnableAlias
+} // end of L_EnableAlias
 
 
 //----------------------------------------
 //  world.EnableAliasGroup
 //----------------------------------------
 static int L_EnableAliasGroup (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->EnableAliasGroup (
-      my_checkstring (L, 1),    // Group
-      optboolean (L, 2, 1)    // enabled flag, defaults to true
+      my_checkstring (L, 1), // Group
+      optboolean (L, 2, 1)   // enabled flag, defaults to true
       ));
   return 1;  // number of result fields
-  } // end of L_EnableAliasGroup
+} // end of L_EnableAliasGroup
 
 
 //----------------------------------------
 //  world.EnableGroup
 //----------------------------------------
 static int L_EnableGroup (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->EnableGroup (
-      my_checkstring (L, 1),    // Group
-      optboolean (L, 2, 1)    // enabled flag, defaults to true
+      my_checkstring (L, 1), // Group
+      optboolean (L, 2, 1)   // enabled flag, defaults to true
       ));
   return 1;  // number of result fields
-  } // end of L_EnableGroup
+} // end of L_EnableGroup
 
 
 //----------------------------------------
 //  world.EnableMapping
 //----------------------------------------
 static int L_EnableMapping (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->EnableMapping (optboolean (L, 1, 1));
   return 0;  // number of result fields
-  } // end of L_EnableMapping
+} // end of L_EnableMapping
 
 
 //----------------------------------------
 //  world.EnablePlugin
 //----------------------------------------
 static int L_EnablePlugin (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->EnablePlugin (
-      my_checkstring (L, 1),    // Plugin ID
-      optboolean (L, 2, 1)    // enabled flag, defaults to true
+      my_checkstring (L, 1), // Plugin ID
+      optboolean (L, 2, 1)   // enabled flag, defaults to true
       ));
   return 1;  // number of result fields
-  } // end of L_EnablePlugin
+} // end of L_EnablePlugin
 
 
 //----------------------------------------
 //  world.EnableTimer
 //----------------------------------------
 static int L_EnableTimer (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->EnableTimer (
-      my_checkstring (L, 1),    // Timer
-      optboolean (L, 2, 1)    // enabled flag, defaults to true
+      my_checkstring (L, 1), // Timer
+      optboolean (L, 2, 1)   // enabled flag, defaults to true
       ));
   return 1;  // number of result fields
-  } // end of L_EnableTimer
+} // end of L_EnableTimer
 
 
 //----------------------------------------
 //  world.EnableTimerGroup
 //----------------------------------------
 static int L_EnableTimerGroup (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->EnableTimerGroup (
-      my_checkstring (L, 1),    // Group
-      optboolean (L, 2, 1)    // enabled flag, defaults to true
+      my_checkstring (L, 1), // Group
+      optboolean (L, 2, 1)   // enabled flag, defaults to true
       ));
   return 1;  // number of result fields
-  } // end of L_EnableTimerGroup
+} // end of L_EnableTimerGroup
 
 
 //----------------------------------------
 //  world.EnableTrigger
 //----------------------------------------
 static int L_EnableTrigger (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->EnableTrigger (
-      my_checkstring (L, 1),    // Trigger
-      optboolean (L, 2, 1)    // enabled flag, defaults to true
+      my_checkstring (L, 1), // Trigger
+      optboolean (L, 2, 1)   // enabled flag, defaults to true
       ));
   return 1;  // number of result fields
-  } // end of L_EnableTrigger
+} // end of L_EnableTrigger
 
 
 //----------------------------------------
 //  world.EnableTriggerGroup
 //----------------------------------------
 static int L_EnableTriggerGroup (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->EnableTriggerGroup (
-      my_checkstring (L, 1),    // Group
-      optboolean (L, 2, 1)    // enabled flag, defaults to true
+      my_checkstring (L, 1), // Group
+      optboolean (L, 2, 1)   // enabled flag, defaults to true
       ));
   return 1;  // number of result fields
-  } // end of L_EnableTriggerGroup
+} // end of L_EnableTriggerGroup
 
 
 //----------------------------------------
 //  world.ErrorDesc
 //----------------------------------------
 static int L_ErrorDesc (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  BSTR str = pDoc->ErrorDesc (my_checknumber (L, 1));
+  BSTR str = pDoc->ErrorDesc (my_checklong(L, 1));
   return pushBstr (L, str);  // number of result fields
-  } // end of L_ErrorDesc
+} // end of L_ErrorDesc
 
 //----------------------------------------
 //  world.EvaluateSpeedwalk
 //----------------------------------------
 static int L_EvaluateSpeedwalk (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   // this is a helper function that returns a CString, not a BSTR
   lua_pushstring (L, pDoc->DoEvaluateSpeedwalk (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_EvaluateSpeedwalk
+} // end of L_EvaluateSpeedwalk
 
 
 //----------------------------------------
 //  world.Execute
 //----------------------------------------
 static int L_Execute (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->Execute (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_Execute
+} // end of L_Execute
 
 
 //----------------------------------------
 //  world.ExportXML
 //----------------------------------------
 static int L_ExportXML (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->ExportXML (
-                  my_checknumber (L, 1), // Type
-                  my_checkstring (L, 2)  // Name
-                  );
+      my_checkshort  (L, 1), // Type
+      my_checkstring (L, 2)  // Name
+      );
   return pushBstr (L, str);  // number of result fields
-  } // end of L_ExportXML
+} // end of L_ExportXML
 
 
 //----------------------------------------
 //  world.FilterPixel
 //----------------------------------------
 static int L_FilterPixel (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->FilterPixel (
-            my_checknumber (L, 1),    // Pixel
-            my_checknumber (L, 2),    // Operation
-            my_checknumber (L, 3)     // Options
-            ));
+      my_checklong   (L, 1), // Pixel
+      my_checkshort  (L, 2), // Operation
+      my_checknumber (L, 3)  // Options
+      ));
   return 1;  // number of result fields
-  } // end of L_FilterPixel
+} // end of L_FilterPixel
 
 //----------------------------------------
 //  world.FixupEscapeSequences
 //----------------------------------------
 static int L_FixupEscapeSequences (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->FixupEscapeSequences (
-                  my_checkstring (L, 1)  // Source
-                  );
+      my_checkstring (L, 1) // Source
+      );
   return pushBstr (L, str);  // number of result fields
-  } // end of L_FixupEscapeSequences
+} // end of L_FixupEscapeSequences
 
 
 //----------------------------------------
 //  world.FixupHTML
 //----------------------------------------
 static int L_FixupHTML (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->FixupHTML (
-                  my_checkstring (L, 1)  // StringToConvert
-                  );
+      my_checkstring (L, 1)  // StringToConvert
+      );
   return pushBstr (L, str);  // number of result fields
-  } // end of L_FixupHTML
+} // end of L_FixupHTML
 
 //----------------------------------------
 //  world.FlashIcon
 //----------------------------------------
 static int L_FlashIcon (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->FlashIcon ();
   return 0;  // number of result fields
-  } // end of L_FlashIcon
+} // end of L_FlashIcon
 
 //----------------------------------------
 //  world.FlushLog
 //----------------------------------------
 static int L_FlushLog (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->FlushLog ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->FlushLog ());
   return 1;  // number of result fields
-  } // end of L_FlushLog
+} // end of L_FlushLog
 
 
 //----------------------------------------
 //  world.GenerateName
 //----------------------------------------
 static int L_GenerateName (lua_State *L)
-  {
-  VARIANT v = doc (L)->GenerateName ();
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GenerateName
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GenerateName ());  // number of result fields
+} // end of L_GenerateName
 
 
 //----------------------------------------
@@ -2200,7 +2196,7 @@ static int L_GenerateName (lua_State *L)
 //  returns 5 fields: result, match, response, flags, script name
 //----------------------------------------
 static int L_GetAlias (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
 
   VARIANT MatchText, 
@@ -2209,330 +2205,322 @@ static int L_GetAlias (lua_State *L)
           Flags, 
           ScriptName;
 
-  long result = pDoc->GetAlias(my_checkstring (L, 1),  // name
-                                  &MatchText, 
-                                  &ResponseText, 
-                                  &Parameter,    // not used these days
-                                  &Flags, 
-                                  &ScriptName); 
-  lua_pushnumber (L, result);         // 1
-  pushVariant (L, MatchText);         // 2
-  pushVariant (L, ResponseText);      // 3
-  pushVariant (L, Flags);             // 4
-  pushVariant (L, ScriptName);        // 5
+  lua_pushnumber(L, pDoc->GetAlias(
+      my_checkstring (L, 1), // name
+      &MatchText, &ResponseText, 
+      &Parameter, // not used these days
+      &Flags, &ScriptName)); 
+
+  pushVariant (L, MatchText);
+  pushVariant (L, ResponseText);
+  pushVariant (L, Flags);
+  pushVariant (L, ScriptName);
 
   return 5;  // number of result fields
-  } // end of L_GetAlias
+} // end of L_GetAlias
 
 
 //----------------------------------------
 //  world.GetAliasInfo
 //----------------------------------------
 static int L_GetAliasInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetAliasInfo (
-      my_checkstring (L, 1),    // Name
-      my_checknumber (L, 2)     // Type
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetAliasInfo
+  return pushVariant (L, pDoc->GetAliasInfo (
+      my_checkstring (L, 1), // Name
+      my_checkshort  (L, 2)  // Type
+      )); // number of result fields
+} // end of L_GetAliasInfo
 
 
 //----------------------------------------
 //  world.GetAliasList
 //----------------------------------------
 static int L_GetAliasList (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetAliasList ();
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetAliasList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetAliasList ());  // number of result fields
+} // end of L_GetAliasList
 
 
 //----------------------------------------
 //  world.GetAliasOption
 //----------------------------------------
 static int L_GetAliasOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetAliasOption (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2)     // Option name
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetAliasOption
+  return pushVariant (L, pDoc->GetAliasOption (
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2)  // Option name
+      ));  // number of result fields
+} // end of L_GetAliasOption
 
 
 //----------------------------------------
 //  world.GetAliasWildcard
 //----------------------------------------
 static int L_GetAliasWildcard (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetAliasWildcard (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2)     // Wildcard name
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetAliasWildcard
+  return pushVariant (L, pDoc->GetAliasWildcard (
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2)  // Wildcard name
+      ));  // number of result fields
+} // end of L_GetAliasWildcard
 
 
 //----------------------------------------
 //  world.GetAlphaOption
 //----------------------------------------
 static int L_GetAlphaOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetAlphaOption (
+  return pushVariant (L, pDoc->GetAlphaOption (
       my_checkstring (L, 1) // Name
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetAlphaOption
+      ));  // number of result fields
+} // end of L_GetAlphaOption
 
 
 //----------------------------------------
 //  world.GetAlphaOptionList
 //----------------------------------------
 static int L_GetAlphaOptionList (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetAlphaOptionList ();
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetAlphaOptionList
+  return pushVariant (L, pDoc->GetAlphaOptionList ());
+} // end of L_GetAlphaOptionList
 
 
 //----------------------------------------
 //  world.GetChatInfo
 //----------------------------------------
 static int L_GetChatInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetChatInfo (
-      my_checknumber (L, 1),    // ChatID 
-      my_checknumber (L, 2)     // InfoType
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetChatInfo
+  return pushVariant (L, pDoc->GetChatInfo (
+      my_checklong  (L, 1), // ChatID 
+      my_checkshort (L, 2)  // InfoType
+      ));
+} // end of L_GetChatInfo
 
 
 //----------------------------------------
 //  world.GetChatList
 //----------------------------------------
 static int L_GetChatList (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetChatList ();
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetChatList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetChatList ());
+} // end of L_GetChatList
 
 
 //----------------------------------------
 //  world.GetChatOption
 //----------------------------------------
 static int L_GetChatOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetChatOption (
-      my_checknumber (L, 1),    // ChatID 
-      my_checkstring (L, 2)     // OptionName
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetChatOption
+  return pushVariant (L, pDoc->GetChatOption (
+      my_checklong   (L, 1), // ChatID 
+      my_checkstring (L, 2)  // OptionName
+      ));  // number of result fields
+} // end of L_GetChatOption
 
 
 //----------------------------------------
 //  world.GetClipboard
 //----------------------------------------
 static int L_GetClipboard (lua_State *L)
-  {
-  BSTR str = doc (L)->GetClipboard ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR str = pDoc->GetClipboard ();
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetClipboard
+} // end of L_GetClipboard
 
 
 //----------------------------------------
 //  world.GetCommand
 //----------------------------------------
 static int L_GetCommand (lua_State *L)
-  {
-  BSTR str = doc (L)->GetCommand ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR str = pDoc->GetCommand ();
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetCommand
+} // end of L_GetCommand
 
 
 //----------------------------------------
 //  world.GetCommandList
 //----------------------------------------
 static int L_GetCommandList (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetCommandList (
-      my_checknumber (L, 1) // Count
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetCommandList
+  return pushVariant (L, pDoc->GetCommandList (
+      my_checklong (L, 1) // Count
+      ));  // number of result fields
+} // end of L_GetCommandList
 
 
 //----------------------------------------
 //  world.GetConnectDuration
 //----------------------------------------
 static int L_GetConnectDuration (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetConnectDuration ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetConnectDuration ());
   return 1;  // number of result fields
-  } // end of L_GetConnectDuration
+} // end of L_GetConnectDuration
 
 
 //----------------------------------------
 //  world.GetCurrentValue
 //----------------------------------------
 static int L_GetCurrentValue (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetCurrentValue (
-            my_checkstring (L, 1)   // OptionName
-            );
-  return pushVariant (L, v);
-  } // end of L_GetCurrentValue
+  return pushVariant (L, pDoc->GetCurrentValue (
+      my_checkstring (L, 1) // OptionName
+      ));
+} // end of L_GetCurrentValue
 
 
 //----------------------------------------
 //  world.GetCustomColourName
 //----------------------------------------
 static int L_GetCustomColourName (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
 
   BSTR str = pDoc->GetCustomColourName (
-      my_checknumber (L, 1)  // WhichColour
+      my_checkshort (L, 1) // WhichColour
       );
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetCustomColourName
+} // end of L_GetCustomColourName
 
 //----------------------------------------
 //  world.GetDefaultValue
 //----------------------------------------
 static int L_GetDefaultValue (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetDefaultValue (
-            my_checkstring (L, 1)   // OptionName
-            );
-  return pushVariant (L, v);
-  } // end of L_GetDefaultValue
+  return pushVariant (L, pDoc->GetDefaultValue (
+      my_checkstring (L, 1)  // OptionName
+      ));
+} // end of L_GetDefaultValue
 
 //----------------------------------------
 //  world.GetDeviceCaps
 //----------------------------------------
 static int L_GetDeviceCaps (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->GetDeviceCaps (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->GetDeviceCaps (my_checklong (L, 1)));
   return 1;  // number of result fields
-  } // end of L_GetDeviceCaps
+} // end of L_GetDeviceCaps
 
 //----------------------------------------
 //  world.GetEntity
 //----------------------------------------
 static int L_GetEntity (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->GetEntity (my_checkstring (L, 1));
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetEntity
+} // end of L_GetEntity
 
 //----------------------------------------
 //  world.GetXMLEntity
 //----------------------------------------
 static int L_GetXMLEntity (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->GetXMLEntity (my_checkstring (L, 1));
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetXMLEntity
+} // end of L_GetXMLEntity
 
 //----------------------------------------
 //  world.GetFrame
 //----------------------------------------
 static int L_GetFrame (lua_State *L)
-  {
-  lua_pushlightuserdata (L, (void *) doc (L)->GetFrame ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushlightuserdata (L, (void *)pDoc->GetFrame ());
   return 1;  // number of result fields
-  } // end of L_GetFrame
+} // end of L_GetFrame
 
 //----------------------------------------
 //  world.GetGlobalOption
 //----------------------------------------
 static int L_GetGlobalOption (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetGlobalOption (my_checkstring (L, 1));
-  return pushVariant (L, v);
-  } // end of L_GetGlobalOption
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetGlobalOption (my_checkstring (L, 1)));
+} // end of L_GetGlobalOption
 
 
 //----------------------------------------
 //  world.GetGlobalOptionList
 //----------------------------------------
 static int L_GetGlobalOptionList (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetGlobalOptionList ();
-  return pushVariant (L, v);
-  } // end of L_GetGlobalOptionList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetGlobalOptionList ());
+} // end of L_GetGlobalOptionList
 
 //----------------------------------------
 //  world.GetHostAddress
 //----------------------------------------
 static int L_GetHostAddress (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetHostAddress (
-            my_checkstring (L, 1)   // HostName
-            );
-  return pushVariant (L, v);
-  } // end of L_GetHostAddress
+  return pushVariant (L, pDoc->GetHostAddress (
+      my_checkstring (L, 1) // HostName
+      ));
+} // end of L_GetHostAddress
 
 
 //----------------------------------------
 //  world.GetHostName
 //----------------------------------------
 static int L_GetHostName (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->GetHostName (my_checkstring (L, 1));
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetHostName
+} // end of L_GetHostName
 
 
 //----------------------------------------
 //  world.GetInfo
 //----------------------------------------
 static int L_GetInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetInfo (
-            my_checknumber (L, 1)   // InfoType
-            );
-  return pushVariant (L, v);
-  } // end of L_GetInfo
+  return pushVariant (L, pDoc->GetInfo (
+      my_checklong (L, 1) // InfoType
+      ));
+} // end of L_GetInfo
 
 
 //----------------------------------------
 //  world.GetInternalCommandsList
 //----------------------------------------
 static int L_GetInternalCommandsList (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetInternalCommandsList ();
-  return pushVariant (L, v);
-  } // end of L_GetInternalCommandsList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetInternalCommandsList ());
+} // end of L_GetInternalCommandsList
 
 
 //----------------------------------------
 //  world.GetLineCount
 //----------------------------------------
 static int L_GetLineCount (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetLineCount ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetLineCount ());
   return 1;  // number of result fields
-  } // end of L_GetLineCount
+} // end of L_GetLineCount
 
 
 //----------------------------------------
@@ -2540,344 +2528,331 @@ static int L_GetLineCount (lua_State *L)
 // extension - for info type 0 or omitted, returns a table
 //----------------------------------------
 static int L_GetLineInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
-  int iLine = my_checknumber (L, 1);
-  int iType = my_optnumber (L, 2, 0);
+
+  long  iLine = my_checklong (L, 1);
+  short iType = my_optshort (L, 2, 0);
   
-  if (iType == 0)
-    {
-    // check line exists
-    if (iLine <= 0 || iLine > pDoc->m_LineList.GetCount ())
-      return 0;     // no result for no line
+  if (iType > 0)
+    // normal behaviour
+    return pushVariant (L, pDoc->GetLineInfo (iLine, iType));
+
+  // check line exists
+  if (iLine <= 0 || iLine > pDoc->m_LineList.GetCount ())
+    return 0;     // no result for no line
 
   // get pointer to line in question
+  CLine * pLine = pDoc->m_LineList.GetAt (pDoc->GetLinePosition (iLine - 1));
 
-    CLine * pLine = pDoc->m_LineList.GetAt (pDoc->GetLinePosition (iLine - 1));
+  lua_newtable(L);
+  MakeTableItem     (L, "text",     CString (pLine->text, pLine->len)); // 1
+  MakeTableItem     (L, "length",   pLine->len); // 2
+  MakeTableItemBool (L, "newline",  pLine->hard_return); // 3
+  MakeTableItemBool (L, "note",     (pLine->flags & COMMENT) != 0); // 4
+  MakeTableItemBool (L, "user",     (pLine->flags & USER_INPUT) != 0); // 5
+  MakeTableItemBool (L, "log",      (pLine->flags & LOG_LINE) != 0); // 6
+  MakeTableItemBool (L, "bookmark", (pLine->flags & BOOKMARK) != 0); // 7
+  MakeTableItemBool (L, "hr",       (pLine->flags & HORIZ_RULE) != 0); // 8
+  MakeTableItem     (L, "time",     (int) pLine->m_theTime.GetTime ()); // 9a
+  MakeTableItem     (L, "timestr",  COleDateTime (pLine->m_theTime.GetTime ())); // 9b
+  MakeTableItem     (L, "line",     pLine->m_nLineNumber); // 10
+  MakeTableItem     (L, "styles",   pLine->styleList.GetCount ()); // 11
 
-    lua_newtable(L);                                                            
-    MakeTableItem     (L, "text",     CString (pLine->text, pLine->len)); // 1
-    MakeTableItem     (L, "length",   pLine->len); // 2
-    MakeTableItemBool (L, "newline",  pLine->hard_return); // 3
-    MakeTableItemBool (L, "note",     (pLine->flags & COMMENT) != 0); // 4
-    MakeTableItemBool (L, "user",     (pLine->flags & USER_INPUT) != 0); // 5
-    MakeTableItemBool (L, "log",      (pLine->flags & LOG_LINE) != 0); // 6
-    MakeTableItemBool (L, "bookmark", (pLine->flags & BOOKMARK) != 0); // 7
-    MakeTableItemBool (L, "hr",       (pLine->flags & HORIZ_RULE) != 0); // 8
-    MakeTableItem     (L, "time",     (int) pLine->m_theTime.GetTime ()); // 9a
-    MakeTableItem     (L, "timestr",  COleDateTime (pLine->m_theTime.GetTime ())); // 9b
-    MakeTableItem     (L, "line",     pLine->m_nLineNumber); // 10
-    MakeTableItem     (L, "styles",   pLine->styleList.GetCount ()); // 11
+  // high-performance timer
+  double ticks = (double) pLine->m_lineHighPerformanceTime.QuadPart / (double) App.m_iCounterFrequency;
+  MakeTableItemReal (L, "ticks", ticks);
 
-    // high-performance timer
-    double ticks = (double) pLine->m_lineHighPerformanceTime.QuadPart / (double) App.m_iCounterFrequency;
-    MakeTableItem (L, "ticks", ticks);
-
-    return 1;   // one table
-    }     // end of returning a table
-
-  // normal behaviour
-  VARIANT v = pDoc->GetLineInfo (iLine, iType);
-  return pushVariant (L, v);
-  } // end of L_GetLineInfo
+  return 1;   // one table
+} // end of L_GetLineInfo
 
 
 //----------------------------------------
 //  world.GetLinesInBufferCount
 //----------------------------------------
 static int L_GetLinesInBufferCount (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetLinesInBufferCount ());
+{
+  CMUSHclientDoc * pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetLinesInBufferCount ());
   return 1;  // number of result fields
-  } // end of L_GetLinesInBufferCount
+} // end of L_GetLinesInBufferCount
 
 
 //----------------------------------------
 //  world.GetLoadedValue
 //----------------------------------------
 static int L_GetLoadedValue (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetLoadedValue (
-            my_checkstring (L, 1)   // OptionName
-            );
-  return pushVariant (L, v);
-  } // end of L_GetLoadedValue
+  return pushVariant (L, pDoc->GetLoadedValue (
+      my_checkstring (L, 1) // OptionName
+      ));
+} // end of L_GetLoadedValue
 
-static void luaWindowPositionHelper (lua_State *L, const RECT & r)
-  {
+static inline void luaWindowPositionHelper (lua_State *L, const RECT & r)
+{
   lua_newtable(L);                                                            
-  MakeTableItem     (L, "left",   r.left);
-  MakeTableItem     (L, "top",    r.top);
-  MakeTableItem     (L, "width",  r.right - r.left);
-  MakeTableItem     (L, "height", r.bottom - r.top);
-  } // end of luaWindowPositionHelper
+  MakeTableItem (L, "left",   r.left);
+  MakeTableItem (L, "top",    r.top);
+  MakeTableItem (L, "width",  r.right - r.left);
+  MakeTableItem (L, "height", r.bottom - r.top);
+} // end of luaWindowPositionHelper
 
 //----------------------------------------
 //  world.GetMainWindowPosition  
 // - extension, return table rather than string
 //----------------------------------------
 static int L_GetMainWindowPosition (lua_State *L)
-  {
+{
   CWindowPlacement wp;
-  Frame.GetWindowPlacement(&wp);  
-
+  Frame.GetWindowPlacement(&wp);
   luaWindowPositionHelper (L, wp.rcNormalPosition);
   return 1;  // number of result fields
-  } // end of L_GetMainWindowPosition
+} // end of L_GetMainWindowPosition
 
 //----------------------------------------
 //  world.GetNotepadWindowPosition  
 // - extension, return table rather than string
 //----------------------------------------
 static int L_GetNotepadWindowPosition (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
 
   CTextDocument * pTextDoc = pDoc->FindNotepad (my_checkstring (L, 1));
-
   if (pTextDoc)
     {
-    CWindowPlacement wp;
-
     // get the view
-    POSITION pos=pTextDoc->GetFirstViewPosition();
-
+    POSITION pos = pTextDoc->GetFirstViewPosition();
     if (pos)
       {
       CView* pView = pTextDoc->GetNextView(pos);
-
       if (pView->IsKindOf(RUNTIME_CLASS(CTextView)))
         {
-        CTextView* pmyView = (CTextView*)pView;
-        pmyView->GetParentFrame ()->GetWindowPlacement(&wp);
+        CWindowPlacement wp;
+        ((CTextView*)pView)->GetParentFrame ()->GetWindowPlacement(&wp);
+
         luaWindowPositionHelper (L, wp.rcNormalPosition);
         return 1;  // number of result fields
         } // end of having the right type of view
-      }   // end of having a view
+      } // end of having a view
     } // end of having an existing notepad document
 
   return 0;   // no results, notepad not found
-  } // end of GetNotepadWindowPosition
+} // end of GetNotepadWindowPosition
 
 //----------------------------------------
 //  world.GetWorldWindowPosition  
 // - extension, return table rather than string
 //----------------------------------------
 static int L_GetWorldWindowPosition (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  int which = my_optnumber (L, 1, 1);  // Which
+
+  int  which  = my_optinteger (L, 1, 1); // Which
   bool screen = optboolean (L, 2, 0);  // client or screen
+
+  POSITION pos = pDoc->GetFirstViewPosition();
   int count = 0;
-
-  CWindowPlacement wp;
-
-  for(POSITION pos=pDoc->GetFirstViewPosition();pos!=NULL;)
+  while (pos != NULL)
     {
     CView* pView = pDoc->GetNextView(pos);
 
-    if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-      {
-      CSendView* pmyView = (CSendView*)pView;
+    if (!pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+      continue;
 
-      count++;
-      if (count != which)
-        continue;      // wrong one
+    ++count;
+    if (count != which)
+      continue;  // wrong one
 
-//        pmyView->GetParentFrame ()->GetClientRect (&wp.rcNormalPosition);
-      pmyView->GetParentFrame ()->GetWindowPlacement(&wp); 
+    CSendView* pmyView = (CSendView*)pView;
 
-      if (screen)
-        {
-        pmyView->GetParentFrame ()->ClientToScreen (&wp.rcNormalPosition);
-        }
-      luaWindowPositionHelper (L, wp.rcNormalPosition);
-      return 1;  // number of result fields
+    CWindowPlacement wp;
+    pmyView->GetParentFrame ()->GetWindowPlacement(&wp); 
+    if (screen)
+      pmyView->GetParentFrame ()->ClientToScreen (&wp.rcNormalPosition);
 
-      }	
+    luaWindowPositionHelper (L, wp.rcNormalPosition);
+    return 1;  // number of result fields
     }
 
   return 0; // oops, that one not found (returns nil)
-
-  } // end of L_GetWorldWindowPosition
+} // end of L_GetWorldWindowPosition
 
 
 //----------------------------------------
 //  world.MakeRegularExpression
 //----------------------------------------
 static int L_MakeRegularExpression (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   // uses helper routine to avoid using BSTR
   lua_pushstring (L, ConvertToRegularExpression(my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_MakeRegularExpression
+} // end of L_MakeRegularExpression
 
 //----------------------------------------
 //  world.GetMapColour
 //----------------------------------------
 static int L_GetMapColour (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->GetMapColour (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->GetMapColour (my_checklong (L, 1)));
   return 1;  // number of result fields
-  } // end of L_GetMapColour
+} // end of L_GetMapColour
 
 //----------------------------------------
 //  world.GetMappingCount
 //----------------------------------------
 static int L_GetMappingCount (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetMappingCount ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetMappingCount ());
   return 1;  // number of result fields
-  } // end of L_GetMappingCount
+} // end of L_GetMappingCount
 
 
 //----------------------------------------
 //  world.GetMappingItem
 //----------------------------------------
 static int L_GetMappingItem (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetMappingItem (
-            my_checknumber (L, 1)   // Item
-            );
-  return pushVariant (L, v);
-  } // end of L_GetMappingItem
+  return pushVariant (L, pDoc->GetMappingItem (
+      my_checklong (L, 1)   // Item
+      ));
+} // end of L_GetMappingItem
 
 
 //----------------------------------------
 //  world.GetMappingString
 //----------------------------------------
 static int L_GetMappingString (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetMappingString ();
-  return pushVariant (L, v);
-  } // end of L_GetMappingString
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetMappingString ());
+} // end of L_GetMappingString
 
 
 //----------------------------------------
 //  world.GetNotepadLength
 //----------------------------------------
 static int L_GetNotepadLength (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->GetNotepadLength (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_GetNotepadLength
+} // end of L_GetNotepadLength
 
 //----------------------------------------
 //  world.GetNotepadList
 //----------------------------------------
 static int L_GetNotepadList (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetNotepadList (optboolean (L, 1, 0));
-  return pushVariant (L, v);
-  } // end of L_GetNotepadList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetNotepadList (optboolean (L, 1, 0)));
+} // end of L_GetNotepadList
 
 //----------------------------------------
 //  world.GetNotepadText
 //----------------------------------------
 static int L_GetNotepadText (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->GetNotepadText (my_checkstring (L, 1));
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetNotepadText
+} // end of L_GetNotepadText
 
 
 //----------------------------------------
 //  world.GetNotes
 //----------------------------------------
 static int L_GetNotes (lua_State *L)
-  {
-  BSTR str = doc (L)->GetNotes ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR str = pDoc->GetNotes ();
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetNotes
+} // end of L_GetNotes
 
 //----------------------------------------
 //  world.GetNoteStyle
 //----------------------------------------
 static int L_GetNoteStyle (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetNoteStyle ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetNoteStyle ());
   return 1;  // number of result fields
-  } // end of L_GetNoteStyle
+} // end of L_GetNoteStyle
 
 
 //----------------------------------------
 //  world.GetOption
 //----------------------------------------
 static int L_GetOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->GetOption (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_GetOption
+} // end of L_GetOption
 
 
 //----------------------------------------
 //  world.GetOptionList
 //----------------------------------------
 static int L_GetOptionList (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetOptionList ();
-  return pushVariant (L, v);
-  } // end of L_GetOptionList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetOptionList ());
+} // end of L_GetOptionList
 
 //----------------------------------------
 //  world.PickColour
 //----------------------------------------
 static int L_PickColour (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->PickColour (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->PickColour (my_checklong (L, 1)));
   return 1;  // number of result fields
-  } // end of L_PickColour
+} // end of L_PickColour
 
 
 //----------------------------------------
 //  world.GetPluginAliasInfo
 //----------------------------------------
 static int L_GetPluginAliasInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetPluginAliasInfo (
-      my_checkstring (L, 1),    // PluginID
-      my_checkstring (L, 2),    // Name
-      my_checknumber (L, 3)     // Type
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetPluginAliasInfo
+  return pushVariant (L, pDoc->GetPluginAliasInfo (
+      my_checkstring (L, 1), // PluginID
+      my_checkstring (L, 2), // Name
+      my_checkshort  (L, 3)  // Type
+      ));  // number of result fields
+} // end of L_GetPluginAliasInfo
 
 
 //----------------------------------------
 //  world.GetPluginAliasList
 //----------------------------------------
 static int L_GetPluginAliasList (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetPluginAliasList (
-      my_checkstring (L, 1)    // PluginID
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetPluginAliasList
+  return pushVariant (L, pDoc->GetPluginAliasList (
+      my_checkstring (L, 1) // PluginID
+      ));  // number of result fields
+} // end of L_GetPluginAliasList
 
 
 //----------------------------------------
 //  world.GetPluginAliasOption
 //----------------------------------------
 static int L_GetPluginAliasOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetPluginAliasOption (
-      my_checkstring (L, 1),    // PluginID
-      my_checkstring (L, 2),    // Alias Name
-      my_checkstring (L, 3)     // Option Name
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetPluginAliasOption
+  return pushVariant (L, pDoc->GetPluginAliasOption (
+      my_checkstring (L, 1), // PluginID
+      my_checkstring (L, 2), // Alias Name
+      my_checkstring (L, 3)  // Option Name
+      ));  // number of result fields
+} // end of L_GetPluginAliasOption
 
 
 
@@ -2885,299 +2860,294 @@ static int L_GetPluginAliasOption (lua_State *L)
 //  world.GetPluginID
 //----------------------------------------
 static int L_GetPluginID (lua_State *L)
-  {
-  BSTR str = doc (L)->GetPluginID ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR str = pDoc->GetPluginID ();
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetPluginID
+} // end of L_GetPluginID
 
 
 //----------------------------------------
 //  world.GetPluginInfo
 //----------------------------------------
 static int L_GetPluginInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetPluginInfo (
-      my_checkstring (L, 1),    // PluginID
-      my_checknumber (L, 2)     // Type
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetPluginInfo
+  return pushVariant (L, pDoc->GetPluginInfo (
+      my_checkstring (L, 1), // PluginID
+      my_checkshort  (L, 2)  // Type
+      ));  // number of result fields
+} // end of L_GetPluginInfo
 
 
 //----------------------------------------
 //  world.GetPluginList
 //----------------------------------------
 static int L_GetPluginList (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetPluginList ();
-  return pushVariant (L, v);
-  } // end of L_GetPluginList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetPluginList ());
+} // end of L_GetPluginList
 
 
 //----------------------------------------
 //  world.GetPluginName
 //----------------------------------------
 static int L_GetPluginName (lua_State *L)
-  {
-  BSTR str = doc (L)->GetPluginName ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR str = pDoc->GetPluginName ();
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetPluginName
+} // end of L_GetPluginName
 
 
 //----------------------------------------
 //  world.GetPluginTimerInfo
 //----------------------------------------
 static int L_GetPluginTimerInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetPluginTimerInfo (
-      my_checkstring (L, 1),    // PluginID
-      my_checkstring (L, 2),    // Name
-      my_checknumber (L, 3)     // Type
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetPluginTimerInfo
+  return pushVariant (L, pDoc->GetPluginTimerInfo (
+      my_checkstring (L, 1), // PluginID
+      my_checkstring (L, 2), // Name
+      my_checkshort  (L, 3)  // Type
+      ));  // number of result fields
+} // end of L_GetPluginTimerInfo
 
 
 //----------------------------------------
 //  world.GetPluginTimerList
 //----------------------------------------
 static int L_GetPluginTimerList (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetPluginTimerList (
+  return pushVariant (L, pDoc->GetPluginTimerList (
       my_checkstring (L, 1)    // PluginID
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetPluginTimerList
+      ));  // number of result fields
+} // end of L_GetPluginTimerList
 
 
 //----------------------------------------
 //  world.GetPluginTimerOption
 //----------------------------------------
 static int L_GetPluginTimerOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetPluginTimerOption (
-      my_checkstring (L, 1),    // PluginID
-      my_checkstring (L, 2),    // Timer Name
-      my_checkstring (L, 3)     // Option Name
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetPluginTimerOption
+  return pushVariant (L, pDoc->GetPluginTimerOption (
+      my_checkstring (L, 1), // PluginID
+      my_checkstring (L, 2), // Timer Name
+      my_checkstring (L, 3)  // Option Name
+      ));  // number of result fields
+} // end of L_GetPluginTimerOption
 
 
 //----------------------------------------
 //  world.GetPluginTriggerInfo
 //----------------------------------------
 static int L_GetPluginTriggerInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   VARIANT v = pDoc->GetPluginTriggerInfo (
       my_checkstring (L, 1),    // PluginID
       my_checkstring (L, 2),    // Name
-      my_checknumber (L, 3)     // Type
+      my_checkshort  (L, 3)     // Type
     );
   return pushVariant (L, v);  // number of result fields
-  } // end of L_GetPluginTriggerInfo
+} // end of L_GetPluginTriggerInfo
 
 
 //----------------------------------------
 //  world.GetPluginTriggerList
 //----------------------------------------
 static int L_GetPluginTriggerList (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetPluginTriggerList (
+  return pushVariant (L, pDoc->GetPluginTriggerList (
       my_checkstring (L, 1)    // PluginID
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetPluginTriggerList
+      ));  // number of result fields
+} // end of L_GetPluginTriggerList
 
 
 //----------------------------------------
 //  world.GetPluginTriggerOption
 //----------------------------------------
 static int L_GetPluginTriggerOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetPluginTriggerOption (
+  return pushVariant (L, pDoc->GetPluginTriggerOption (
       my_checkstring (L, 1),    // PluginID
       my_checkstring (L, 2),    // Trigger Name
       my_checkstring (L, 3)     // Option Name
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetPluginTriggerOption
+      ));  // number of result fields
+} // end of L_GetPluginTriggerOption
 
 
 //----------------------------------------
 //  world.GetPluginVariable
 //----------------------------------------
 static int L_GetPluginVariable (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetPluginVariable (
+  return pushVariant (L, pDoc->GetPluginVariable (
       my_checkstring (L, 1),   // PluginID
       my_checkstring (L, 2)    // VariableName
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetPluginVariable
+      ));  // number of result fields
+} // end of L_GetPluginVariable
 
 
 //----------------------------------------
 //  world.GetPluginVariableList
 //----------------------------------------
 static int L_GetPluginVariableList (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
 
-  // plugin name
-  const char * PluginID = my_checkstring (L, 1);
-
   // lookup plugin
+  const char * PluginID = my_checkstring (L, 1);
   CPlugin * pPlugin = NULL;  
-  if (strlen (PluginID) > 0)  
-    {                         
+  if (PluginID[0] != '\0')
+    {
     pPlugin = pDoc->GetPlugin (PluginID); 
-    if (!pPlugin)             
-	    return 0;   // no results - non-empty plugin not found     
-    }                         
+    if (!pPlugin)
+      return 0;   // no results - non-empty plugin not found
+    }
+
   // save current plugin
   CPlugin * pOldPlugin = pDoc->m_CurrentPlugin;  
-  pDoc->m_CurrentPlugin = pPlugin;               
+  pDoc->m_CurrentPlugin = pPlugin;
                       
   // now get the variable list 
-  GetVariableListHelper (L, pDoc);                   
+  GetVariableListHelper (L, pDoc);
 
   // restore current plugin
-  pDoc->m_CurrentPlugin = pOldPlugin;            
+  pDoc->m_CurrentPlugin = pOldPlugin;
 
-  return 1;     // one result (one table)
-
-  } // end of L_GetPluginVariableList
+  return 1;     // one table
+} // end of L_GetPluginVariableList
 
 
 //----------------------------------------
 //  world.GetQueue
 //----------------------------------------
 static int L_GetQueue (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetQueue ();
-  return pushVariant (L, v);
-  } // end of L_GetQueue
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetQueue ());
+} // end of L_GetQueue
 
 
 //----------------------------------------
 //  world.GetReceivedBytes
 //----------------------------------------
 static int L_GetReceivedBytes (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->m_nBytesIn);
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushinteger (L, (lua_Integer) pDoc->m_nBytesIn);
   return 1;  // number of result fields
-  } // end of L_GetReceivedBytes
+} // end of L_GetReceivedBytes
 
 
 //----------------------------------------
 //  world.GetRecentLines
 //----------------------------------------
 static int L_GetRecentLines (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  BSTR str = pDoc->GetRecentLines (my_checknumber (L, 1));
+  BSTR str = pDoc->GetRecentLines (my_checklong (L, 1));
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetRecentLines
+} // end of L_GetRecentLines
 
 
 //----------------------------------------
 //  world.GetScriptTime
 //----------------------------------------
 static int L_GetScriptTime (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetScriptTime ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetScriptTime ());
   return 1;  // number of result fields
-  } // end of L_GetScriptTime
+} // end of L_GetScriptTime
 
 
 //----------------------------------------
 //  world.GetSelectionEndColumn
 //----------------------------------------
 static int L_GetSelectionEndColumn (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetSelectionEndColumn ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetSelectionEndColumn ());
   return 1;  // number of result fields
-  } // end of L_GetSelectionEndColumn
+} // end of L_GetSelectionEndColumn
 
 
 //----------------------------------------
 //  world.GetSelectionEndLine
 //----------------------------------------
 static int L_GetSelectionEndLine (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetSelectionEndLine ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetSelectionEndLine ());
   return 1;  // number of result fields
-  } // end of L_GetSelectionEndLine
+} // end of L_GetSelectionEndLine
 
 
 //----------------------------------------
 //  world.GetSelectionStartColumn
 //----------------------------------------
 static int L_GetSelectionStartColumn (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetSelectionStartColumn ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetSelectionStartColumn ());
   return 1;  // number of result fields
-  } // end of L_GetSelectionStartColumn
+} // end of L_GetSelectionStartColumn
 
 
 //----------------------------------------
 //  world.GetSelectionStartLine
 //----------------------------------------
 static int L_GetSelectionStartLine (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetSelectionStartLine ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetSelectionStartLine ());
   return 1;  // number of result fields
-  } // end of L_GetSelectionStartLine
+} // end of L_GetSelectionStartLine
 
 
 //----------------------------------------
 //  world.GetSentBytes
 //----------------------------------------
 static int L_GetSentBytes (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->m_nBytesOut);
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, (lua_Integer) pDoc->m_nBytesOut);
   return 1;  // number of result fields
-  } // end of L_GetSentBytes
+} // end of L_GetSentBytes
 
 
 //----------------------------------------
 //  world.GetSoundStatus
 //----------------------------------------
 static int L_GetSoundStatus (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetSoundStatus (my_checknumber (L, 1)));
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetSoundStatus (my_checkshort (L, 1)));
   return 1;  // number of result fields
-  } // end of L_GetSoundStatus
+} // end of L_GetSoundStatus
 
 
-static bool DoStyle (lua_State *L, 
-                      CMUSHclientDoc *pDoc, 
-                      CLine * pLine, 
-                      int iStyleNumber,
-                      CString & strText)
-  {
-
+static bool DoStyle (lua_State *L, CMUSHclientDoc *pDoc, 
+                     CLine * pLine, int iStyleNumber, CString & strText)
+{
   // check style exists
   if (iStyleNumber <= 0 || iStyleNumber > pLine->styleList.GetCount ())
     return true;   // error, style doesn't exist
 
-  CStyle * pStyle;
-  POSITION pos;
-  int iCol = 0;
-  int iCount = 1;
-
   // search for it sequentially so we know the column number, 
   // so we can get its text
-  for (pos = pLine->styleList.GetHeadPosition(); pos; iCount++)
+  POSITION pos = pLine->styleList.GetHeadPosition();
+  CStyle * pStyle = NULL;
+  int iCol = 0;
+  for (int iCount = 1; pos != NULL; ++iCount)
     {
     pStyle = pLine->styleList.GetNext (pos);
     if (iCount == iStyleNumber)
@@ -3187,25 +3157,21 @@ static bool DoStyle (lua_State *L,
       return true;   // error, style doesn't exist
 
     iCol += pStyle->iLength; // new column
-
     } // end of looping looking for it
 
-    int iAction = 0;
-    switch (pStyle->iFlags & ACTIONTYPE)
-      {
-      case ACTION_NONE:       iAction = 0; break;
-      case ACTION_SEND:       iAction = 1; break;
-        case ACTION_HYPERLINK:  iAction = 2; break;
-      case ACTION_PROMPT:     iAction = 3; break;
-      } // end of switch
+  int iAction = 0;
+  switch (pStyle->iFlags & ACTIONTYPE)
+    {
+    case ACTION_NONE:       iAction = 0; break;
+    case ACTION_SEND:       iAction = 1; break;
+    case ACTION_HYPERLINK:  iAction = 2; break;
+    case ACTION_PROMPT:     iAction = 3; break;
+    } // end of switch
 
+  COLORREF colour1, colour2;
+  pDoc->GetStyleRGB (pStyle, colour1, colour2);
 
-    COLORREF colour1,
-             colour2;
-
-    pDoc->GetStyleRGB (pStyle, colour1, colour2);
-    CAction * pAction = pStyle->pAction;
-
+  CAction * pAction = pStyle->pAction;
 //  1: text of style
 //  2: length of style run
 //  3: starting column of style
@@ -3240,23 +3206,22 @@ static bool DoStyle (lua_State *L,
   MakeTableItem     (L, "backcolour", colour2); // 15
 
   return false;   // OK return
-  } // end of DoStyle
+} // end of DoStyle
 
 //----------------------------------------
 //  world.GetStyleInfo
 // - extension will return a table of types, or table of tables
 //----------------------------------------
 static int L_GetStyleInfo (lua_State *L)
-  {
-
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
-  int iLine = my_checknumber (L, 1);            // LineNumber  
-  int iStyleNumber = my_optnumber (L, 2, 0);    // StyleNumber 
-  int iType = my_optnumber (L, 3, 0);           // InfoType    
+
+  int iLine        = (int) my_checknumber (L, 1);  // LineNumber  
+  int iStyleNumber = (int) my_optnumber (L, 2, 0); // StyleNumber 
+  int iType        = (int) my_optnumber (L, 3, 0); // InfoType    
 
   CLine * pLine = NULL;
   CString strText;
-
   if (iStyleNumber == 0 || iType == 0)  // extension
     {
     // check line exists
@@ -3264,25 +3229,21 @@ static int L_GetStyleInfo (lua_State *L)
       return 0;     // no result for no line
 
     // get pointer to line in question
-
     pLine = pDoc->m_LineList.GetAt (pDoc->GetLinePosition (iLine - 1));
     strText = CString (pLine->text, pLine->len);
-
     }
 
   // if style is zero, make a table per style
   if (iStyleNumber == 0)  // do all styles
     {
     lua_newtable(L);    // table has one entry per style                                                         
-    for (iStyleNumber = 1; iStyleNumber <= pLine->styleList.GetCount (); iStyleNumber++)
+    for (iStyleNumber = 1; iStyleNumber <= pLine->styleList.GetCount (); ++iStyleNumber)
       {
       if (iType == 0)   // all types wanted
         DoStyle (L, pDoc, pLine, iStyleNumber, strText);
       else
-        {   // a single type, use our usual routine to get it
-        VARIANT v = pDoc->GetStyleInfo (iLine, iStyleNumber, iType); 
-        pushVariant (L, v);
-        }
+        // a single type, use our usual routine to get it
+        pushVariant (L, pDoc->GetStyleInfo (iLine, iStyleNumber, iType));
 
       lua_rawseti(L, -2, iStyleNumber);  // put individual style table into line table
       }  // for each style
@@ -3294,240 +3255,222 @@ static int L_GetStyleInfo (lua_State *L)
     {
     if (DoStyle (L, pDoc, pLine, iStyleNumber, strText))
       return 0;   // error, no table returned
-    return 1;   // one table
+    else
+      return 1;   // one table
     }
 
   // here for usual behaviour
   VARIANT v = pDoc->GetStyleInfo (iLine, iStyleNumber, iType); 
   return pushVariant (L, v);
-  } // end of L_GetStyleInfo
+} // end of L_GetStyleInfo
 
 //----------------------------------------
 //  world.GetSysColor
 //----------------------------------------
 static int L_GetSysColor (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->GetSysColor (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->GetSysColor (my_checklong (L, 1)));
   return 1;  // number of result fields
-  } // end of L_GetSysColor
+} // end of L_GetSysColor
 
 //----------------------------------------
 //  world.GetSystemMetrics
 //----------------------------------------
 static int L_GetSystemMetrics (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->GetSystemMetrics (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->GetSystemMetrics (my_checklong (L, 1)));
   return 1;  // number of result fields
-  } // end of L_GetSystemMetrics
+} // end of L_GetSystemMetrics
 
 //----------------------------------------
 //  world.GetTimer
 //----------------------------------------
 static int L_GetTimer (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
 
-  VARIANT Hour, 
-          Minute, 
-          Second, 
-          ResponseText, 
-          Flags, 
-          ScriptName;
+  VARIANT Hour, Minute, Second, 
+          ResponseText, Flags, ScriptName;
 
   long result = pDoc->GetTimer(my_checkstring (L, 1),  // name
-                                  &Hour, 
-                                  &Minute, 
-                                  &Second, 
-                                  &ResponseText, 
-                                  &Flags, 
-                                  &ScriptName); 
+      &Hour, &Minute, &Second,
+      &ResponseText, &Flags, &ScriptName
+      );
 
-  lua_pushnumber (L, result);       // 1
-  pushVariant (L, Hour);            // 2
-  pushVariant (L, Minute);          // 3
-  pushVariant (L, Second);          // 4
-  pushVariant (L, ResponseText);    // 5
-  pushVariant (L, Flags);           // 6
-  pushVariant (L, ScriptName);      // 7
+  lua_pushnumber (L, result);    // 1
+  pushVariant (L, Hour);         // 2
+  pushVariant (L, Minute);       // 3
+  pushVariant (L, Second);       // 4
+  pushVariant (L, ResponseText); // 5
+  pushVariant (L, Flags);        // 6
+  pushVariant (L, ScriptName);   // 7
 
   return 7;  // number of result fields
-  } // end of L_GetTimer
+} // end of L_GetTimer
 
 
 //----------------------------------------
 //  world.GetTimerInfo
 //----------------------------------------
 static int L_GetTimerInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetTimerInfo (
+  return pushVariant (L, pDoc->GetTimerInfo (
       my_checkstring (L, 1),    // TimerName
-      my_checknumber (L, 2)     // Type
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetTimerInfo
+      my_checkshort  (L, 2)     // Type
+      ));  // number of result fields
+} // end of L_GetTimerInfo
 
 
 //----------------------------------------
 //  world.GetTimerList
 //----------------------------------------
 static int L_GetTimerList (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetTimerList ();
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetTimerList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetTimerList ());  // number of result fields
+} // end of L_GetTimerList
 
 
 //----------------------------------------
 //  world.GetTimerOption
 //----------------------------------------
 static int L_GetTimerOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetTimerOption (
-      my_checkstring (L, 1),    // TimerName
-      my_checkstring (L, 2)     // Option name
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetTimerOption
+  return pushVariant (L, pDoc->GetTimerOption (
+      my_checkstring (L, 1), // TimerName
+      my_checkstring (L, 2)  // Option name
+      ));  // number of result fields
+} // end of L_GetTimerOption
 
 
 //----------------------------------------
 //  world.GetTrigger
 //----------------------------------------
 static int L_GetTrigger (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
 
-  VARIANT MatchText, 
-          ResponseText, 
-          Flags, 
-          Colour, 
-          Wildcard, 
-          SoundFileName, 
-          ScriptName;
+  VARIANT MatchText, ResponseText,
+          Flags, Colour, Wildcard, 
+          SoundFileName, ScriptName;
 
   long result = pDoc->GetTrigger(my_checkstring (L, 1),  // name
-                                  &MatchText, 
-                                  &ResponseText, 
-                                  &Flags, 
-                                  &Colour, 
-                                  &Wildcard, 
-                                  &SoundFileName, 
-                                  &ScriptName); 
+      &MatchText, &ResponseText,
+      &Flags, &Colour, &Wildcard,
+      &SoundFileName, &ScriptName);
 
-  lua_pushnumber (L, result);      // 1
-  pushVariant (L, MatchText);      // 2
-  pushVariant (L, ResponseText);   // 3
-  pushVariant (L, Flags);          // 4
-  pushVariant (L, Colour);         // 5
-  pushVariant (L, Wildcard);       // 6
-  pushVariant (L, SoundFileName);  // 7
-  pushVariant (L, ScriptName);     // 8
+  lua_pushnumber (L, result);     // 1
+  pushVariant (L, MatchText);     // 2
+  pushVariant (L, ResponseText);  // 3
+  pushVariant (L, Flags);         // 4
+  pushVariant (L, Colour);        // 5
+  pushVariant (L, Wildcard);      // 6
+  pushVariant (L, SoundFileName); // 7
+  pushVariant (L, ScriptName);    // 8
 
   return 8;  // number of result fields
-  } // end of L_GetTrigger
+} // end of L_GetTrigger
 
 
 //----------------------------------------
 //  world.GetTriggerInfo
 //----------------------------------------
 static int L_GetTriggerInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetTriggerInfo (
-      my_checkstring (L, 1),    // TriggerName
-      my_checknumber (L, 2)     // Type
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetTriggerInfo
+  return pushVariant (L, pDoc->GetTriggerInfo (
+      my_checkstring (L, 1), // TriggerName
+      my_checkshort  (L, 2)  // Type
+      ));  // number of result fields
+} // end of L_GetTriggerInfo
 
 
 //----------------------------------------
 //  world.GetTriggerList
 //----------------------------------------
 static int L_GetTriggerList (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetTriggerList ();
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetTriggerList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetTriggerList ());  // number of result fields
+} // end of L_GetTriggerList
 
 
 //----------------------------------------
 //  world.GetTriggerOption
 //----------------------------------------
 static int L_GetTriggerOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetTriggerOption (
-      my_checkstring (L, 1),    // TriggerName
-      my_checkstring (L, 2)     // Option name
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetTriggerOption
+  return pushVariant (L, pDoc->GetTriggerOption (
+      my_checkstring (L, 1), // TriggerName
+      my_checkstring (L, 2)  // Option name
+      ));  // number of result fields
+} // end of L_GetTriggerOption
 
 
 //----------------------------------------
 //  world.GetTriggerWildcard
 //----------------------------------------
 static int L_GetTriggerWildcard (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetTriggerWildcard (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2)     // Wildcard name
-    );
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetTriggerWildcard
+  return pushVariant (L, pDoc->GetTriggerWildcard (
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2)  // Wildcard name
+      ));  // number of result fields
+} // end of L_GetTriggerWildcard
 
 
 //----------------------------------------
 //  world.GetUdpPort
 //----------------------------------------
 static int L_GetUdpPort (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->GetUdpPort (
-      my_checknumber (L, 1),    // First
-      my_checknumber (L, 2)     // Last
-    ));
+      my_checklong (L, 1), // First
+      my_checklong (L, 2)  // Last
+      ));
   return 1;  // number of result fields
-  } // end of L_GetUdpPort
+} // end of L_GetUdpPort
 
 
 //----------------------------------------
 //  world.GetUniqueID
 //----------------------------------------
 static int L_GetUniqueID (lua_State *L)
-  {
-  BSTR str = doc (L)->GetUniqueID ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR str = pDoc->GetUniqueID ();
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetUniqueID
+} // end of L_GetUniqueID
 
 
 //----------------------------------------
 //  world.GetUniqueNumber
 //----------------------------------------
 static int L_GetUniqueNumber (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetUniqueNumber ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetUniqueNumber ());
   return 1;  // number of result fields
-  } // end of L_GetUniqueNumber
+} // end of L_GetUniqueNumber
 
 
 //----------------------------------------
 //  world.GetVariable
 //----------------------------------------
 static int L_GetVariable (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->GetVariable (
-      my_checkstring (L, 1)    // VariableName
-    );
-  return pushVariant (L, v);  // number of result fields 
-  } // end of L_GetVariable
+  return pushVariant (L, pDoc->GetVariable (
+      my_checkstring (L, 1) // VariableName
+      ));  // number of result fields 
+} // end of L_GetVariable
 
 
 //----------------------------------------
@@ -3535,24 +3478,25 @@ static int L_GetVariable (lua_State *L)
 // extension - returns variable name *and* value
 //----------------------------------------
 static int L_GetVariableList (lua_State *L)
-  {
-  GetVariableListHelper (L, doc (L));
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  GetVariableListHelper (L, pDoc);
   return 1;  // number of result fields  (one table)
-  } // end of L_GetVariableList
+} // end of L_GetVariableList
 
 
 //----------------------------------------
 //  world.GetWorld
 //----------------------------------------
 static int L_GetWorld (lua_State *L)
-  {
-  CString strName = my_checkstring (L, 1);
+{
+  const char* strName = my_checkstring (L, 1);
 
-  for (POSITION docPos = App.m_pWorldDocTemplate->GetFirstDocPosition();
-      docPos != NULL; )
+  POSITION docPos = App.m_pWorldDocTemplate->GetFirstDocPosition();
+  CMUSHclientDoc * pDoc = NULL;
+  while (docPos != NULL)
     {
-    CMUSHclientDoc * pDoc = (CMUSHclientDoc *) App.m_pWorldDocTemplate->GetNextDoc(docPos);
-  
+    pDoc = (CMUSHclientDoc *) App.m_pWorldDocTemplate->GetNextDoc(docPos);
     if (pDoc->m_mush_name.CompareNoCase (strName) == 0)
       {
       // our "world" is a userdatum which is a pointer (to a pointer) to the world
@@ -3560,27 +3504,27 @@ static int L_GetWorld (lua_State *L)
       luaL_getmetatable(L, mushclient_typename);
       lua_setmetatable(L, -2);
       *ud = pDoc;    // store pointer to this world in the userdata
-      return 1;
 
+      return 1;
       } // end of world found
     } // end of doing each document
 
   return 0;  // number of result fields
-  } // end of L_GetWorld
+} // end of L_GetWorld
 
 
 //----------------------------------------
 //  world.GetWorldById
 //----------------------------------------
 static int L_GetWorldById (lua_State *L)
-  {
+{
   CString WorldID = my_checkstring (L, 1);
 
-  for (POSITION docPos = App.m_pWorldDocTemplate->GetFirstDocPosition();
-      docPos != NULL; )
+  POSITION docPos = App.m_pWorldDocTemplate->GetFirstDocPosition();
+  CMUSHclientDoc * pDoc = NULL;
+  while (docPos != NULL)
     {
-    CMUSHclientDoc * pDoc = (CMUSHclientDoc *) App.m_pWorldDocTemplate->GetNextDoc(docPos);
-  
+    pDoc = (CMUSHclientDoc *) App.m_pWorldDocTemplate->GetNextDoc(docPos);
     if (pDoc->m_strWorldID.CompareNoCase (WorldID) == 0)
       {
       // our "world" is a userdatum which is a pointer (to a pointer) to the world
@@ -3588,457 +3532,455 @@ static int L_GetWorldById (lua_State *L)
       luaL_getmetatable(L, mushclient_typename);
       lua_setmetatable(L, -2);
       *ud = pDoc;    // store pointer to this world in the userdata
-      return 1;
 
+      return 1;
       } // end of world found
     } // end of doing each document
 
   return 0;  // number of result fields
-  } // end of L_GetWorldById
+} // end of L_GetWorldById
 
 
 //----------------------------------------
 //  world.GetWorldID
 //----------------------------------------
 static int L_GetWorldID (lua_State *L)
-  {
-  BSTR str = doc (L)->GetWorldID ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR str = pDoc->GetWorldID ();
   return pushBstr (L, str);  // number of result fields
-  } // end of L_GetWorldID
+} // end of L_GetWorldID
 
 //----------------------------------------
 //  world.GetWorldIdList
 //----------------------------------------
 static int L_GetWorldIdList (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetWorldIdList ();
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetWorldIdList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetWorldIdList ());  // number of result fields
+} // end of L_GetWorldIdList
 
 
 //----------------------------------------
 //  world.GetWorldList
 //----------------------------------------
 static int L_GetWorldList (lua_State *L)
-  {
-  VARIANT v = doc (L)->GetWorldList ();
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_GetWorldList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->GetWorldList ());  // number of result fields
+} // end of L_GetWorldList
 
 
 //----------------------------------------
 //  world.Hash
 //----------------------------------------
 static int L_Hash (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->Hash (my_checkstring (L, 1));
   return pushBstr (L, str);  // number of result fields
-  } // end of L_Hash
+} // end of L_Hash
 
 //----------------------------------------
 //  world.Help
 //----------------------------------------
 static int L_Help (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->Help (my_optstring (L, 1, ""));
   return 0;  // number of result fields
-  } // end of L_Help
+} // end of L_Help
 
 //----------------------------------------
 //  world.Hyperlink
 //----------------------------------------
 static int L_Hyperlink (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->Hyperlink (
-                      my_checkstring (L, 1),  // Action
-                      my_checkstring (L, 2),  // Text
-                      my_checkstring (L, 3),  // Hint
-                      my_checkstring (L, 4),  // TextColour
-                      my_checkstring (L, 5),  // BackColour
-                      optboolean (L, 6, 0)   // URL  - optional
-                      );
+      my_checkstring (L, 1),  // Action
+      my_checkstring (L, 2),  // Text
+      my_checkstring (L, 3),  // Hint
+      my_checkstring (L, 4),  // TextColour
+      my_checkstring (L, 5),  // BackColour
+      optboolean (L, 6, 0)    // URL  - optional
+      );
   return 0;  // number of result fields
-  } // end of L_Hyperlink
+} // end of L_Hyperlink
 
 
 //----------------------------------------
 //  world.ImportXML
 //----------------------------------------
 static int L_ImportXML (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ImportXML (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ImportXML
+} // end of L_ImportXML
 
 
 //----------------------------------------
 //  world.Info
 //----------------------------------------
 static int L_Info (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   pDoc->Info (concatArgs (L).c_str ());
-//  lua_concat (L, lua_gettop (L));
-//  pDoc->Info (my_checkstring (L, 1));
   return 0;  // number of result fields
-  } // end of L_Info
+} // end of L_Info
 
 
 //----------------------------------------
 //  world.InfoBackground
 //----------------------------------------
 static int L_InfoBackground (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->InfoBackground (my_checkstring (L, 1));
   return 0;  // number of result fields
-  } // end of L_InfoBackground
+} // end of L_InfoBackground
 
 
 //----------------------------------------
 //  world.InfoClear
 //----------------------------------------
 static int L_InfoClear (lua_State *L)
-  {
-  doc (L)->InfoClear ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  pDoc->InfoClear ();
   return 0;  // number of result fields
-  } // end of L_InfoClear
+} // end of L_InfoClear
 
 
 //----------------------------------------
 //  world.InfoColour
 //----------------------------------------
 static int L_InfoColour (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->InfoColour (my_checkstring (L, 1));
   return 0;  // number of result fields
-  } // end of L_InfoColour
+} // end of L_InfoColour
 
 
 //----------------------------------------
 //  world.InfoFont
 //----------------------------------------
 static int L_InfoFont (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->InfoFont (
-                    my_checkstring (L, 1),    // FontName
-                    my_checknumber (L, 2),    // Size
-                    my_checknumber (L, 3)     // Style
-                    );
+      my_checkstring (L, 1), // FontName
+      my_checkshort  (L, 2), // Size
+      my_checkshort  (L, 3)  // Style
+      );
   return 0;  // number of result fields
-  } // end of L_InfoFont
+} // end of L_InfoFont
 
 
 //----------------------------------------
 //  world.IsAlias
 //----------------------------------------
 static int L_IsAlias (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->IsAlias (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_IsAlias
+} // end of L_IsAlias
 
 
 //----------------------------------------
 //  world.IsConnected
 //----------------------------------------
 static int L_IsConnected (lua_State *L)
-  {
-  lua_pushboolean (L, doc (L)->IsConnected ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushboolean (L, pDoc->IsConnected ());
   return 1;  // number of result fields
-  } // end of L_IsConnected
+} // end of L_IsConnected
 
 
 //----------------------------------------
 //  world.IsLogOpen
 //----------------------------------------
 static int L_IsLogOpen (lua_State *L)
-  {
-  lua_pushboolean (L, doc (L)->IsLogOpen ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushboolean (L, pDoc->IsLogOpen ());
   return 1;  // number of result fields
-  } // end of L_IsLogOpen
+} // end of L_IsLogOpen
 
 
 //----------------------------------------
 //  world.IsPluginInstalled
 //----------------------------------------
 static int L_IsPluginInstalled (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushboolean (L, pDoc->IsPluginInstalled (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_IsPluginInstalled
+} // end of L_IsPluginInstalled
 
 
 //----------------------------------------
 //  world.IsTimer
 //----------------------------------------
 static int L_IsTimer (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->IsTimer (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_IsTimer
+} // end of L_IsTimer
 
 
 //----------------------------------------
 //  world.IsTrigger
 //----------------------------------------
 static int L_IsTrigger (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->IsTrigger (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_IsTrigger
+} // end of L_IsTrigger
 
 
 //----------------------------------------
 //  world.LoadPlugin
 //----------------------------------------
 static int L_LoadPlugin (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->LoadPlugin (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_LoadPlugin
+} // end of L_LoadPlugin
 
 
 //----------------------------------------
 //  world.GetLogInput
 //----------------------------------------
 static int L_GetLogInput (lua_State *L)
-  {
-  lua_pushboolean (L, doc (L)->m_log_input);
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushboolean (L, pDoc->m_log_input);
   return 1;  // number of result fields
-  } // end of L_GetLogInput
+} // end of L_GetLogInput
 
 //----------------------------------------
 //  world.SetLogInput
 //----------------------------------------
 static int L_SetLogInput (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->m_log_input = optboolean (L, 1, 1) != 0;
+  pDoc->m_log_input = (optboolean (L, 1, 1) != 0);
   return 0;  // number of result fields
-  } // end of L_SetLogInput
+} // end of L_SetLogInput
 
 
 //----------------------------------------
 //  world.GetLogNotes
 //----------------------------------------
 static int L_GetLogNotes (lua_State *L)
-  {
-  lua_pushboolean (L, doc (L)->m_bLogNotes);
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushboolean (L, pDoc->m_bLogNotes);
   return 1;  // number of result fields
-  } // end of L_GetLogNotes
+} // end of L_GetLogNotes
 
 //----------------------------------------
 //  world.SetLogNotes
 //----------------------------------------
 static int L_SetLogNotes (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->m_bLogNotes = optboolean (L, 1, 1) != 0;
+  pDoc->m_bLogNotes = (optboolean (L, 1, 1) != 0);
   return 0;  // number of result fields
-  } // end of L_SetLogNotes
+} // end of L_SetLogNotes
 
 
 //----------------------------------------
 //  world.GetLogOutput
 //----------------------------------------
 static int L_GetLogOutput (lua_State *L)
-  {
-  lua_pushboolean (L, doc (L)->m_bLogOutput);
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushboolean (L, pDoc->m_bLogOutput);
   return 1;  // number of result fields
-  } // end of L_GetLogOutput
+} // end of L_GetLogOutput
 
 //----------------------------------------
 //  world.SetLogOutput
 //----------------------------------------
 static int L_SetLogOutput (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->m_bLogOutput = optboolean (L, 1, 1) != 0;
+  pDoc->m_bLogOutput = (optboolean (L, 1, 1) != 0);
   return 0;  // number of result fields
-  } // end of L_SetLogOutput
+} // end of L_SetLogOutput
 
 //----------------------------------------
 //  world.LogSend
 //----------------------------------------
 static int L_LogSend (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   lua_pushnumber (L, pDoc->LogSend (concatArgs (L).c_str ()));
-
-//  lua_concat (L, lua_gettop (L));
-//  lua_pushnumber (L, pDoc->LogSend (my_checkstring (L, 1)));
-
   return 1;  // number of result fields
-  } // end of L_LogSend
+} // end of L_LogSend
 
 //----------------------------------------
 //  world.MapColour
 //----------------------------------------
 static int L_MapColour (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->MapColour (
-      my_checknumber (L, 1),  // Original
-      my_checknumber (L, 2)   // Replacement
+      my_checklong (L, 1), // Original
+      my_checklong (L, 2)  // Replacement
       );
   return 0;  // number of result fields
-  } // end of L_MapColour
+} // end of L_MapColour
 
 //----------------------------------------
 //  world.MapColourList
 //----------------------------------------
 static int L_MapColourList (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
-  lua_newtable(L);                                                            
+
+  lua_newtable(L);
 
   map<COLORREF, COLORREF>::const_iterator it;
-
-  for (it = pDoc->m_ColourTranslationMap.begin (); 
-       it != pDoc->m_ColourTranslationMap.end (); it++)
+  for (it = pDoc->m_ColourTranslationMap.begin ();
+       it != pDoc->m_ColourTranslationMap.end ();
+       ++it)
     {
     lua_pushnumber (L, it->first);
     lua_pushnumber (L, it->second);
     lua_rawset(L, -3);
-    }      // end of looping through each colour
+    }  // end of looping through each colour
 
   return 1;  // 1 table
-  } // end of L_MapColourList
+} // end of L_MapColourList
 
 //----------------------------------------
 //  world.GetMapping
 //----------------------------------------
 static int L_GetMapping (lua_State *L)
-  {
-  lua_pushboolean (L, doc (L)->m_bMapping);
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushboolean (L, pDoc->m_bMapping);
   return 1;  // number of result fields
-  } // end of L_GetMapping
+} // end of L_GetMapping
 
 //----------------------------------------
 //  world.SetMapping
 //----------------------------------------
 static int L_SetMapping (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->m_bMapping = optboolean (L, 1, 1) != 0;
+  pDoc->m_bMapping = (optboolean (L, 1, 1) != 0);
   return 0;  // number of result fields
-  } // end of L_SetMapping
+} // end of L_SetMapping
 
 //----------------------------------------
 //  world.Metaphone
 //----------------------------------------
 static int L_Metaphone (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  BSTR str = pDoc->Metaphone (my_checkstring (L, 1),
-                              my_optnumber (L, 2, 4));
+  BSTR str = pDoc->Metaphone (my_checkstring (L, 1), my_optshort (L, 2, 4));
   return pushBstr (L, str);
-  } // end of L_Metaphone
+} // end of L_Metaphone
 
 //----------------------------------------
 //  world.GetNormalColour
 //----------------------------------------
 static int L_GetNormalColour (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->GetNormalColour (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->GetNormalColour (my_checkshort (L, 1)));
   return 1;  // number of result fields
-  } // end of GetNormalColour
+} // end of GetNormalColour
 
 //----------------------------------------
 //  world.SetNormalColour
 //----------------------------------------
 static int L_SetNormalColour (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->SetNormalColour (
-      my_checknumber (L, 1),  // WhichColour
-      my_checknumber (L, 2)   // nNewValue
+      my_checkshort (L, 1), // WhichColour
+      my_checklong  (L, 2)  // nNewValue
       );
   return 0;  // number of result fields
-  } // end of SetNormalColour
+} // end of SetNormalColour
 
 //----------------------------------------
 //  world.MoveMainWindow
 //----------------------------------------
 static int L_MoveMainWindow (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->MoveMainWindow (
-      my_checknumber (L, 1),  // Left
-      my_checknumber (L, 2),  // Top
-      my_checknumber (L, 3),  // Width
-      my_checknumber (L, 4)   // Height
+      my_checklong (L, 1), // Left
+      my_checklong (L, 2), // Top
+      my_checklong (L, 3), // Width
+      my_checklong (L, 4)  // Height
       );
   return 0;  // number of result fields
-  } // end of L_MoveMainWindow
+} // end of L_MoveMainWindow
 
 //----------------------------------------
 //  world.MoveWorldWindow
 //----------------------------------------
 static int L_MoveWorldWindow (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->MoveWorldWindowX (
-      my_checknumber (L, 1),  // Left
-      my_checknumber (L, 2),  // Top
-      my_checknumber (L, 3),  // Width
-      my_checknumber (L, 4),   // Height
-      my_optnumber (L, 5, 1)  // Which
+      my_checklong (L, 1),  // Left
+      my_checklong (L, 2),  // Top
+      my_checklong (L, 3),  // Width
+      my_checklong (L, 4),  // Height
+      my_optshort (L, 5, 1) // Which
       );
   return 0;  // number of result fields
-  } // end of L_MoveWorldWindow
+} // end of L_MoveWorldWindow
 
 //----------------------------------------
 //  world.MoveNotepadWindow
 //----------------------------------------
 static int L_MoveNotepadWindow (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushboolean (L, pDoc->MoveNotepadWindow (
-      my_checkstring (L, 1),  // title
-      my_checknumber (L, 2),  // Left
-      my_checknumber (L, 3),  // Top
-      my_checknumber (L, 4),  // Width
-      my_checknumber (L, 5)   // Height
+      my_checkstring (L, 1), // Title
+      my_checklong   (L, 2), // Left
+      my_checklong   (L, 3), // Top
+      my_checklong   (L, 4), // Width
+      my_checklong   (L, 5)  // Height
       ));
   return 1;  // number of result fields
-  } // end of L_MoveNotepadWindow
+} // end of L_MoveNotepadWindow
 
 //----------------------------------------
 //  world.MtSrand
 //----------------------------------------
 static int L_MtSrand (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
 
-  const int table = 1;
-
 // Lua extension - allow for table of seeds
-
-  if (lua_istable (L, table))
+  if (lua_istable (L, 1))
     {
     vector <unsigned long> v;
 
     // standard Lua table iteration
-    for (lua_pushnil (L); lua_next (L, table) != 0; lua_pop (L, 1))
+    for (lua_pushnil (L); lua_next (L, 1) != 0; lua_pop (L, 1))
       {
       if (!lua_isnumber (L, -1))
         luaL_error (L, "MtSrand table must consist of numbers");
-
-      v.push_back (lua_tonumber (L, -1));
+      v.push_back (lua_tointeger (L, -1));
       } // end of extracting vector of keys
 
     if (v.size () == 0)
@@ -4047,620 +3989,617 @@ static int L_MtSrand (lua_State *L)
     init_by_array (&v [0], v.size ());
     }
   else
-    pDoc->MtSrand (my_checknumber (L, 1));
+    pDoc->MtSrand (my_checklong (L, 1));
+
   return 0;  // number of result fields
-  } // end of L_MtSrand
+} // end of L_MtSrand
 
 //----------------------------------------
 //  world.MtRand
 //----------------------------------------
 static int L_MtRand (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->MtRand ());
   return 1;  // number of result fields
-  } // end of L_MtRand
+} // end of L_MtRand
 
 //----------------------------------------
 //  world.Note
 //----------------------------------------
 static int L_Note (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   pDoc->Note (concatArgs (L).c_str ());
-
-//  lua_concat (L, lua_gettop (L));
-//  pDoc->Note (my_checkstring (L, 1));
-
   return 0;  // number of result fields
-  } // end of L_Note
+} // end of L_Note
 
 //----------------------------------------
 //  world.NoteHr
 //----------------------------------------
 static int L_NoteHr (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   pDoc->NoteHr ();
   return 0;  // number of result fields
-  } // end of L_NoteHr
+} // end of L_NoteHr
 
 
 //----------------------------------------
 //  world.GetNoteColour
 //----------------------------------------
 static int L_GetNoteColour (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetNoteColour ());
+{
+  CMUSHclientDoc * pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetNoteColour ());
   return 1;  // number of result fields
-  } // end of GetNoteColour
+} // end of GetNoteColour
 
 //----------------------------------------
 //  world.SetNoteColour
 //----------------------------------------
 static int L_SetNoteColour (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->SetNoteColour (
-      my_checknumber (L, 1)   // nNewValue
-      );
+  pDoc->SetNoteColour (my_checkshort (L, 1));
   return 0;  // number of result fields
-  } // end of SetNoteColour
+} // end of SetNoteColour
 
 
 //----------------------------------------
 //  world.GetNoteColourBack
 //----------------------------------------
 static int L_GetNoteColourBack (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetNoteColourBack ());
+{
+  CMUSHclientDoc * pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetNoteColourBack ());
   return 1;  // number of result fields
-  } // end of GetNoteColourBack
+} // end of GetNoteColourBack
 
 //----------------------------------------
 //  world.SetNoteColourBack
 //----------------------------------------
 static int L_SetNoteColourBack (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->SetNoteColourBack (
-      my_checknumber (L, 1)   // nNewValue
-      );
+  pDoc->SetNoteColourBack (my_checklong (L, 1));
   return 0;  // number of result fields
-  } // end of SetNoteColourBack
+} // end of SetNoteColourBack
 
 
 //----------------------------------------
 //  world.GetNoteColourFore
 //----------------------------------------
 static int L_GetNoteColourFore (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->GetNoteColourFore ());
+{
+  CMUSHclientDoc * pDoc = doc (L);
+  lua_pushnumber (L, pDoc->GetNoteColourFore ());
   return 1;  // number of result fields
-  } // end of GetNoteColourFore
+} // end of GetNoteColourFore
 
 //----------------------------------------
 //  world.SetNoteColourFore
 //----------------------------------------
 static int L_SetNoteColourFore (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->SetNoteColourFore (
-      my_checknumber (L, 1)   // nNewValue
-      );
+  pDoc->SetNoteColourFore (my_checklong (L, 1));
   return 0;  // number of result fields
-  } // end of SetNoteColourFore
+} // end of SetNoteColourFore
 
 
 //----------------------------------------
 //  world.NoteColourName
 //----------------------------------------
 static int L_NoteColourName (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->NoteColourName (
-      my_checkstring (L, 1),    // Foreground
-      my_checkstring (L, 2)     // Background
+      my_checkstring (L, 1), // Foreground
+      my_checkstring (L, 2)  // Background
       );
   return 0;  // number of result fields
-  } // end of L_NoteColourName
+} // end of L_NoteColourName
 
 
 //----------------------------------------
 //  world.NoteColourRGB
 //----------------------------------------
 static int L_NoteColourRGB (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->NoteColourRGB (
-      my_checknumber (L, 1),    // Foreground
-      my_checknumber (L, 2)     // Background
+      my_checklong (L, 1), // Foreground
+      my_checklong (L, 2)  // Background
       );
   return 0;  // number of result fields
-  } // end of L_NoteColourRGB
+} // end of L_NoteColourRGB
 
 //----------------------------------------
 //  world.NotepadColour
 //----------------------------------------
 static int L_NotepadColour (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->NotepadColour (
-        my_checkstring (L, 1),   // Title
-        my_checkstring (L, 2),   // TextColour
-        my_checkstring (L, 3)    // BackgroundColour
-                      ));
+      my_checkstring (L, 1), // Title
+      my_checkstring (L, 2), // TextColour
+      my_checkstring (L, 3)  // BackgroundColour
+      ));
   return 1;  // number of result fields
-  } // end of L_NotepadColour
+} // end of L_NotepadColour
 
 //----------------------------------------
 //  world.NotepadFont
 //----------------------------------------
 static int L_NotepadFont (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->NotepadFont (
-        my_checkstring (L, 1),   // Title
-        my_checkstring (L, 2),   // FontName
-        my_checknumber (L, 3),   // Size
-        my_checknumber (L, 4),   // Style
-        my_optnumber (L, 5, 0)   // Charset
-                      ));
+      my_checkstring (L, 1), // Title
+      my_checkstring (L, 2), // FontName
+      my_checkshort  (L, 3), // Size
+      my_checkshort  (L, 4), // Style
+      my_optshort (L, 5, 0)  // Charset
+      ));
   return 1;  // number of result fields
-  } // end of L_NotepadFont
+} // end of L_NotepadFont
 
 
 //----------------------------------------
 //  world.NotepadReadOnly
 //----------------------------------------
 static int L_NotepadReadOnly (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->NotepadReadOnly (
-        my_checkstring (L, 1),   // Title
-        optboolean (L, 2, 1)    // true or false
-                      ));
+      my_checkstring (L, 1), // Title
+      optboolean (L, 2, 1)   // true or false
+      ));
   return 1;  // number of result fields
-  } // end of L_NotepadReadOnly
+} // end of L_NotepadReadOnly
 
 
 //----------------------------------------
 //  world.NotepadSaveMethod
 //----------------------------------------
 static int L_NotepadSaveMethod (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->NotepadSaveMethod (
-        my_checkstring (L, 1),   // Title
-        my_checknumber (L, 2)    // Method (0-2)
-                      ));
+      my_checkstring (L, 1), // Title
+      my_checkshort  (L, 2)  // Method (0-2)
+      ));
   return 1;  // number of result fields
-  } // end of L_NotepadSaveMethod
+} // end of L_NotepadSaveMethod
 
 //----------------------------------------
 //  world.NoteStyle
 //----------------------------------------
 static int L_NoteStyle (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->NoteStyle (
-      my_checknumber (L, 1)    // Style
-      );
+  pDoc->NoteStyle (my_checkshort (L, 1));
   return 0;  // number of result fields
-  } // end of L_NoteStyle
+} // end of L_NoteStyle
 
 
 //----------------------------------------
 //  world.Open
 //----------------------------------------
 static int L_Open (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-
   CDocument * pnewDoc = App.OpenDocumentFile (my_checkstring (L, 1));
-
-  lua_pushboolean (L, pnewDoc != NULL);    // true means opened OK, false otherwise
-
+  lua_pushboolean (L, (pnewDoc != NULL)); // true means opened OK, false otherwise
   return 1;  // number of result fields
-  } // end of L_Open
+} // end of L_Open
 
 //----------------------------------------
 //  world.OpenBrowser
 //----------------------------------------
 static int L_OpenBrowser (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-
-  lua_pushnumber (L, pDoc->OpenBrowser (
-      my_checkstring (L, 1)));
+  lua_pushnumber (L, pDoc->OpenBrowser (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_OpenBrowser
+} // end of L_OpenBrowser
 
 //----------------------------------------
 //  world.OpenLog
 //----------------------------------------
 static int L_OpenLog (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->OpenLog (
-      my_checkstring (L, 1),      // LogFileName
-      optboolean (L, 2, 0)      // Append - optional
+      my_checkstring (L, 1), // LogFileName
+      optboolean (L, 2, 0)   // Append - optional
       ));
   return 1;  // number of result fields
-  } // end of L_OpenLog
+} // end of L_OpenLog
 
 
 //----------------------------------------
 //  world.PasteCommand
 //----------------------------------------
 static int L_PasteCommand (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->PasteCommand (my_checkstring (L, 1));
   return pushBstr (L, str);
-  } // end of L_PasteCommand
+} // end of L_PasteCommand
 
 //----------------------------------------
 //  world.Pause
 //----------------------------------------
 static int L_Pause (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->Pause (optboolean (L, 1, 1));
   return 0;  // number of result fields
-  } // end of L_Pause
+} // end of L_Pause
 
 //----------------------------------------
 //  world.PlaySound
 //----------------------------------------
 static int L_PlaySound (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   lua_pushnumber (L, pDoc->PlaySound (
-                  my_checknumber (L, 1),  // Buffer
-                  my_optstring (L, 2, ""),   // Filename
-                  optboolean (L, 3, 0),    // Repeat
-                  my_optnumber (L, 4, 0),  // Volume
-                  my_optnumber (L, 5, 0))  // Pan
-                  );
+      my_checkshort (L, 1),    // Buffer
+      my_optstring (L, 2, ""), // Filename
+      optboolean (L, 3, 0),    // Repeat
+      my_optnumber (L, 4, 0),  // Volume
+      my_optnumber (L, 5, 0)   // Pan
+      ));
   return 1;  // number of result fields
-  } // end of L_PlaySound
+} // end of L_PlaySound
 
 //----------------------------------------
 //  world.PlaySoundMemory
 //----------------------------------------
 static int L_PlaySoundMemory (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
-  LPCTSTR sBuffer;
-  size_t  iBufferLength;
-  sBuffer = luaL_checklstring (L, 2, &iBufferLength);
+
+  size_t iBufferLength;
+  LPCTSTR sBuffer = luaL_checklstring (L, 2, &iBufferLength);
+
   lua_pushnumber (L, pDoc->PlaySoundHelper (
-                  my_checknumber (L, 1),  // Buffer
-                  (LPCTSTR) NULL,         // Filename
-                  optboolean (L, 3, 0),   // Repeat
-                  my_optnumber (L, 4, 0), // Volume
-                  my_optnumber (L, 5, 0), // Pan
-                  sBuffer,                // MemoryBuffer
-                  iBufferLength           // MemLen
-                  )  
-                  );
+      my_checkshort (L, 1),   // Buffer
+      (LPCTSTR) NULL,         // Filename
+      optboolean (L, 3, 0),   // Repeat
+      my_optnumber (L, 4, 0), // Volume
+      my_optnumber (L, 5, 0), // Pan
+      sBuffer,                // MemoryBuffer
+      iBufferLength           // MemLen
+      ));
   return 1;  // number of result fields
-  } // end of L_PlaySoundMemory
+} // end of L_PlaySoundMemory
 
 
 //----------------------------------------
 //  world.PluginSupports
 //----------------------------------------
 static int L_PluginSupports (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->PluginSupports (
-      my_checkstring (L, 1),      // PluginID
-      my_checkstring (L, 2)       // Routine
+      my_checkstring (L, 1), // PluginID
+      my_checkstring (L, 2)  // Routine
       ));
   return 1;  // number of result fields
-  } // end of L_PluginSupports
+} // end of L_PluginSupports
 
 
 //----------------------------------------
 //  world.PushCommand
 //----------------------------------------
 static int L_PushCommand (lua_State *L)
-  {
-  BSTR str = doc (L)->PushCommand ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR str = pDoc->PushCommand ();
   return pushBstr (L, str);
-  } // end of L_PushCommand
+} // end of L_PushCommand
 
 
 //----------------------------------------
 //  world.Queue
 //----------------------------------------
 static int L_Queue (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->Queue (
-      my_checkstring (L, 1),      // Message
-      optboolean (L, 2, 1)      // Echo - optional
+      my_checkstring (L, 1), // Message
+      optboolean (L, 2, 1)   // Echo - optional
       ));
   return 1;  // number of result fields
-  } // end of L_Queue
+} // end of L_Queue
 
 
 //----------------------------------------
 //  world.ReadNamesFile
 //----------------------------------------
 static int L_ReadNamesFile (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ReadNamesFile (
-      my_checkstring (L, 1)      // FileName
+      my_checkstring (L, 1) // FileName
       ));
   return 1;  // number of result fields
-  } // end of L_ReadNamesFile
+} // end of L_ReadNamesFile
 
 
 //----------------------------------------
 //  world.Redraw
 //----------------------------------------
 static int L_Redraw (lua_State *L)
-  {
-  doc (L)->Redraw ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  pDoc->Redraw ();
   return 0;  // number of result fields
-  } // end of L_Redraw
+} // end of L_Redraw
 
 //----------------------------------------
 //  world.ReloadPlugin
 //----------------------------------------
 static int L_ReloadPlugin (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ReloadPlugin (
-      my_checkstring (L, 1)      // PluginID
+      my_checkstring (L, 1) // PluginID
       ));
   return 1;  // number of result fields
-  } // end of L_ReloadPlugin
+} // end of L_ReloadPlugin
 
 
 //----------------------------------------
 //  world.RemoveBacktracks
 //----------------------------------------
 static int L_RemoveBacktracks (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->RemoveBacktracks (my_checkstring (L, 1));
   return pushBstr (L, str);
-  } // end of L_RemoveBacktracks
+} // end of L_RemoveBacktracks
 
 
 //----------------------------------------
 //  world.GetRemoveMapReverses
 //----------------------------------------
 static int L_GetRemoveMapReverses (lua_State *L)
-  {
-  lua_pushboolean (L, doc (L)->m_bRemoveMapReverses);
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushboolean (L, pDoc->m_bRemoveMapReverses);
   return 1;  // number of result fields
-  } // end of L_GetRemoveMapReverses
+} // end of L_GetRemoveMapReverses
 
 //----------------------------------------
 //  world.SetRemoveMapReverses
 //----------------------------------------
 static int L_SetRemoveMapReverses (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->m_bRemoveMapReverses = my_checknumber (L, 1) != 0;
+  pDoc->m_bRemoveMapReverses = (my_checknumber (L, 1) != 0);
   return 0;  // number of result fields
-  } // end of L_SetRemoveMapReverses
+} // end of L_SetRemoveMapReverses
 
 //----------------------------------------
 //  world.Repaint
 //----------------------------------------
 static int L_Repaint (lua_State *L)
-  {
-  doc (L)->Repaint ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  pDoc->Repaint ();
   return 0;  // number of result fields
-  } // end of L_Repaint
+} // end of L_Repaint
 
 //----------------------------------------
 //  world.Replace
 //----------------------------------------
 static int L_Replace (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->Replace (
-      my_checkstring (L, 1),    // Source
-      my_checkstring (L, 2),    // SearchFor
-      my_checkstring (L, 3),    // ReplaceWith
-      optboolean (L, 4, 1)    // Multiple - optional
+      my_checkstring (L, 1), // Source
+      my_checkstring (L, 2), // SearchFor
+      my_checkstring (L, 3), // ReplaceWith
+      optboolean (L, 4, 1)   // Multiple - optional
       );
   return pushBstr (L, str);
-  } // end of L_Replace
+} // end of L_Replace
 
 
 //----------------------------------------
 //  world.ReplaceNotepad
 //----------------------------------------
 static int L_ReplaceNotepad (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   lua_pushboolean (L, pDoc->ReplaceNotepad (
-      my_checkstring (L, 1),  // Title
-      concatArgs (L, "", 2).c_str ()   // Contents
+      my_checkstring (L, 1),         // Title
+      concatArgs (L, "", 2).c_str () // Contents
       ));
   return 0;  // number of result fields
-  } // end of L_ReplaceNotepad
+} // end of L_ReplaceNotepad
 
 
 //----------------------------------------
 //  world.Reset
 //----------------------------------------
 static int L_Reset (lua_State *L)
-  {
-  doc (L)->Reset ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  pDoc->Reset ();
   return 0;  // number of result fields
-  } // end of L_Reset
+} // end of L_Reset
 
 
 //----------------------------------------
 //  world.ResetIP
 //----------------------------------------
 static int L_ResetIP (lua_State *L)
-  {
-  doc (L)->ResetIP ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  pDoc->ResetIP ();
   return 0;  // number of result fields
-  } // end of ResetIP
+} // end of ResetIP
 
 
 //----------------------------------------
 //  world.ResetStatusTime
 //----------------------------------------
 static int L_ResetStatusTime (lua_State *L)
-  {
-  doc (L)->ResetStatusTime ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  pDoc->ResetStatusTime ();
   return 0;  // number of result fields
-  } // end of L_ResetStatusTime
+} // end of L_ResetStatusTime
 
 
 //----------------------------------------
 //  world.ResetTimer
 //----------------------------------------
 static int L_ResetTimer (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->ResetTimer (
-      my_checkstring (L, 1)      // TimerName
+      my_checkstring (L, 1) // TimerName
       ));
   return 1;  // number of result fields
-  } // end of L_ResetTimer
+} // end of L_ResetTimer
 
 
 //----------------------------------------
 //  world.ResetTimers
 //----------------------------------------
 static int L_ResetTimers (lua_State *L)
-  {
-  doc (L)->ResetTimers ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  pDoc->ResetTimers ();
   return 0;  // number of result fields
-  } // end of L_ResetTimers
+} // end of L_ResetTimers
 
 
 //----------------------------------------
 //  world.ReverseSpeedwalk
 //----------------------------------------
 static int L_ReverseSpeedwalk (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   // this is a helper function that returns a CString, not a BSTR
   lua_pushstring (L, pDoc->DoReverseSpeedwalk (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ReverseSpeedwalk
+} // end of L_ReverseSpeedwalk
 
 
 //----------------------------------------
 //  world.RGBColourToName
 //----------------------------------------
 static int L_RGBColourToName (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  BSTR str = pDoc->RGBColourToName (my_checknumber (L, 1));
+  BSTR str = pDoc->RGBColourToName (my_checklong (L, 1));
   return pushBstr (L, str);
-  } // end of L_RGBColourToName
+} // end of L_RGBColourToName
 
 
 //----------------------------------------
 //  world.Save
 //----------------------------------------
 static int L_Save (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   CString strOldName = pDoc->GetPathName ();
+
   bool bSaveAs = optboolean (L, 2, 0);  // Save-As flag
-  if (bSaveAs) 
+  if (bSaveAs)
+  {
     lua_pushboolean (L, pDoc->Save (my_checkstring (L, 1)));
+    pDoc->SetPathName (strOldName, FALSE);
+  }
   else
     lua_pushboolean (L, pDoc->Save (my_optstring (L, 1, "")));
-  if (bSaveAs)
-    pDoc->SetPathName (strOldName, FALSE);
+
   return 1;  // number of result fields
-  } // end of L_Save
+} // end of L_Save
 
 
 //----------------------------------------
 //  world.SaveNotepad
 //----------------------------------------
 static int L_SaveNotepad (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SaveNotepad (
-      my_checkstring (L, 1),     // Title
-      my_checkstring (L, 2),     // FileName
-      optboolean (L, 3, 0)     // ReplaceExisting
+      my_checkstring (L, 1), // Title
+      my_checkstring (L, 2), // FileName
+      optboolean (L, 3, 0)   // ReplaceExisting
       ));
   return 1;  // number of result fields
-  } // end of L_SaveNotepad
+} // end of L_SaveNotepad
 
 
 //----------------------------------------
 //  world.SaveState
 //----------------------------------------
 static int L_SaveState (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SaveState ());
   return 1;  // number of result fields
-  } // end of L_SaveState
+} // end of L_SaveState
 
 
 //----------------------------------------
 //  world.SelectCommand
 //----------------------------------------
 static int L_SelectCommand (lua_State *L)
-  {
-  doc (L)->SelectCommand ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  pDoc->SelectCommand ();
   return 0;  // number of result fields
-  } // end of L_SelectCommand
+} // end of L_SelectCommand
 
 
 //----------------------------------------
 //  world.Send
 //----------------------------------------
 static int L_Send (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   lua_pushnumber (L, pDoc->Send (concatArgs (L).c_str ()));
   return 1;  // number of result fields
-  } // end of L_Send
+} // end of L_Send
 
 
 //----------------------------------------
 //  world.SendImmediate
 //----------------------------------------
 static int L_SendImmediate (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   lua_pushnumber (L, pDoc->SendImmediate (concatArgs (L).c_str ()));
   return 1;  // number of result fields
-  } // end of L_SendImmediate
+} // end of L_SendImmediate
 
 
 //----------------------------------------
 //  world.SendNoEcho
 //----------------------------------------
 static int L_SendNoEcho (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   lua_pushnumber (L, pDoc->SendNoEcho (concatArgs (L).c_str ()));
   return 1;  // number of result fields
-  } // end of L_SendNoEcho
+} // end of L_SendNoEcho
 
 //----------------------------------------
 //  world.SendPkt
 //----------------------------------------
 static int L_SendPkt (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
-
-  long result = eWorldClosed;
 
   if (pDoc->m_iConnectPhase == eConnectConnectedToMud)
     {
@@ -4668,171 +4607,174 @@ static int L_SendPkt (lua_State *L)
     size_t textLength;
     const char * text = my_checklstring (L, 1, &textLength);
     pDoc->SendPacket (text, textLength);
-	  result = eOK;
-    }
 
-  lua_pushnumber (L, result);
+    lua_pushnumber(L, eOK);
+    }
+  else
+    lua_pushnumber(L, eWorldClosed);
+
   return 1;  // number of result fields
-  } // end of L_SendPkt
+} // end of L_SendPkt
 
 //----------------------------------------
 //  world.SendPush
 //----------------------------------------
 static int L_SendPush (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   lua_pushnumber (L, pDoc->SendPush (concatArgs (L).c_str ()));
   return 1;  // number of result fields
-  } // end of L_SendPush
+} // end of L_SendPush
 
 //----------------------------------------
 //  world.SendSpecial
 //----------------------------------------
 static int L_SendSpecial (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   lua_pushnumber (L, pDoc->SendSpecial (my_checkstring (L, 1),
-                  optboolean (L, 2, 0),   // Echo
-                  optboolean (L, 3, 0),   // Queue
-                  optboolean (L, 4, 0),   // Log
-                  optboolean (L, 5, 0))   // History
-                  );
+      optboolean (L, 2, 0), // Echo
+      optboolean (L, 3, 0), // Queue
+      optboolean (L, 4, 0), // Log
+      optboolean (L, 5, 0)  // History
+      ));
   return 1;  // number of result fields
-  } // end of L_SendSpecial
+} // end of L_SendSpecial
 
 //----------------------------------------
 //  world.SendToNotepad
 //----------------------------------------
 static int L_SendToNotepad (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   lua_pushboolean (L, pDoc->SendToNotepad (
-      my_checkstring (L, 1), // Title
-      concatArgs (L, "", 2).c_str ()  // Contents
+      my_checkstring (L, 1),         // Title
+      concatArgs (L, "", 2).c_str () // Contents
       ));
   return 1;  // number of result fields
-  } // end of L_SendToNotepad
+} // end of L_SendToNotepad
 
 
 //----------------------------------------
 //  world.SetAliasOption
 //----------------------------------------
 static int L_SetAliasOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetAliasOption (
-      my_checkstring (L, 1),    // AliasName
-      my_checkstring (L, 2),    // OptionName
-      my_checkstring (L, 3)     // Value
+      my_checkstring (L, 1), // AliasName
+      my_checkstring (L, 2), // OptionName
+      my_checkstring (L, 3)  // Value
       ));
   return 1;  // number of result fields
-  } // end of L_SetAliasOption
+} // end of L_SetAliasOption
 
 
 //----------------------------------------
 //  world.SetAlphaOption
 //----------------------------------------
 static int L_SetAlphaOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetAlphaOption (
-      my_checkstring (L, 1),    // OptionName
-      my_checkstring (L, 2)     // Value
+      my_checkstring (L, 1), // OptionName
+      my_checkstring (L, 2)  // Value
       ));
   return 1;  // number of result fields
-  } // end of L_SetAlphaOption
+} // end of L_SetAlphaOption
 
 //----------------------------------------
 //  world.SetBackgroundColour
 //----------------------------------------
 static int L_SetBackgroundColour (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetBackgroundColour (
-      my_checknumber (L, 1)     // RGB colour
+      my_checklong (L, 1) // RGB colour
       ));
   return 1;  // number of result fields
-  } // end of L_SetBackgroundColour
+} // end of L_SetBackgroundColour
 
 //----------------------------------------
 //  world.SetBackgroundImage
 //----------------------------------------
 static int L_SetBackgroundImage (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetBackgroundImage (
-      my_checkstring (L, 1),    // FileName
-      my_checknumber (L, 2)     // mode
+      my_checkstring (L, 1), // FileName
+      my_checkshort  (L, 2)  // mode
       ));
   return 1;  // number of result fields
-  } // end of L_SetBackgroundImage
+} // end of L_SetBackgroundImage
 
 //----------------------------------------
 //  world.SetChatOption
 //----------------------------------------
 static int L_SetChatOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetChatOption (
-      my_checknumber (L, 1),    // Chat ID
-      my_checkstring (L, 2),    // OptionName
-      my_checkstring (L, 3)     // Value
+      my_checklong   (L, 1), // Chat ID
+      my_checkstring (L, 2), // OptionName
+      my_checkstring (L, 3)  // Value
       ));
   return 1;  // number of result fields
-  } // end of L_SetChatOption
+} // end of L_SetChatOption
 
 
 //----------------------------------------
 //  world.SetChanged
 //----------------------------------------
 static int L_SetChanged (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->SetChanged (optboolean (L, 1, 1));
   return 0;  // number of result fields
-  } // end of L_SetChanged
+} // end of L_SetChanged
 
 //----------------------------------------
 //  world.SetClipboard
 //----------------------------------------
 static int L_SetClipboard (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->SetClipboard (concatArgs (L).c_str ());
   return 0;  // number of result fields
-  } // end of L_SetClipboard
+} // end of L_SetClipboard
 
 //----------------------------------------
 //  world.SetCommand
 //----------------------------------------
 static int L_SetCommand (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetCommand (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_SetCommand
+} // end of L_SetCommand
 
 //----------------------------------------
 //  world.SetCommandSelection
 //----------------------------------------
 static int L_SetCommandSelection (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetCommandSelection (
-                    my_checknumber (L, 1),   // First
-                    my_checknumber (L, 2))); // Last
+      my_checklong (L, 1), // First
+      my_checklong (L, 2)  // Last
+      ));
   return 1;  // number of result fields
-  } // end of L_SetCommandSelection
+} // end of L_SetCommandSelection
 
 //----------------------------------------
 //  world.SetCommandWindowHeight
 //----------------------------------------
 static int L_SetCommandWindowHeight (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  lua_pushnumber (L, pDoc->SetCommandWindowHeight (my_checknumber (L, 1)));
+  lua_pushnumber (L, pDoc->SetCommandWindowHeight (my_checkshort (L, 1)));
   return 1;  // number of result fields
-  } // end of L_SetCommandWindowHeight
+} // end of L_SetCommandWindowHeight
 
 //----------------------------------------
 //  world.SetCustomColourName
@@ -4841,7 +4783,7 @@ static int L_SetCustomColourName (lua_State *L)
   {
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber(L, pDoc->SetCustomColourName (
-      my_checknumber (L, 1),  // WhichColour
+      my_checkshort  (L, 1),  // WhichColour
       my_checkstring (L, 2)   // Name
       ));
   return 1;  // number of result fields
@@ -4851,769 +4793,765 @@ static int L_SetCustomColourName (lua_State *L)
 //  world.SetEntity
 //----------------------------------------
 static int L_SetEntity (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->SetEntity (my_checkstring (L, 1),
-                   my_optstring (L, 2, ""));
+  pDoc->SetEntity (my_checkstring (L, 1), my_optstring (L, 2, ""));
   return 0;  // number of result fields
-  } // end of L_SetEntity
+} // end of L_SetEntity
 
 //----------------------------------------
 //  world.SetForegroundImage
 //----------------------------------------
 static int L_SetForegroundImage (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetForegroundImage (
-      my_checkstring (L, 1),    // FileName
-      my_checknumber (L, 2)     // mode
+      my_checkstring (L, 1), // FileName
+      my_checkshort  (L, 2)  // mode
       ));
   return 1;  // number of result fields
-  } // end of L_SetForegroundImage
+} // end of L_SetForegroundImage
 
 
 //----------------------------------------
 //  world.SetInputFont
 //----------------------------------------
 static int L_SetInputFont (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->SetInputFont (
-      my_checkstring (L, 1),  // FontName
-      my_checknumber (L, 2),  // PointSize
-      my_checknumber (L, 3),  // Weight
-      my_optnumber (L, 4, 0)  // Italic
+      my_checkstring (L, 1), // FontName
+      my_checkshort  (L, 2), // PointSize
+      my_checkshort  (L, 3), // Weight
+      optboolean (L, 4, 0)   // Italic
       );
   return 0;  // number of result fields
-  } // end of L_SetInputFont
+} // end of L_SetInputFont
 
 
 //----------------------------------------
 //  world.SetNotes
 //----------------------------------------
 static int L_SetNotes (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->SetNotes (my_checkstring (L, 1));
   return 0;  // number of result fields
-  } // end of L_SetNotes
+} // end of L_SetNotes
 
 
 //----------------------------------------
 //  world.SetOption
 //----------------------------------------
 static int L_SetOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetOption (
-      my_checkstring (L, 1),    // OptionName
-      my_checknumber (L, 2)     // Value
+      my_checkstring (L, 1), // OptionName
+      my_checklong   (L, 2)  // Value
       ));
   return 1;  // number of result fields
-  } // end of L_SetOption
+} // end of L_SetOption
 
 
 //----------------------------------------
 //  world.SetOutputFont
 //----------------------------------------
 static int L_SetOutputFont (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->SetOutputFont (
-      my_checkstring (L, 1),  // FontName
-      my_checknumber (L, 2)   // PointSize
+      my_checkstring (L, 1), // FontName
+      my_checkshort  (L, 2)  // PointSize
       );
   return 0;  // number of result fields
-  } // end of L_SetOutputFont
+} // end of L_SetOutputFont
 
 
 //----------------------------------------
 //  world.SetStatus
 //----------------------------------------
 static int L_SetStatus (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   pDoc->SetStatus (concatArgs (L).c_str ());
   return 0;  // number of result fields
-  } // end of L_SetStatus
+} // end of L_SetStatus
 
 
 //----------------------------------------
 //  world.SetTimerOption
 //----------------------------------------
 static int L_SetTimerOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetTimerOption (
-      my_checkstring (L, 1),    // AliasName
-      my_checkstring (L, 2),    // OptionName
-      my_checkstring (L, 3)     // Value
+      my_checkstring (L, 1), // AliasName
+      my_checkstring (L, 2), // OptionName
+      my_checkstring (L, 3)  // Value
       ));
   return 1;  // number of result fields
-  } // end of L_SetTimerOption
+} // end of L_SetTimerOption
 
 //----------------------------------------
 //  world.SetToolBarPosition
 //----------------------------------------
 static int L_SetToolBarPosition (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetToolBarPosition (
-      my_checknumber (L, 1),    // Which
-      optboolean (L, 2, 0),    // Float
-      my_checknumber (L, 3),    // Side
-      my_checknumber (L, 4),    // Top
-      my_checknumber (L, 5)     // Left
+      my_checkshort (L, 1), // Which
+      optboolean (L, 2, 0), // Float
+      my_checkshort (L, 3), // Side
+      my_checklong  (L, 4), // Top
+      my_checklong  (L, 5)  // Left
       ));
   return 1;  // number of result fields
-  } // end of L_SetToolBarPosition
+} // end of L_SetToolBarPosition
 
 //----------------------------------------
 //  world.SetTriggerOption
 //----------------------------------------
 static int L_SetTriggerOption (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetTriggerOption (
-      my_checkstring (L, 1),    // AliasName
-      my_checkstring (L, 2),    // OptionName
-      my_checkstring (L, 3)     // Value
+      my_checkstring (L, 1), // AliasName
+      my_checkstring (L, 2), // OptionName
+      my_checkstring (L, 3)  // Value
       ));
   return 1;  // number of result fields
-  } // end of L_SetTriggerOption
+} // end of L_SetTriggerOption
 
 
 //----------------------------------------
 //  world.SetVariable
 //----------------------------------------
 static int L_SetVariable (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetVariable (
-      my_checkstring (L, 1),    // VariableName
-      my_checkstring (L, 2)     // Contents
+      my_checkstring (L, 1), // VariableName
+      my_checkstring (L, 2)  // Contents
       ));
   return 1;  // number of result fields
-  } // end of L_SetVariable
+} // end of L_SetVariable
 
 //----------------------------------------
 //  world.SetWorldWindowStatus
 //----------------------------------------
 static int L_SetWorldWindowStatus (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->SetWorldWindowStatus (my_checknumber (L, 1));
+  pDoc->SetWorldWindowStatus (my_checkshort (L, 1));
   return 0;  // number of result fields
-  } // end of L_SetWorldWindowStatus
+} // end of L_SetWorldWindowStatus
 
 //----------------------------------------
 //  world.ShiftTabCompleteItem
 //----------------------------------------
 static int L_ShiftTabCompleteItem (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L,pDoc->ShiftTabCompleteItem (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_ShiftTabCompleteItem
+} // end of L_ShiftTabCompleteItem
 
 //----------------------------------------
 //  world.ShowInfoBar
 //----------------------------------------
 static int L_ShowInfoBar (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->ShowInfoBar (optboolean (L, 1, 1));
   return 0;  // number of result fields
-  } // end of L_ShowInfoBar
+} // end of L_ShowInfoBar
 
 //----------------------------------------
 //  world.Simulate
 //----------------------------------------
 static int L_Simulate (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->Simulate (concatArgs (L).c_str ());
   return 0;  // number of result fields
-  } // end of L_Simulate
+} // end of L_Simulate
 
 //----------------------------------------
 //  world.Sound
 //----------------------------------------
 static int L_Sound (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->Sound (
-      my_checkstring (L, 1)    // SoundFileName
+      my_checkstring (L, 1) // SoundFileName
       ));
   return 1;  // number of result fields
-  } // end of L_Sound
+} // end of L_Sound
 
 
 //----------------------------------------
 //  world.GetSpeedWalkDelay
 //----------------------------------------
 static int L_GetSpeedWalkDelay (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->GetSpeedWalkDelay ());
   return 1;  // number of result fields
-  } // end of GetSpeedWalkDelay
+} // end of GetSpeedWalkDelay
 
 //----------------------------------------
 //  world.SetSpeedWalkDelay
 //----------------------------------------
 static int L_SetSpeedWalkDelay (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   pDoc->SetSpeedWalkDelay (
-      my_checknumber (L, 1)   // nNewValue
+      my_checkshort (L, 1) // nNewValue
       );
   return 0;  // number of result fields
-  } // end of SetSpeedWalkDelay
+} // end of SetSpeedWalkDelay
 
 //----------------------------------------
 //  world.SpellCheck
 //----------------------------------------
 static int L_SpellCheck (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->SpellCheck (my_checkstring (L, 1));
-  return pushVariant (L, v);
-  } // end of L_SpellCheck
+  return pushVariant (L, pDoc->SpellCheck (my_checkstring (L, 1)));
+} // end of L_SpellCheck
 
 //----------------------------------------
 //  world.SpellCheckCommand
 //----------------------------------------
 static int L_SpellCheckCommand (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SpellCheckCommand (
-            my_optnumber (L, 1, -1),  // Start column
-            my_optnumber (L, 2, -1)   // End column
-            ));
+      my_optlong (L, 1, -1), // Start column
+      my_optlong (L, 2, -1)  // End column
+      ));
   return 1;  // number of result fields
-  } // end of SpellCheckCommand
+} // end of SpellCheckCommand
 
 //----------------------------------------
 //  world.SpellCheckDlg
 //----------------------------------------
 static int L_SpellCheckDlg (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->SpellCheckDlg (my_checkstring (L, 1));
-  return pushVariant (L, v);
-  } // end of L_SpellCheckDlg
+  return pushVariant (L, pDoc->SpellCheckDlg (my_checkstring (L, 1)));
+} // end of L_SpellCheckDlg
 
 // prototype ;)
-CString StripAnsi (const CString strMessage);
+// located in scripting/methods.cpp
+extern CString StripAnsi (const CString strMessage);
 
 //----------------------------------------
 //  world.StripANSI
 //----------------------------------------
 static int L_StripANSI (lua_State *L)
-  {
+{
   // this is a helper function that returns a CString, not a BSTR
   lua_pushstring (L, StripAnsi (my_checkstring (L, 1)));
   return 1;  // number of result fields
-  } // end of L_StripANSI
+} // end of L_StripANSI
 
 //----------------------------------------
 //  world.StopSound
 //----------------------------------------
 static int L_StopSound (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
-  lua_pushnumber (L, pDoc->StopSound (my_optnumber (L, 1, 0)));   // Buffer
+  lua_pushnumber (L, pDoc->StopSound (
+      my_optshort (L, 1, 0) // Buffer
+      ));
   return 1;  // number of result fields
-  } // end of L_StopSound
+} // end of L_StopSound
 
 //----------------------------------------
 //  world.Tell
 //----------------------------------------
 static int L_Tell (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   pDoc->Tell (concatArgs (L).c_str ());
   return 0;  // number of result fields
-  } // end of L_Tell
+} // end of L_Tell
 
 
 //----------------------------------------
 //  world.TextRectangle
 //----------------------------------------
 static int L_TextRectangle (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->TextRectangle (
-            my_checknumber (L, 1),    // Left
-            my_checknumber (L, 2),    // Top
-            my_checknumber (L, 3),    // Right
-            my_checknumber (L, 4),    // Bottom
-            my_checknumber (L, 5),    // BorderOffset
-            my_checknumber (L, 6),    // BorderColour
-            my_checknumber (L, 7),    // BorderWidth
-            my_checknumber (L, 8),    // OutsideFillColour
-            my_checknumber (L, 9)     // OutsideFillStyle
-            ));
+      my_checklong (L, 1), // Left
+      my_checklong (L, 2), // Top
+      my_checklong (L, 3), // Right
+      my_checklong (L, 4), // Bottom
+      my_checklong (L, 5), // BorderOffset
+      my_checklong (L, 6), // BorderColour
+      my_checklong (L, 7), // BorderWidth
+      my_checklong (L, 8), // OutsideFillColour
+      my_checklong (L, 9)  // OutsideFillStyle
+      ));
   return 1;  // number of result fields
-  } // end of L_TextRectangle
+} // end of L_TextRectangle
 
 
 //----------------------------------------
 //  world.GetTrace
 //----------------------------------------
 static int L_GetTrace (lua_State *L)
-  {
-  lua_pushboolean (L, doc (L)->m_bTrace);
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushboolean (L, pDoc->m_bTrace);
   return 1;  // number of result fields
-  } // end of L_GetTrace
+} // end of L_GetTrace
 
 //----------------------------------------
 //  world.SetTrace
 //----------------------------------------
 static int L_SetTrace (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  pDoc->m_bTrace = optboolean (L, 1, 1) != 0;
+  pDoc->m_bTrace = optboolean (L, 1, 1);
   return 0;  // number of result fields
-  } // end of L_SetTrace
+} // end of L_SetTrace
 
 
 //----------------------------------------
 //  world.TraceOut
 //----------------------------------------
 static int L_TraceOut (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   pDoc->TraceOut (concatArgs (L).c_str ());
   return 0;  // number of result fields
-  } // end of L_TraceOut
+} // end of L_TraceOut
 
 //----------------------------------------
 //  world.TranslateGerman
 //----------------------------------------
 static int L_TranslateGerman (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->TranslateGerman (
-                  my_checkstring (L, 1)  // Text
-                  );
+      my_checkstring (L, 1) // Text
+      );
   return pushBstr (L, str);  // number of result fields
-  } // end of L_TranslateGerman
+} // end of L_TranslateGerman
 
 //----------------------------------------
 //  world.TranslateDebug
 //----------------------------------------
 static int L_TranslateDebug (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->TranslateDebug (
-                  my_optstring (L, 1, "")  // Message
-                  ));
+      my_optstring (L, 1, "") // Message
+      ));
   return 1;  // number of result fields
-  } // end of L_TranslateDebug
+} // end of L_TranslateDebug
 
 //----------------------------------------
 //  world.Transparency
 //----------------------------------------
 static int L_Transparency (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushboolean (L, pDoc->Transparency (
-          my_checknumber (L, 1),    // Key
-          my_checknumber (L, 2)    // Amount
+      my_checklong  (L, 1), // Key
+      my_checkshort (L, 2)  // Amount
       ));
   return 1;  // number of result fields
-  } // end of L_Transparency
+} // end of L_Transparency
 
 //----------------------------------------
 //  world.Trim
 //----------------------------------------
 static int L_Trim (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   BSTR str = pDoc->Trim (
-                  my_checkstring (L, 1)  // Source
-                  );
+      my_checkstring (L, 1)  // Source
+      );
   return pushBstr (L, str);  // number of result fields
-  } // end of L_Trim
+} // end of L_Trim
 
 //----------------------------------------
 //  world.UdpListen
 //----------------------------------------
 static int L_UdpListen (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->UdpListen (
-            my_checkstring (L, 1),  // IP
-            my_checknumber (L, 2),  // Port
-            my_checkstring (L, 3)   // Script
-            ));
+      my_checkstring (L, 1), // IP
+      my_checkshort  (L, 2), // Port
+      my_checkstring (L, 3)  // Script
+      ));
   return 1;  // number of result fields
-  } // end of L_UdpListen
+} // end of L_UdpListen
 
 //----------------------------------------
 //  world.UdpPortList
 //----------------------------------------
 static int L_UdpPortList (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
-  VARIANT v = pDoc->UdpPortList ();
-  return pushVariant (L, v);
-  } // end of L_UdpPortList
+  return pushVariant (L, pDoc->UdpPortList ());
+} // end of L_UdpPortList
 
 //----------------------------------------
 //  world.UdpSend
 //----------------------------------------
 static int L_UdpSend (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->UdpSend (
-            my_checkstring (L, 1),  // IP
-            my_checknumber (L, 2),  // Port
-            my_checkstring (L, 3)   // Text
-            ));
+      my_checkstring (L, 1), // IP
+      my_checkshort  (L, 2), // Port
+      my_checkstring (L, 3)  // Text
+      ));
   return 1;  // number of result fields
-  } // end of L_UdpSend
+} // end of L_UdpSend
 
 //----------------------------------------
 //  world.Version
 //----------------------------------------
 static int L_Version (lua_State *L)
-  {
-  BSTR str = doc (L)->Version ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR str = pDoc->Version ();
   return pushBstr (L, str);  // number of result fields
-  } // end of L_Version
+} // end of L_Version
 
 //----------------------------------------
 //  world.WindowAddHotspot
 //----------------------------------------
 static int L_WindowAddHotspot (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowAddHotspot (
-            my_checkstring (L, 1),  // Name
-            my_checkstring (L, 2),  // HotspotId
-            my_checknumber (L, 3),  // Left
-            my_checknumber (L, 4),  // Top
-            my_checknumber (L, 5),  // Right
-            my_checknumber (L, 6),  // Bottom
-            my_optstring (L, 7, ""),  // MouseOver
-            my_optstring (L, 8, ""),  // CancelMouseOver
-            my_optstring (L, 9, ""),  // MouseDown
-            my_optstring (L, 10, ""), // CancelMouseDown
-            my_optstring (L, 11, ""), // MouseUp
-            my_optstring (L, 12, ""), // TooltipText
-            my_optnumber (L, 13, 0),  // Cursor
-            my_optnumber (L, 14, 0)   // Flags
-
-            ));
+      my_checkstring (L, 1),    // Name
+      my_checkstring (L, 2),    // HotspotId
+      my_checklong   (L, 3),    // Left
+      my_checklong   (L, 4),    // Top
+      my_checklong   (L, 5),    // Right
+      my_checklong   (L, 6),    // Bottom
+      my_optstring (L, 7, ""),  // MouseOver
+      my_optstring (L, 8, ""),  // CancelMouseOver
+      my_optstring (L, 9, ""),  // MouseDown
+      my_optstring (L, 10, ""), // CancelMouseDown
+      my_optstring (L, 11, ""), // MouseUp
+      my_optstring (L, 12, ""), // TooltipText
+      my_optlong   (L, 13, 0),  // Cursor
+      my_optlong   (L, 14, 0)   // Flags
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowAddHotspot
+} // end of L_WindowAddHotspot
 
 //----------------------------------------
 //  world.WindowArc
 //----------------------------------------
 static int L_WindowArc (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowArc (
-            my_checkstring (L, 1),  // Name
-            my_checknumber (L, 2),  // Left
-            my_checknumber (L, 3),  // Top
-            my_checknumber (L, 4),  // Right
-            my_checknumber (L, 5),  // Bottom
-            my_checknumber (L, 6),  // x1
-            my_checknumber (L, 7),  // y2
-            my_checknumber (L, 8),  // x1
-            my_checknumber (L, 9),  // y2
-            my_checknumber (L, 10),  // PenColour
-            my_checknumber (L, 11),  // PenStyle
-            my_checknumber (L, 12)   // PenWidth
-            ));
+      my_checkstring (L, 1), // Name
+      my_checklong (L, 2),   // Left
+      my_checklong (L, 3),   // Top
+      my_checklong (L, 4),   // Right
+      my_checklong (L, 5),   // Bottom
+      my_checklong (L, 6),   // x1
+      my_checklong (L, 7),   // y2
+      my_checklong (L, 8),   // x1
+      my_checklong (L, 9),   // y2
+      my_checklong (L, 10),  // PenColour
+      my_checklong (L, 11),  // PenStyle
+      my_checklong (L, 12)   // PenWidth
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowArc
+} // end of L_WindowArc
 
 //----------------------------------------
 //  world.WindowBezier
 //----------------------------------------
 static int L_WindowBezier (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowBezier (
-            my_checkstring (L, 1),  // Name
-            my_checkstring (L, 2),  // Points
-            my_checknumber (L, 3),  // PenColour
-            my_checknumber (L, 4),  // PenStyle
-            my_checknumber (L, 5)   // PenWidth
-            ));
+      my_checkstring (L, 1),  // Name
+      my_checkstring (L, 2),  // Points
+      my_checklong (L, 3),    // PenColour
+      my_checklong (L, 4),    // PenStyle
+      my_checklong (L, 5)     // PenWidth
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowBezier
+} // end of L_WindowBezier
 
 //----------------------------------------
 //  world.WindowBlendImage
 //----------------------------------------
 static int L_WindowBlendImage (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowBlendImage (
-            my_checkstring (L, 1),    // Name
-            my_checkstring (L, 2),    // ImageId
-            my_checknumber (L, 3),    // Left
-            my_checknumber (L, 4),    // Top
-            my_checknumber (L, 5),    // Right
-            my_checknumber (L, 6),    // Bottom
-            my_checknumber (L, 7),    // Mode
-            my_optnumber (L, 8, 1),   // Opacity
-            my_optnumber (L, 9, 0),   // SrcLeft
-            my_optnumber (L, 10, 0),  // SrcTop
-            my_optnumber (L, 11, 0),  // SrcRight
-            my_optnumber (L, 12, 0)   // SrcBottom
-            ));
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // ImageId
+      my_checklong (L, 3),   // Left
+      my_checklong (L, 4),   // Top
+      my_checklong (L, 5),   // Right
+      my_checklong (L, 6),   // Bottom
+      my_checkshort (L, 7),  // Mode
+      my_optlong (L, 8, 1),  // Opacity
+      my_optlong (L, 9, 0),  // SrcLeft
+      my_optlong (L, 10, 0), // SrcTop
+      my_optlong (L, 11, 0), // SrcRight
+      my_optlong (L, 12, 0)  // SrcBottom
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowBlendImage
+} // end of L_WindowBlendImage
 
 //----------------------------------------
 //  world.WindowCircleOp
 //----------------------------------------
 static int L_WindowCircleOp (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowCircleOp (
-            my_checkstring (L, 1),    // Name
-            my_checknumber (L, 2),    // Action
-            my_checknumber (L, 3),    // Left
-            my_checknumber (L, 4),    // Top
-            my_checknumber (L, 5),    // Right
-            my_checknumber (L, 6),    // Bottom
-            my_checknumber (L, 7),    // PenColour
-            my_checknumber (L, 8),    // PenStyle
-            my_checknumber (L, 9),    // PenWidth
-            my_checknumber (L, 10),   // BrushColour
-            my_optnumber (L, 11, 0),  // BrushStyle
-            my_optnumber (L, 12, 0),  // Extra1
-            my_optnumber (L, 13, 0),  // Extra2
-            my_optnumber (L, 14, 0),  // Extra3
-            my_optnumber (L, 15, 0)   // Extra4
-            ));
+      my_checkstring (L, 1), // Name
+      my_checkshort (L, 2),  // Action
+      my_checklong (L, 3),   // Left
+      my_checklong (L, 4),   // Top
+      my_checklong (L, 5),   // Right
+      my_checklong (L, 6),   // Bottom
+      my_checklong (L, 7),   // PenColour
+      my_checklong (L, 8),   // PenStyle
+      my_checklong (L, 9),   // PenWidth
+      my_checklong (L, 10),  // BrushColour
+      my_optlong (L, 11, 0), // BrushStyle
+      my_optlong (L, 12, 0), // Extra1
+      my_optlong (L, 13, 0), // Extra2
+      my_optlong (L, 14, 0), // Extra3
+      my_optlong (L, 15, 0)  // Extra4
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowCircleOp
+} // end of L_WindowCircleOp
 
 //----------------------------------------
 //  world.WindowCreate
 //----------------------------------------
 static int L_WindowCreate (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowCreate (
-      my_checkstring (L, 1),    // Name
-      my_checknumber (L, 2),    // Left
-      my_checknumber (L, 3),    // Top
-      my_checknumber (L, 4),    // Width
-      my_checknumber (L, 5),    // Height
-      my_checknumber (L, 6),    // Position
-      my_checknumber (L, 7),    // Flags
-      my_checknumber (L, 8)     // Background Colour
-    ));
-
+      my_checkstring (L, 1),  // Name
+      my_checklong (L, 2),    // Left
+      my_checklong (L, 3),    // Top
+      my_checklong (L, 4),    // Width
+      my_checklong (L, 5),    // Height
+      my_checkshort (L, 6),   // Position
+      my_checklong (L, 7),    // Flags
+      my_checklong (L, 8)     // Background Colour
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowCreate
+} // end of L_WindowCreate
 
 //----------------------------------------
 //  world.WindowCreateImage
 //----------------------------------------
 static int L_WindowCreateImage (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowCreateImage (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2),    // ImageId
-      my_checknumber (L, 3),    // Row1
-      my_checknumber (L, 4),    // Row2
-      my_checknumber (L, 5),    // Row3
-      my_checknumber (L, 6),    // Row4
-      my_checknumber (L, 7),    // Row5
-      my_checknumber (L, 8),    // Row6
-      my_checknumber (L, 9),    // Row7
-      my_checknumber (L, 10)    // Row8
-    ));
-
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // ImageId
+      my_checklong (L, 3),   // Row1
+      my_checklong (L, 4),   // Row2
+      my_checklong (L, 5),   // Row3
+      my_checklong (L, 6),   // Row4
+      my_checklong (L, 7),   // Row5
+      my_checklong (L, 8),   // Row6
+      my_checklong (L, 9),   // Row7
+      my_checklong (L, 10)   // Row8
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowCreateImage
+} // end of L_WindowCreateImage
 
 //----------------------------------------
 //  world.WindowDelete
 //----------------------------------------
 static int L_WindowDelete (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowDelete (
-            my_checkstring (L, 1)  // Name
-            ));
+      my_checkstring (L, 1) // Name
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowDelete
+} // end of L_WindowDelete
 
 //----------------------------------------
 //  world.WindowDeleteAllHotspots
 //----------------------------------------
 static int L_WindowDeleteAllHotspots (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowDeleteAllHotspots (
-            my_checkstring (L, 1)  // Name
-            ));
+      my_checkstring (L, 1) // Name
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowDeleteAllHotspots
+} // end of L_WindowDeleteAllHotspots
 
 //----------------------------------------
 //  world.WindowDeleteHotspot
 //----------------------------------------
 static int L_WindowDeleteHotspot (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowDeleteHotspot (
-            my_checkstring (L, 1),  // Name
-            my_checkstring (L, 2)   // HotspotId
-            ));
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2)  // HotspotId
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowDeleteHotspot
+} // end of L_WindowDeleteHotspot
 
 //----------------------------------------
 //  world.WindowDragHandler
 //----------------------------------------
 static int L_WindowDragHandler (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowDragHandler (
-            my_checkstring (L, 1),    // Name
-            my_checkstring (L, 2),    // HotspotId
-            my_optstring (L, 3, ""),  // MoveCallback
-            my_optstring (L, 4, ""),  // ReleaseCallback
-            my_optnumber (L, 5, 0)    // Flags
-            ));
+      my_checkstring (L, 1),   // Name
+      my_checkstring (L, 2),   // HotspotId
+      my_optstring (L, 3, ""), // MoveCallback
+      my_optstring (L, 4, ""), // ReleaseCallback
+      my_optlong (L, 5, 0)     // Flags
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowDragHandler
+} // end of L_WindowDragHandler
 
 //----------------------------------------
 //  world.WindowDrawImage
 //----------------------------------------
 static int L_WindowDrawImage (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowDrawImage (
-            my_checkstring (L, 1),    // Name
-            my_checkstring (L, 2),    // ImageId
-            my_checknumber (L, 3),    // Left
-            my_checknumber (L, 4),    // Top
-            my_checknumber (L, 5),    // Right
-            my_checknumber (L, 6),    // Bottom
-            my_optnumber (L, 7, 1),   // Mode
-            my_optnumber (L, 8, 0),   // SrcLeft
-            my_optnumber (L, 9, 0),   // SrcTop
-            my_optnumber (L, 10, 0),  // SrcRight
-            my_optnumber (L, 11, 0)   // SrcBottom
-            ));
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // ImageId
+      my_checklong (L, 3),   // Left
+      my_checklong (L, 4),   // Top
+      my_checklong (L, 5),   // Right
+      my_checklong (L, 6),   // Bottom
+      my_optshort (L, 7, 1), // Mode
+      my_optlong (L, 8, 0),  // SrcLeft
+      my_optlong (L, 9, 0),  // SrcTop
+      my_optlong (L, 10, 0), // SrcRight
+      my_optlong (L, 11, 0)  // SrcBottom
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowDrawImage
+} // end of L_WindowDrawImage
 
 //----------------------------------------
 //  world.WindowDrawImageAlpha
 //----------------------------------------
 static int L_WindowDrawImageAlpha (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowDrawImageAlpha (
-            my_checkstring (L, 1),    // Name
-            my_checkstring (L, 2),    // ImageId
-            my_checknumber (L, 3),    // Left
-            my_checknumber (L, 4),    // Top
-            my_checknumber (L, 5),    // Right
-            my_checknumber (L, 6),    // Bottom
-            my_optnumber (L, 7, 1),   // Opacity
-            my_optnumber (L, 8, 0),   // SrcLeft
-            my_optnumber (L, 9, 0)    // SrcTop
-            ));
+      my_checkstring (L, 1),  // Name
+      my_checkstring (L, 2),  // ImageId
+      my_checklong (L, 3),    // Left
+      my_checklong (L, 4),    // Top
+      my_checklong (L, 5),    // Right
+      my_checklong (L, 6),    // Bottom
+      my_optnumber (L, 7, 1), // Opacity
+      my_optlong (L, 8, 0),   // SrcLeft
+      my_optlong (L, 9, 0)    // SrcTop
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowDrawImageAlpha
+} // end of L_WindowDrawImageAlpha
 
 //----------------------------------------
 //  world.WindowFilter
 //----------------------------------------
 static int L_WindowFilter (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowFilter (
-            my_checkstring (L, 1),    // Name
-            my_checknumber (L, 2),    // Left
-            my_checknumber (L, 3),    // Top
-            my_checknumber (L, 4),    // Right
-            my_checknumber (L, 5),    // Bottom
-            my_checknumber (L, 6),    // Operation
-            my_checknumber (L, 7)     // Options
-            ));
+      my_checkstring (L, 1), // Name
+      my_checklong (L, 2),   // Left
+      my_checklong (L, 3),   // Top
+      my_checklong (L, 4),   // Right
+      my_checklong (L, 5),   // Bottom
+      my_checkshort (L, 6),  // Operation
+      my_checknumber (L, 7)  // Options
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowFilter
+} // end of L_WindowFilter
 
 //----------------------------------------
 //  world.WindowFont
 //----------------------------------------
 static int L_WindowFont (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowFont (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2),    // FontId
-      my_checkstring (L, 3),    // FontName
-      my_checknumber (L, 4),    // Size
-      optboolean (L, 5, 0),    // Bold
-      optboolean (L, 6, 0),    // Italic
-      optboolean (L, 7, 0),    // Underline
-      optboolean (L, 8, 0),    // Strikeout
-      my_optnumber (L, 9, DEFAULT_CHARSET),  // Charset
-      my_optnumber (L, 10, FF_DONTCARE)  // PitchAndFamily
-    ));
-
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // FontId
+      my_checkstring (L, 3), // FontName
+      my_checknumber (L, 4), // Size
+      optboolean (L, 5, 0),  // Bold
+      optboolean (L, 6, 0),  // Italic
+      optboolean (L, 7, 0),  // Underline
+      optboolean (L, 8, 0),  // Strikeout
+      my_optshort (L, 9, DEFAULT_CHARSET), // Charset
+      my_optshort (L, 10, FF_DONTCARE)     // PitchAndFamily
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowFont
+} // end of L_WindowFont
 
 //----------------------------------------
 //  world.WindowFontInfo
 //----------------------------------------
 static int L_WindowFontInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->WindowFontInfo (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2),    // FontId
-      my_checknumber (L, 3)     // InfoType
-    );
-
-  return pushVariant (L, v);
-  } // end of L_WindowFontInfo
+  return pushVariant (L, pDoc->WindowFontInfo (
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // FontId
+      my_checklong (L, 3)    // InfoType
+      ));
+} // end of L_WindowFontInfo
 
 //----------------------------------------
 //  world.WindowFontList
 //----------------------------------------
 static int L_WindowFontList (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->WindowFontList (my_checkstring (L, 1)); // name
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_WindowFontList
+  return pushVariant (L, pDoc->WindowFontList (
+      my_checkstring (L, 1) // Name
+      ));
+} // end of L_WindowFontList
 
 //----------------------------------------
 //  world.WindowGetPixel
 //----------------------------------------
 static int L_WindowGetPixel (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowGetPixel (
-            my_checkstring (L, 1),  // Name
-            my_checknumber (L, 2),  // x
-            my_checknumber (L, 3)   // y
-            ));
+      my_checkstring (L, 1), // Name
+      my_checklong (L, 2),   // x
+      my_checklong (L, 3)    // y
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowGetPixel
+} // end of L_WindowGetPixel
 
 //----------------------------------------
 //  world.WindowGradient
@@ -5622,15 +5560,15 @@ static int L_WindowGradient (lua_State *L)
   {
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowGradient (
-            my_checkstring (L, 1),    // Name
-            my_checknumber (L, 2),    // Left
-            my_checknumber (L, 3),    // Top
-            my_checknumber (L, 4),    // Right
-            my_checknumber (L, 5),    // Bottom
-            my_checknumber (L, 6),    // StartColour
-            my_checknumber (L, 7),    // EndColour
-            my_checknumber (L, 8)     // Mode
-            ));
+      my_checkstring (L, 1), // Name
+      my_checklong (L, 2),   // Left
+      my_checklong (L, 3),   // Top
+      my_checklong (L, 4),   // Right
+      my_checklong (L, 5),   // Bottom
+      my_checklong (L, 6),   // StartColour
+      my_checklong (L, 7),   // EndColour
+      my_checkshort (L, 8)   // Mode
+      ));
   return 1;  // number of result fields
   } // end of L_WindowGradient
 
@@ -5638,408 +5576,394 @@ static int L_WindowGradient (lua_State *L)
 //  world.WindowHotspotInfo
 //----------------------------------------
 static int L_WindowHotspotInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->WindowHotspotInfo (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2),    // HotspotId
-      my_checknumber (L, 3)     // InfoType
-    );
-
-  return pushVariant (L, v);
-  } // end of L_WindowHotspotInfo
+  return pushVariant (L, pDoc->WindowHotspotInfo (
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // HotspotId
+      my_checklong (L, 3)    // InfoType
+      ));
+} // end of L_WindowHotspotInfo
 
 //----------------------------------------
 //  world.WindowHotspotList
 //----------------------------------------
 static int L_WindowHotspotList (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->WindowHotspotList (my_checkstring (L, 1)); // name
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_WindowHotspotList
+  return pushVariant (L, pDoc->WindowHotspotList (
+      my_checkstring (L, 1) // Name
+      ));
+} // end of L_WindowHotspotList
 
 //----------------------------------------
 //  world.WindowHotspotTooltip
 //----------------------------------------
 static int L_WindowHotspotTooltip (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowHotspotTooltip (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2),    // HotspotId
-      my_checkstring (L, 3)     // TooltipText
-    ));
-
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // HotspotId
+      my_checkstring (L, 3)  // TooltipText
+      ));
   return 1;
-  } // end of L_WindowHotspotTooltip
+} // end of L_WindowHotspotTooltip
 
 //----------------------------------------
 //  world.WindowImageFromWindow
 //----------------------------------------
 static int L_WindowImageFromWindow (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowImageFromWindow (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2),    // ImageId
-      my_checkstring (L, 3)     // SourceWindow
-    ));
-
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // ImageId
+      my_checkstring (L, 3)  // SourceWindow
+      ));
   return 1;
-  } // end of L_WindowImageFromWindow
+} // end of L_WindowImageFromWindow
 
 //----------------------------------------
 //  world.WindowImageInfo
 //----------------------------------------
 static int L_WindowImageInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->WindowImageInfo (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2),    // ImageId
-      my_checknumber (L, 3)     // InfoType
-    );
-
-  return pushVariant (L, v);
-  } // end of L_WindowImageInfo
+  return pushVariant (L, pDoc->WindowImageInfo (
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // ImageId
+      my_checklong (L, 3)    // InfoType
+      ));
+} // end of L_WindowImageInfo
 
 //----------------------------------------
 //  world.WindowImageList
 //----------------------------------------
 static int L_WindowImageList (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->WindowImageList (my_checkstring (L, 1)); // name
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_WindowImageList
+  return pushVariant (L, pDoc->WindowImageList (
+      my_checkstring (L, 1) // Name
+      ));
+} // end of L_WindowImageList
 
 //----------------------------------------
 //  world.WindowImageOp
 //----------------------------------------
 static int L_WindowImageOp (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowImageOp (
-            my_checkstring (L, 1),    // Name
-            my_checknumber (L, 2),    // Action
-            my_checknumber (L, 3),    // Left
-            my_checknumber (L, 4),    // Top
-            my_checknumber (L, 5),    // Right
-            my_checknumber (L, 6),    // Bottom
-            my_checknumber (L, 7),    // PenColour
-            my_checknumber (L, 8),    // PenStyle
-            my_checknumber (L, 9),    // PenWidth
-            my_checknumber (L, 10),   // BrushColour
-            my_checkstring (L, 11),   // ImageId
-            my_optnumber (L, 12, 0),  // EllipseWidth
-            my_optnumber (L, 13, 0)   // EllipseHeight
-            ));
+      my_checkstring (L, 1), // Name
+      my_checkshort (L, 2),  // Action
+      my_checklong (L, 3),   // Left
+      my_checklong (L, 4),   // Top
+      my_checklong (L, 5),   // Right
+      my_checklong (L, 6),   // Bottom
+      my_checklong (L, 7),   // PenColour
+      my_checklong (L, 8),   // PenStyle
+      my_checklong (L, 9),   // PenWidth
+      my_checklong (L, 10),  // BrushColour
+      my_checkstring (L, 11),  // ImageId
+      my_optlong (L, 12, 0), // EllipseWidth
+      my_optlong (L, 13, 0)  // EllipseHeight
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowImageOp
+} // end of L_WindowImageOp
 
 //----------------------------------------
 //  world.WindowInfo
 //----------------------------------------
 static int L_WindowInfo (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  VARIANT v = pDoc->WindowInfo (
-      my_checkstring (L, 1),    // Name
-      my_checknumber (L, 2)     // InfoType
-    );
-
-  return pushVariant (L, v);
-  } // end of L_WindowInfo
+  return pushVariant (L, pDoc->WindowInfo (
+      my_checkstring (L, 1), // Name
+      my_checklong (L, 2)    // InfoType
+      ));
+} // end of L_WindowInfo
 
 //----------------------------------------
 //  world.WindowLine
 //----------------------------------------
 static int L_WindowLine (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowLine (
-            my_checkstring (L, 1),  // Name
-            my_checknumber (L, 2),  // x1
-            my_checknumber (L, 3),  // y2
-            my_checknumber (L, 4),  // x1
-            my_checknumber (L, 5),  // y2
-            my_checknumber (L, 6),  // PenColour
-            my_checknumber (L, 7),  // PenStyle
-            my_checknumber (L, 8)   // PenWidth
-            ));
+      my_checkstring (L, 1), // Name
+      my_checklong (L, 2),   // x1
+      my_checklong (L, 3),   // y2
+      my_checklong (L, 4),   // x1
+      my_checklong (L, 5),   // y2
+      my_checklong (L, 6),   // PenColour
+      my_checklong (L, 7),   // PenStyle
+      my_checklong (L, 8)    // PenWidth
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowLine
+} // end of L_WindowLine
 
 //----------------------------------------
 //  world.WindowList
 //----------------------------------------
 static int L_WindowList (lua_State *L)
-  {
-  VARIANT v = doc (L)->WindowList ();
-  return pushVariant (L, v);  // number of result fields
-  } // end of L_WindowList
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  return pushVariant (L, pDoc->WindowList ());  // number of result fields
+} // end of L_WindowList
 
 //----------------------------------------
 //  world.WindowLoadImage
 //----------------------------------------
 static int L_WindowLoadImage (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowLoadImage (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2),    // FontId
-      my_checkstring (L, 3)     // FileName
-     ));
-
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // FontId
+      my_checkstring (L, 3)  // FileName
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowLoadImage
+} // end of L_WindowLoadImage
 
 //----------------------------------------
 //  world.WindowLoadImageMemory
 //----------------------------------------
 static int L_WindowLoadImageMemory (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
-  LPCTSTR sBuffer;
-  size_t  iBufferLength;
-  sBuffer = luaL_checklstring (L, 3, &iBufferLength);
 
+  size_t  iBufferLength;
+  LPCTSTR sBuffer = luaL_checklstring (L, 3, &iBufferLength);
   lua_pushnumber (L, pDoc->WindowLoadImageMemory (
       my_checkstring (L, 1),    // Name
       my_checkstring (L, 2),    // FontId
       (unsigned char *) sBuffer,
       iBufferLength,
       optboolean (L, 4, 0)      // swap alpha?
-     ));
-
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowLoadImageMemory
+} // end of L_WindowLoadImageMemory
 
 //----------------------------------------
 //  world.WindowMenu
 //----------------------------------------
 static int L_WindowMenu (lua_State *L)
-  {
-  BSTR str;  
-
+{
   CMUSHclientDoc *pDoc = doc (L);
-  str = pDoc->WindowMenu (
-      my_checkstring (L, 1),    // Name
-      my_checknumber (L, 2),    // Left
-      my_checknumber (L, 3),    // Top
-      my_checkstring (L, 4)     // Items
-     );
-
+  BSTR str = pDoc->WindowMenu (
+      my_checkstring (L, 1), // Name
+      my_checklong (L, 2),   // Left
+      my_checklong (L, 3),   // Top
+      my_checkstring (L, 4)  // Items
+      );
   return pushBstr (L, str);  // number of result fields
-  } // end of L_WindowMenu
+} // end of L_WindowMenu
 
 //----------------------------------------
 //  world.WindowMergeImageAlpha
 //----------------------------------------
 static int L_WindowMergeImageAlpha (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowMergeImageAlpha (
-            my_checkstring (L, 1),    // Name
-            my_checkstring (L, 2),    // ImageId
-            my_checkstring (L, 3),    // MaskId
-            my_checknumber (L, 4),    // Left
-            my_checknumber (L, 5),    // Top
-            my_checknumber (L, 6),    // Right
-            my_checknumber (L, 7),    // Bottom
-            my_checknumber (L, 8),    // Mode
-            my_optnumber (L, 9, 1),   // Opacity
-            my_optnumber (L, 10, 0),  // SrcLeft
-            my_optnumber (L, 11, 0),  // SrcTop
-            my_optnumber (L, 12, 0),  // SrcRight
-            my_optnumber (L, 13, 0)   // SrcBottom
-            ));
+      my_checkstring (L, 1),  // Name
+      my_checkstring (L, 2),  // ImageId
+      my_checkstring (L, 3),  // MaskId
+      my_checklong (L, 4),    // Left
+      my_checklong (L, 5),    // Top
+      my_checklong (L, 6),    // Right
+      my_checklong (L, 7),    // Bottom
+      my_checkshort (L, 8),   // Mode
+      my_optnumber (L, 9, 1), // Opacity
+      my_optlong (L, 10, 0),  // SrcLeft
+      my_optlong (L, 11, 0),  // SrcTop
+      my_optlong (L, 12, 0),  // SrcRight
+      my_optlong (L, 13, 0)   // SrcBottom
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowMergeImageAlpha
+} // end of L_WindowMergeImageAlpha
 
 
 //----------------------------------------
 //  world.WindowPolygon
 //----------------------------------------
 static int L_WindowPolygon (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowPolygon (
-            my_checkstring (L, 1),  // Name
-            my_checkstring (L, 2),  // Points
-            my_checknumber (L, 3),  // PenColour
-            my_checknumber (L, 4),  // PenStyle
-            my_checknumber (L, 5),  // PenWidth
-            my_checknumber (L, 6),  // BrushColour
-            my_optnumber (L, 7, 0), // BrushStyle
-            optboolean (L, 8, 0),   // Close
-            optboolean (L, 9, 0)    // Winding
-            ));
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // Points
+      my_checklong (L, 3),   // PenColour
+      my_checkshort (L, 4),  // PenStyle
+      my_checklong (L, 5),   // PenWidth
+      my_checklong (L, 6),   // BrushColour
+      my_optlong (L, 7, 0),  // BrushStyle
+      optboolean (L, 8, 0),  // Close
+      optboolean (L, 9, 0)   // Winding
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowPolygon
+} // end of L_WindowPolygon
 
 //----------------------------------------
 //  world.WindowPosition
 //----------------------------------------
 static int L_WindowPosition (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowPosition (
-      my_checkstring (L, 1),    // Name
-      my_checknumber (L, 2),    // Left
-      my_checknumber (L, 3),    // Top
-      my_checknumber (L, 4),    // Position
-      my_checknumber (L, 5)     // Flags
-    ));
-
+      my_checkstring (L, 1), // Name
+      my_checklong (L, 2),   // Left
+      my_checklong (L, 3),   // Top
+      my_checkshort (L, 4),  // Position
+      my_checklong (L, 5)    // Flags
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowPosition
+} // end of L_WindowPosition
 
 //----------------------------------------
 //  world.WindowRectOp
 //----------------------------------------
 static int L_WindowRectOp (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowRectOp (
-            my_checkstring (L, 1),  // Name
-            my_checknumber (L, 2),  // Action
-            my_checknumber (L, 3),  // Left
-            my_checknumber (L, 4),  // Top
-            my_checknumber (L, 5),  // Right
-            my_checknumber (L, 6),  // Bottom
-            my_checknumber (L, 7),  // Colour1
-            my_optnumber (L, 8, 0)  // Colour2
-            ));
+      my_checkstring (L, 1), // Name
+      my_checkshort (L, 2),  // Action
+      my_checklong (L, 3), // Left
+      my_checklong (L, 4), // Top
+      my_checklong (L, 5), // Right
+      my_checklong (L, 6), // Bottom
+      my_checklong (L, 7), // Colour1
+      my_optlong (L, 8, 0) // Colour2
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowRectOp
+} // end of L_WindowRectOp
 
 //----------------------------------------
 //  world.WindowSetPixel
 //----------------------------------------
 static int L_WindowSetPixel (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowSetPixel (
-            my_checkstring (L, 1),  // Name
-            my_checknumber (L, 2),  // x
-            my_checknumber (L, 3),  // y
-            my_checknumber (L, 4)   // Colour
-            ));
+      my_checkstring (L, 1), // Name
+      my_checklong (L, 2),   // x
+      my_checklong (L, 3),   // y
+      my_checklong (L, 4)    // Colour
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowSetPixel
+} // end of L_WindowSetPixel
 
 //----------------------------------------
 //  world.WindowShow
 //----------------------------------------
 static int L_WindowShow (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L,pDoc->WindowShow (
-        my_checkstring (L, 1),    // Name
-        optboolean (L, 2, 1)));    // Show
+      my_checkstring (L, 1), // Name
+      optboolean (L, 2, 1)   // Show
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowShow
+} // end of L_WindowShow
 
 //----------------------------------------
 //  world.WindowText
 //----------------------------------------
 static int L_WindowText (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowText (
-        my_checkstring (L, 1),    // Name
-        my_checkstring (L, 2),    // Font
-        my_checkstring (L, 3),    // Text
-        my_checknumber (L, 4),    // Left
-        my_checknumber (L, 5),    // Top
-        my_checknumber (L, 6),    // Right
-        my_checknumber (L, 7),    // Bottom
-        my_checknumber (L, 8),    // Colour
-        optboolean (L, 9, 0)     // Unicode
-        ));
-
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // Font
+      my_checkstring (L, 3), // Text
+      my_checklong (L, 4),   // Left
+      my_checklong (L, 5),   // Top
+      my_checklong (L, 6),   // Right
+      my_checklong (L, 7),   // Bottom
+      my_checklong (L, 8),   // Colour
+      optboolean (L, 9, 0)   // Unicode
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowText
+} // end of L_WindowText
 
 //----------------------------------------
 //  world.WindowTextWidth
 //----------------------------------------
 static int L_WindowTextWidth (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowTextWidth (
-        my_checkstring (L, 1),    // Name
-        my_checkstring (L, 2),    // Font
-        my_checkstring (L, 3),    // Text
-        optboolean (L, 4, 0)      // Unicode
-        ));
-
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2), // Font
+      my_checkstring (L, 3), // Text
+      optboolean (L, 4, 0)   // Unicode
+      ));
   return 1;  // number of result fields
-  } // end of WindowTextWidth
+} // end of WindowTextWidth
 
 //----------------------------------------
 //  world.WindowWrite
 //----------------------------------------
 static int L_WindowWrite (lua_State *L)
-  {
+{
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->WindowWrite (
-      my_checkstring (L, 1),    // Name
-      my_checkstring (L, 2)     // FileName
-     ));
-
+      my_checkstring (L, 1), // Name
+      my_checkstring (L, 2)  // FileName
+      ));
   return 1;  // number of result fields
-  } // end of L_WindowWrite
+} // end of L_WindowWrite
 
 //----------------------------------------
 //  world.WorldAddress
 //----------------------------------------
 static int L_WorldAddress (lua_State *L)
-  {
-  BSTR str = doc (L)->WorldAddress ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR str = pDoc->WorldAddress ();
   return pushBstr (L, str);  // number of result fields
-  } // end of L_WorldAddress
+} // end of L_WorldAddress
 
 
 //----------------------------------------
 //  world.WorldName
 //----------------------------------------
 static int L_WorldName (lua_State *L)
-  {
-  BSTR str = doc (L)->WorldName ();
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  BSTR str = pDoc->WorldName ();
   return pushBstr (L, str);  // number of result fields
-  } // end of L_WorldName
+} // end of L_WorldName
 
 
 //----------------------------------------
 //  world.WorldPort
 //----------------------------------------
 static int L_WorldPort (lua_State *L)
-  {
-  lua_pushnumber (L, doc (L)->WorldPort ());
+{
+  CMUSHclientDoc *pDoc = doc (L);
+  lua_pushnumber (L, pDoc->WorldPort ());
   return 1;  // number of result fields
-  } // end of L_WorldPort
+} // end of L_WorldPort
 
 //----------------------------------------
 //  world.WriteLog
 //----------------------------------------
 static int L_WriteLog (lua_State *L)
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // must do this first
   lua_pushnumber (L, pDoc->WriteLog (concatArgs (L).c_str ()));
   return 1;  // number of result fields
-  } // end of L_WriteLog
+} // end of L_WriteLog
 
 // methods implemented in Lua
 // warning - case-sensitive!
 
 // eg. world.Note ("hello ", "world")
 
-static const struct luaL_reg worldlib [] = 
-  {
-
+static const struct luaL_reg worldlib [] = {
   {"Accelerator", L_Accelerator},
   {"AcceleratorTo", L_AcceleratorTo},
   {"AcceleratorList", L_AcceleratorList},
@@ -6459,11 +6383,11 @@ static const struct luaL_reg worldlib [] =
   {"WriteLog", L_WriteLog},
     
   {NULL, NULL}
-  };
+};
 
 
 static int l_print (lua_State *L) 
-  {
+{
   CMUSHclientDoc * pDoc = doc (L);  // have to do it first
   pDoc->Note (concatArgs (L, " ").c_str ());
   return 0;
@@ -6471,54 +6395,46 @@ static int l_print (lua_State *L)
 
 
 int world2string (lua_State *L) 
-  {
-//  CMUSHclientDoc *pDoc = doc(L);
-//  lua_pushfstring(L, "world(%s)", pDoc->m_mush_name);
-
+{
+  //CMUSHclientDoc *pDoc = doc(L);
+  //lua_pushfstring(L, "world(%s)", pDoc->m_mush_name);
   lua_pushliteral (L, "world");
   return 1;
-  }
+}
   
-static const struct luaL_reg worldlib_meta [] = 
-  {
-    {"__tostring", world2string},
-    {NULL, NULL}
-  };
+static const struct luaL_reg worldlib_meta [] = {
+  {"__tostring", world2string},
+  {NULL, NULL}
+};
 
-static int MakeFlagsTable (lua_State *L, 
-                           const char *name,
-                           const flags_pair *arr)
+static int MakeFlagsTable (lua_State *L, const char *name, const flags_pair *arr)
 {
-  const flags_pair *p;
   lua_newtable(L);
-  for(p=arr; p->key != NULL; p++) {
+  for (const flags_pair *p = arr; p->key != NULL; ++p)
+    {
     lua_pushstring(L, p->key);
     lua_pushnumber(L, p->val);
     lua_rawset(L, -3);
-  }
+    }
   lua_setglobal (L, name);
   return 1;
 }
 
 // warning - translates messages
-static int MakeIntFlagsTable (lua_State *L, 
-                             const char *name,
-                             const int_flags_pair *arr)
+static int MakeIntFlagsTable (lua_State *L, const char *name, const int_flags_pair *arr)
 {
-  const int_flags_pair *p;
   lua_newtable(L);
-  for(p=arr; p->val != NULL; p++) {
+  for (const int_flags_pair *p = arr; p->val != NULL; ++p)
+    {
     lua_pushnumber(L, p->key);
     lua_pushstring(L, Translate (p->val));
     lua_rawset(L, -3);
-  }
+    }
   lua_setglobal (L, name);
   return 1;
 }
 
-static flags_pair trigger_flags[] =
-{
-
+static flags_pair trigger_flags[] = {
   { "Enabled", 1 },  // enable trigger 
   { "OmitFromLog", 2 },  // omit from log file 
   { "OmitFromOutput", 4 },  // omit trigger from output 
@@ -6534,9 +6450,7 @@ static flags_pair trigger_flags[] =
   { NULL, 0 }
 };
 
-static flags_pair custom_colours[] =
-{
-
+static flags_pair custom_colours[] = {
   { "NoChange", -1 }, 
   { "Custom1", 0 }, 
   { "Custom2", 1 }, 
@@ -6559,9 +6473,7 @@ static flags_pair custom_colours[] =
   { NULL, 0 }
 };
 
-static flags_pair alias_flags[] =
-{
-
+static flags_pair alias_flags[] = {
   { "Enabled", 1 },  // same as for AddTrigger 
   { "IgnoreAliasCase", 32 },  // ignore case when matching 
   { "OmitFromLogFile", 64 },  // omit this alias from the log file 
@@ -6577,9 +6489,7 @@ static flags_pair alias_flags[] =
   { NULL, 0 }
 };
 
-static flags_pair timer_flags[] =
-{
-
+static flags_pair timer_flags[] = {
   { "Enabled", 1 },  // same as for AddTrigger 
   { "AtTime", 2 },  // if not set, time is "every" 
   { "OneShot", 4 },  // if set, timer only fires once 
@@ -6592,9 +6502,7 @@ static flags_pair timer_flags[] =
   { NULL, 0 }
 };
 
-static flags_pair error_codes[] =
-{
-
+static flags_pair error_codes[] = {
   { "eOK", 0 },                             // No error
   { "eWorldOpen", 30001 },                  // The world is already open
   { "eWorldClosed", 30002 },                // The world is closed, this action cannot be performed
@@ -6671,13 +6579,10 @@ static flags_pair error_codes[] =
   { "eNoSuchWindow", 30073 },               // requested miniwindow does not exist
   { "eBrushStyleNotValid", 30074 },         // invalid settings for brush parameter
 
-
   { NULL, 0 }
 };
 
-int_flags_pair error_descriptions[] =
-{
-
+int_flags_pair error_descriptions[] = {
   {  0,      Translate_NoOp ("No error") },
   {  30001,  Translate_NoOp ("The world is already open") },
   {  30002,  Translate_NoOp ("The world is closed, this action cannot be performed") },
@@ -6757,9 +6662,7 @@ int_flags_pair error_descriptions[] =
   { NULL, 0 }
 };
 
-static flags_pair send_to_destinations [] =
-{
-
+static flags_pair send_to_destinations [] = {
   {  "world",            eSendToWorld  },
   {  "command",          eSendToCommand  },
   {  "output",           eSendToOutput  },
@@ -6798,15 +6701,13 @@ static int l_errorhandler (lua_State *L)
 // int win_io_pclose (lua_State *L);
 
 int RegisterLuaRoutines (lua_State *L)
-  {
-
-  lua_newtable (L);  // environment
+{
+  lua_newtable (L); // environment
   lua_replace (L, LUA_ENVIRONINDEX);
-
   lua_settable(L, LUA_ENVIRONINDEX);
 
   // we want the global table so we can put a metatable on it
-//  lua_getglobal (L, "_G");
+  // lua_getglobal (L, "_G");
 
   lua_pushvalue (L, LUA_GLOBALSINDEX);
 
@@ -6824,11 +6725,9 @@ int RegisterLuaRoutines (lua_State *L)
   // set the world library as the metatable for the global library
   lua_setmetatable (L, -2);
 
-
   // print function for debugging
   lua_pushcfunction(L, l_print);
   lua_setglobal(L, "print");
-
         
   /*
 
@@ -6841,7 +6740,6 @@ int RegisterLuaRoutines (lua_State *L)
   */
 
   // see manual, 28.2, to see why we do this
-
   // we make a metatable for the world in case they do a world.GetWorld ("name")
 
   luaL_newmetatable(L, mushclient_typename);
@@ -6866,14 +6764,15 @@ int RegisterLuaRoutines (lua_State *L)
   // send-to table
   MakeFlagsTable (L, "sendto", send_to_destinations);
 
-  // colour names
 
+  // colour names
   lua_newtable(L);
 
-  for (POSITION pos = App.m_ColoursMap.GetStartPosition(); pos; )
+  POSITION pos = App.m_ColoursMap.GetStartPosition();
+  CColours * pColour = NULL;
+  CString strColourName;
+  while (pos != NULL)
     {
-    CColours * pColour;
-    CString strColourName;
     App.m_ColoursMap.GetNextAssoc (pos, strColourName, pColour);
     lua_pushstring(L, strColourName);
     lua_pushnumber(L, pColour->iColour);
@@ -6882,12 +6781,11 @@ int RegisterLuaRoutines (lua_State *L)
 
   lua_setglobal (L, "colour_names");
 
-  // extended colour values
 
+  // extended colour values
   lua_newtable(L);
 
-  int i;
-  for (i = 0; i < 256; i++)
+  for (short i = 0; i <= 255; ++i)
     {
     lua_pushnumber(L, xterm_256_colours [i]);
     lua_rawseti (L, -2, i);
@@ -6895,77 +6793,71 @@ int RegisterLuaRoutines (lua_State *L)
 
   lua_setglobal (L, "extended_colours");
 
+
   // add xml reader to utils lib
   luaL_register (L, "utils", ptr_xmllib);
 
   return 0;
-  }
+}
 
 
 CString GetFromStack (lua_State *L, const char * what)
-  {
+{
   CString s;
 
   lua_pushstring (L, what);  
-  lua_rawget    (L, -2);               // get it
+  lua_rawget (L, -2); // get it
 
   lua_getglobal(L, "tostring");
-  lua_pushvalue (L, -2);    // make copy of result
-  lua_call (L, 1, 1);       // convert to string
+  lua_pushvalue (L, -2); // make copy of result
+  lua_call (L, 1, 1);    // convert to string
 
   s = lua_tostring (L, -1);
   lua_pop (L, 2);   // pop result and tostring function
 
   return s;
-  } // end of GetFromStack
+} // end of GetFromStack
 
 static int our_lua_debug_colournote (lua_State *L)
-  {
+{
   // just get what they were trying to say
-  const char * text = luaL_checkstring (L, 3);
+  CString sText = luaL_checkstring (L, 3);
 
-  CString sText (text);
   sText.Replace ("\n", ENDLINE);
   sText += ENDLINE;
 
   App.AppendToTheNotepad ("Lua Debugging",
-                          sText,
-                          false,  // don't replace selection
-                          eNotepadPacketDebug);
+      sText,
+      false,  // don't replace selection
+      eNotepadPacketDebug);
 
   // make sure they see it
   App.ActivateNotepad ("Lua Debugging");
 
   return 0;
-  }
+}
 
 static int our_lua_debug_function (lua_State *L)
-  {
-
+{
   CDebugLuaDlg dlg;
-
   dlg.L = L;    // Lua state for doing commands
 
   lua_getglobal (L, LUA_DBLIBNAME);  /* "debug" */
-
   if (!lua_istable (L, -1))
-     luaL_error(L, "Cannot debug, no debug table");	
+    luaL_error(L, "Cannot debug, no debug table");	
 
   // make our own ColourNote in case they are not attached to a world
-
   lua_getglobal (L, "ColourNote");  
-
   if (!lua_isfunction (L, -1))
-    {
+  {
     lua_pushcfunction(L, our_lua_debug_colournote);
-    lua_setglobal    (L, "ColourNote");    // set ColourNote to our function   
-    }
-
+    lua_setglobal (L, "ColourNote");    // set ColourNote to our function   
+  }
   lua_pop (L, 1);   // pop original ColourNote from stack
 
   // get a heap of info
   lua_pushstring(L, "getinfo");  
-  lua_rawget    (L, -2);               // get getinfo function
+  lua_rawget    (L, -2); // get getinfo function
   
   if (lua_isfunction (L, -1))
     {
@@ -6974,7 +6866,6 @@ static int our_lua_debug_function (lua_State *L)
     lua_call (L, 2, 1);   // 2 args, expect table as result
 
     // on stack now should be table of results
-
     if (lua_istable (L, -1))
       {
       // source of function
@@ -6982,72 +6873,56 @@ static int our_lua_debug_function (lua_State *L)
 
       // first line defined
       CString strFirstLine = GetFromStack (L, "linedefined");
-
       // last line defined
       CString strLastLine = GetFromStack (L, "lastlinedefined");
       dlg.m_strLines.Format ("%s, %s", (LPCTSTR) strFirstLine, (LPCTSTR) strLastLine);
 
       // current line executing
       dlg.m_strCurrentLine = GetFromStack (L, "currentline");
-
       // what function is: Lua, C, main
       dlg.m_strWhat = GetFromStack (L, "what");
 
       // what the "name" field is (might be empty)
       CString strNameWhat = GetFromStack (L, "namewhat");
-
       // if empty, there is no name field, otherwise get it
       if (!strNameWhat.IsEmpty ())
-        {
-        // name of function
-        dlg.m_strFunctionName = GetFromStack (L, "name");
-        dlg.m_strFunctionName += " (";
-        dlg.m_strFunctionName += strNameWhat;
-        dlg.m_strFunctionName += ")";
-        }
+        dlg.m_strFunctionName = GetFromStack (L, "name") + " (" + strNameWhat + ")";
 
       // number of upvalues
       dlg.m_strNups = GetFromStack (L, "nups");
-
       // function address
       dlg.m_strFunction = GetFromStack (L, "func");
-      
       } // end of table returned
-
     } // we have getinfo function
 
   lua_settop (L, 0);  // discard any results now
 
-
   // preload with their last command
-
   dlg.m_strCommand = App.m_strLastDebugCommand;
-
   dlg.DoModal ();
 
   // put last command back, unless they blanked it out
-
   if (!dlg.m_strCommand.IsEmpty ())
     App.m_strLastDebugCommand = dlg.m_strCommand;
 
   if (dlg.m_bAbort)
-      luaL_error(L, "Script aborted");	
+    luaL_error(L, "Script aborted");
 
   return 0;
-  } // end of our_lua_debug_function
+} // end of our_lua_debug_function
 
 int our_exit_function (lua_State *L)
-  {
+{
   return luaL_error(L, LUA_QL("os.exit") " not implemented in MUSHclient");	
-  }  // end of our_exit_function
+}  // end of our_exit_function
 
 int our_popen_function (lua_State *L)
-  {
+{
   return luaL_error(L, LUA_QL("io.popen") " not implemented in MUSHclient");	
-  } // end of our_popen_function
+} // end of our_popen_function
 
 int DisableDLLs (lua_State * L)
-  {
+{
   if (!App.m_bEnablePackageLibrary)
     {
     // grab package library
@@ -7074,11 +6949,9 @@ int DisableDLLs (lua_State * L)
     lua_rawseti     (L, -2, 3);                  //  package.loaders [3] = nil   
 
     lua_settop(L, 0);   // clear stack
-
     }
 
   // change debug.debug to ours
-
   lua_pushstring(L, LUA_DBLIBNAME);  /* "debug" */
   lua_rawget    (L, LUA_GLOBALSINDEX);    // get debug library   
 
@@ -7092,7 +6965,6 @@ int DisableDLLs (lua_State * L)
     }  // debug library was there
 
   // get rid of os.exit
-
   lua_pushstring(L, LUA_OSLIBNAME);  /* "os" */
   lua_rawget    (L, LUA_GLOBALSINDEX);    // get os library   
 
@@ -7103,11 +6975,9 @@ int DisableDLLs (lua_State * L)
     lua_rawset    (L, -3);    // set os.exit to our function   
     
     lua_pop(L, 1);  // pop os table
-
     }  // os library was there
 
   // get rid of io.popen 
-
   lua_pushstring(L, LUA_IOLIBNAME);  /* "io" */
   lua_rawget    (L, LUA_GLOBALSINDEX);    // get io library   
 
@@ -7122,6 +6992,6 @@ int DisableDLLs (lua_State * L)
 
   lua_settop(L, 0);   // clear stack
   return 0;
-  } // end of DisableDLLs
+} // end of DisableDLLs
 
 #endif  // LUA

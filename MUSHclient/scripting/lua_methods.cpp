@@ -9,6 +9,7 @@
 #include "..\sendvw.h"
 #include "..\dialogs\DebugLuaDlg.h"
 
+#define USE_LUA
 #ifdef USE_LUA
 
 const char mushclient_typename[] = "mushclient.world";
@@ -312,14 +313,10 @@ LUALIB_API lua_Integer my_optinteger (lua_State *L, int narg, lua_Integer def)
 
 #define my_checkstring(L,n)	(my_checklstring(L, (n), NULL))
 #define my_optstring(L,n,d)	(my_optlstring(L, (n), (d), NULL))
-#define my_checkint(L,n)	((int)my_checknumber(L, (n)))
-#define my_optint(L,n,d)	((int)my_optnumber(L, (n), (d)))
 #define my_checklong(L,n)	((long)my_checknumber(L, (n)))
 #define my_optlong(L,n,d)	((long)my_optnumber(L, (n), (d)))
 #define my_checkshort(L,n)  ((short)my_checknumber(L, (n)))
 #define my_optshort(L,n,d)  ((short)my_optnumber(L, (n), (d)))
-
-#define checkDoc(L) doc (L)
 
 //-------------- end of special checks --------------------
 
@@ -552,7 +549,7 @@ static int L_AdjustColour (lua_State *L)
 //----------------------------------------
 static int L_ANSI (lua_State *L)
 {
-  checkDoc(L); // must do this first
+  CMUSHclientDoc * pDoc = doc (L); // DO NO REMOVE - it has side effects
 
   int n = lua_gettop(L);  /* number of arguments */
 

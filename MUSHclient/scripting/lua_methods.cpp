@@ -197,7 +197,7 @@ string concatArgs (lua_State *L, const char * delimiter = "", const int first = 
     lua_pushvalue(L, i);   // L: ... tostring, <buf>, ... tostring, value
     lua_call(L, 1, 1);     // L: ... tostring, <buf>, ... str
 
-    if (lua_isnoneornil(L, -1))
+    if (!lua_isstring(L, -1))
       luaL_error(L, "'tostring' must return a string to be concatenated");
 
     if (i > first)

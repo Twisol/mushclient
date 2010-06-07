@@ -673,56 +673,38 @@ static void zlib_free (void * opaque, void * address)
 
 
 
-void CMUSHclientDoc::SetUpOutputWindow (void)
-  {
-
+void CMUSHclientDoc::SetUpOutputWindow ()
+{
   // Accept incoming chat calls
   if (m_bAcceptIncomingChatConnections)
     ChatAcceptCalls (0);
 
-// document details will be loaded now, so set screen font
+  // document details will be loaded now, so set screen font
+  ChangeFont (m_font_height, m_font_name,
+      m_font_weight, m_font_charset,
+      m_bShowBold, m_bShowItalic, m_bShowUnderline, m_iLineSpacing);
 
-  ChangeFont (m_font_height, 
-              m_font_name, 
-              m_font_weight, 
-              m_font_charset,
-              m_bShowBold,
-              m_bShowItalic,
-              m_bShowUnderline,
-              m_iLineSpacing);
+  ChangeInputFont (m_input_font_height, m_input_font_name,
+      m_input_font_weight, m_input_font_charset,
+      m_input_font_italic);
 
-  ChangeInputFont (m_input_font_height, 
-                  m_input_font_name, 
-                  m_input_font_weight, 
-                  m_input_font_charset,
-                  m_input_font_italic);
-
-
-// we defer allocating positions array to now, because m_maxlines is read from the
-// document file.
-
+  // we defer allocating positions array to now, because m_maxlines is read from the
+  // document file.
   if (!m_pLinePositions)
     {
+    // clear all elements
     m_pLinePositions = new POSITION [(m_maxlines / JUMP_SIZE) + 1];
-
-  // clear all elements
-
-    for (int i = 0; i <= m_maxlines / JUMP_SIZE; i++)
-      m_pLinePositions [i] = NULL;
-
+    memset(m_pLinePositions, 0, (m_maxlines / JUMP_SIZE) + 1);
     m_pLinePositions [0] = m_LineList.GetHeadPosition ();
-
     }   // end of not having a positions array yet
 
 // we defer allocating the first line to now, because m_nWrapColumn is read from the
 // document file.
-
-// put first line in line list
-
   if (!m_pCurrentLine)
     {
-    m_total_lines = 0;
-    m_pCurrentLine = new CLine (++m_total_lines, m_nWrapColumn, 0, WHITE, BLACK, m_bUTF_8);
+    // put first line in line list
+    m_total_lines = 1;
+    m_pCurrentLine = new CLine (m_total_lines, m_nWrapColumn, 0, WHITE, BLACK, m_bUTF_8);
     m_LineList.AddTail (m_pCurrentLine);
     }
 
@@ -747,48 +729,37 @@ void CMUSHclientDoc::SetUpOutputWindow (void)
   Note ("");
 
   // set output window(s) to "pause" if wanted
-
-  for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-
-		  pmyView->m_freeze = m_bStartPaused;
-
-	    }	
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      ((CMUSHView*)pView)->m_freeze = m_bStartPaused;
     } // end of looping through views
 
-// ------ load global plugins (unless already loaded from world file)
-
+  // ------ load global plugins (unless already loaded from world file)
   CString strPath;
-
   try
-
     {
-
     vector<string> v;
-    POSITION pos;
-
     StringToVector ((LPCTSTR) App.m_strPluginList, v, "*");
-
+    POSITION pos = NULL;
     for (vector<string>::const_iterator i = v.begin (); i != v.end (); i++)
       {
       strPath = i->c_str ();
-      bool bAlreadyLoaded = false;
 
       // see if we already have this one
-      for (pos = m_PluginList.GetHeadPosition(); pos; )
+      POSITION pos = m_PluginList.GetHeadPosition();
+      CPlugin * p = NULL;
+      bool bAlreadyLoaded = false;
+      while (pos != NULL)
         {
-        CPlugin * p = m_PluginList.GetNext (pos);
-
+        p = m_PluginList.GetNext (pos);
         if (p->m_strSource == strPath)
           {
-           bAlreadyLoaded = true;
-           p->m_bGlobal = true;
-           break;
+          bAlreadyLoaded = true;
+          p->m_bGlobal = true;
+          break;
           } // end of same plugin
         }  // end of searching for it
 
@@ -796,92 +767,71 @@ void CMUSHclientDoc::SetUpOutputWindow (void)
         {
         InternalLoadPlugin (strPath);
         // mark it as loaded globally
-        for (pos = m_PluginList.GetHeadPosition(); pos; )
+        pos = m_PluginList.GetHeadPosition();
+        while (pos != NULL)
           {
-          CPlugin * p = m_PluginList.GetNext (pos);
-
+          p = m_PluginList.GetNext (pos);
           if (p->m_strSource == strPath)
             {
              p->m_bGlobal = true;
              break;
             } // end of same plugin
           }  // end of searching for it
-
         }
-
       }   // end of loading each plugin
-
     } // end of try block
-
   catch (CFileException * e)
     {
     UMessageBox (TFormat ("Unable to open or read %s",
-                      (LPCTSTR) strPath), MB_ICONEXCLAMATION);
+        (LPCTSTR) strPath), MB_ICONEXCLAMATION);
     e->Delete ();
     } // end of catching a file exception
-
   catch (CArchiveException* e) 
     {
-    UMessageBox (TFormat ("There was a problem loading the plugin %s. "
-                     "See the error window for more details",
-                     (LPCTSTR) strPath), MB_ICONEXCLAMATION);
+    UMessageBox (TFormat (
+        "There was a problem loading the plugin %s. See the error window for more details",
+        (LPCTSTR) strPath),
+        MB_ICONEXCLAMATION);
     e->Delete ();
     }
 
     SetModifiedFlag (FALSE);   // loading plugins doesn't count
-
-  }  // end of CMUSHclientDoc::SetUpOutputWindow
+}  // end of CMUSHclientDoc::SetUpOutputWindow
 
 
 bool CMUSHclientDoc::SeeIfHandlerCanExecute (const CString & strName)
-  {
+{
   if (!strName.IsEmpty () && strName [0] == '!')
     {
     Execute (strName.Mid (1));
     return false;
     }
-
   return true;  // go ahead and call normal script
+} // end of SeeIfHandlerCanExecute
 
-  } // end of SeeIfHandlerCanExecute
-
-BOOL CMUSHclientDoc::OpenSession (void)
-  {
-
-
-// initialise scripting engine if necessary
- 
-  if (m_bEnableScripts &&     // provided wanted
-     !m_ScriptEngine)         // and not already going
-      CreateScriptEngine ();  // create scripting engine
-
+BOOL CMUSHclientDoc::OpenSession ()
+{
+  // initialise scripting engine if necessary
+  if (m_bEnableScripts &&  // provided wanted
+      !m_ScriptEngine)     // and not already going
+    CreateScriptEngine (); // create scripting engine
 
   // execute "open" script
-  if (m_ScriptEngine)
+  if (m_ScriptEngine && SeeIfHandlerCanExecute (m_strWorldOpen))
     {
+    DISPPARAMS params = { NULL, NULL, 0, 0 };
+    long nInvocationCount = 0;
 
-    if (SeeIfHandlerCanExecute (m_strWorldOpen))
-      {
-      DISPPARAMS params = { NULL, NULL, 0, 0 };
-      long nInvocationCount = 0;
-
-      ExecuteScript (m_dispidWorldOpen,  
-                   m_strWorldOpen,
-                   eWorldAction,
-                   "world open", 
-                   "opening world",
-                   params, 
-                   nInvocationCount); 
-      }
+    ExecuteScript (m_dispidWorldOpen, m_strWorldOpen,
+      eWorldAction, "world open", "opening world",
+      params, nInvocationCount);
     } // end of executing open script
 
-  if (App.m_bAutoConnectWorlds)
-	  if (ConnectSocket())
-		  return TRUE;
+  if (App.m_bAutoConnectWorlds && ConnectSocket())
+    return TRUE;
 
   return FALSE;
-
-  } // end of OpenSession
+} // end of OpenSession
 
 
 
@@ -891,54 +841,45 @@ BOOL CMUSHclientDoc::OpenSession (void)
 #ifdef _DEBUG
 void CMUSHclientDoc::AssertValid() const
 {
+  CDocument::AssertValid();
 
-	CDocument::AssertValid();
-
-// a few little checks to make sure our document is OK
-
-// but what will they be?
-
+  // a few little checks to make sure our document is OK
+  // but what will they be?
 }
 
 void CMUSHclientDoc::Dump(CDumpContext& dc) const
 {
-	CDocument::Dump(dc);
+  CDocument::Dump(dc);
 }
 #endif //_DEBUG
+
 
 /////////////////////////////////////////////////////////////////////////////
 // CMUSHclientDoc commands
 
-
-BOOL CMUSHclientDoc::ConnectSocket(void)
+BOOL CMUSHclientDoc::ConnectSocket()
 {
-
-CString str;
-
   // no IP? don't connect
   if (m_server == "0.0.0.0")
     return FALSE;
 
-// a few checks, in case they slip in blank names/site/port via configuration
-
+  // a few checks, in case they slip in blank names/site/port via configuration
   if (m_mush_name.IsEmpty ())
     {
     TMessageBox ("Cannot connect. World name not specified");
-		  return FALSE;
+    return FALSE;
     }
-
-  if (m_server.IsEmpty ())
+  else if (m_server.IsEmpty ())
     {
     UMessageBox (TFormat ("Cannot connect to \"%s\", TCP/IP address not specified", 
-                    (const char *) m_mush_name));
-		  return FALSE;
+        (const char *) m_mush_name));
+    return FALSE;
     }
-
-  if (m_port <= 0)
+  else if (m_port <= 0)
     {
     UMessageBox (TFormat ("Cannot connect to \"%s\", port number not specified", 
-                    (const char *) m_mush_name));
-		  return FALSE;
+        (const char *) m_mush_name));
+    return FALSE;
     }
 
   switch (m_iSocksProcessing)
@@ -949,29 +890,24 @@ CString str;
     case eProxyServerSocks4:     // socks 4
     case eProxyServerSocks5:     // socks 5
       if (m_strProxyServerName.IsEmpty ())
-          {
-          TMessageBox("The proxy server address cannot be blank.");
-		      return FALSE;
-          }     // end of proxy server name being blank
-
-      if (m_iProxyServerPort == 0)
-          {
-          TMessageBox("The proxy server port must be specified.");
-		      return FALSE;
-          }     // end of proxy server port being zero
+        {
+        TMessageBox("The proxy server address cannot be blank.");
+        return FALSE;
+        }     // end of proxy server name being blank
+      else if (m_iProxyServerPort == 0)
+        {
+        TMessageBox("The proxy server port must be specified.");
+		return FALSE;
+        }     // end of proxy server port being zero
       break;
 
     default:
-          UMessageBox(TFormat ("Unknown proxy server type: %d.", m_iSocksProcessing));
-		      return FALSE;
-          break;
-
+      UMessageBox(TFormat ("Unknown proxy server type: %d.", m_iSocksProcessing));
+      return FALSE;
     } // end of switch
 
-	m_bEnableAutoSay = FALSE;		// auto-say off at start of session
-
+  m_bEnableAutoSay = FALSE;   // auto-say off at start of session
   m_bDisconnectOK = false;    // not OK to disconnect
-  
   m_bCompress = FALSE;        // not compressing yet
   m_iMCCP_type = 0;           // no MCCP type yet
   m_bSupports_MCCP_2 = false; // haven't offered MCCP 2 yet
@@ -980,39 +916,32 @@ CString str;
   m_iOutputPacketCount = 0;
   m_iUTF8ErrorCount = 0;
 
+  Frame.SetStatusMessageNow (TFormat ("Connecting to %s, port %d", 
+      (const char *) m_mush_name,
+      m_port));
 
-  str = TFormat ("Connecting to %s, port %d", 
-              (const char *) m_mush_name, m_port);
-  Frame.SetStatusMessageNow (str);
-
-// get rid of any earlier socket
-
+  // get rid of any earlier socket
   delete m_pSocket;
 
-// now create a new one 
-
-	m_pSocket = new CWorldSocket(this);
-
-	if (!m_pSocket->Create(0,
-                         SOCK_STREAM,
-                         FD_READ | FD_WRITE | FD_CONNECT | FD_CLOSE,
-                         NULL))
-	  {
-
+  // now create a new one 
+  m_pSocket = new CWorldSocket(this);
+  if (!m_pSocket->Create(0, SOCK_STREAM,
+      FD_READ | FD_WRITE | FD_CONNECT | FD_CLOSE,
+      NULL))
+    {
     int iStatus = GetLastError ();
 
     // tell them socket create failed
-
     UMessageBox (TFormat ("Unable to create TCP/IP socket for \"%s\", code = %i (%s)", 
-                    (const char *) m_mush_name, 
-                    iStatus,
-                    GetSocketError (iStatus)));
+        (const char *) m_mush_name, 
+        iStatus,
+        GetSocketError (iStatus)));
 
-		  delete m_pSocket;
-		  m_pSocket = NULL;
+    delete m_pSocket;
+    m_pSocket = NULL;
 
-		  return FALSE;
-	  }     // end of can't create socket
+    return FALSE;
+    }     // end of can't create socket
 
 // stop socket from lingering on close
 
@@ -1025,7 +954,10 @@ CString str;
     {
     DWORD dwBytesReturned;
     tcp_keepalive keepaliveData = {1, 60 * 1000 * 2, 6000};     // every 2 minutes
-    WSAIoctl (m_pSocket->m_hSocket, SIO_KEEPALIVE_VALS, &keepaliveData, sizeof (keepaliveData), NULL, 0, &dwBytesReturned, NULL, NULL);
+    WSAIoctl (m_pSocket->m_hSocket, SIO_KEEPALIVE_VALS,
+        &keepaliveData, sizeof (keepaliveData),
+        NULL, 0,
+        &dwBytesReturned, NULL, NULL);
     }
 
   BOOL bStatus = m_pSocket->AsyncSelect ();
@@ -1041,68 +973,46 @@ CString str;
   m_sockAddr.sin_port = htons((u_short)m_port);   // normal MUD port
   m_ProxyAddr.sin_port = htons((u_short)m_iProxyServerPort);  // proxy server port
 
-// fix up server name to dotted a socket address, if necessary
-
-  if (m_sockAddr.sin_family != AF_INET || m_sockAddr.sin_addr.s_addr == INADDR_NONE)
+  // fix up server name to dotted a socket address, if necessary
+  if (m_sockAddr.sin_family != AF_INET ||
+      m_sockAddr.sin_addr.s_addr == INADDR_NONE)
     {
+      m_sockAddr.sin_family = AF_INET;
+      m_sockAddr.sin_addr.s_addr = inet_addr(m_server);
 
-	  m_sockAddr.sin_family = AF_INET;
-	  m_sockAddr.sin_addr.s_addr = inet_addr(m_server);
-
-// if address is INADDR_NONE then address was a name, not a number
-
-	  if (m_sockAddr.sin_addr.s_addr == INADDR_NONE)
-	   {
-      m_iConnectPhase = eConnectMudNameLookup;
-
-      if (LookupHostName (m_server))
-        return FALSE;
-
-      return TRUE;    // we are waiting for host name lookup to finish
-
-	   }   // end of address not being an IP address
-
+      // if address is INADDR_NONE then address was a name, not a number
+      if (m_sockAddr.sin_addr.s_addr == INADDR_NONE)
+	    {
+        m_iConnectPhase = eConnectMudNameLookup;
+        return !LookupHostName (m_server);
+        }   // end of address not being an IP address
     }   // end of not having converted the name to an address
 
-// if we got this far we know the host IP address - how about the proxy server address?
-
-  if (m_iSocksProcessing != eProxyServerNone)
+  // if we got this far we know the host IP address - how about the proxy server address?
+  if (m_iSocksProcessing != eProxyServerNone &&
+      m_ProxyAddr.sin_family != AF_INET ||
+      m_ProxyAddr.sin_addr.s_addr == INADDR_NONE)
     {
-    if (m_ProxyAddr.sin_family != AF_INET || m_ProxyAddr.sin_addr.s_addr == INADDR_NONE)
+    m_ProxyAddr.sin_family = AF_INET;
+    m_ProxyAddr.sin_addr.s_addr = inet_addr(m_strProxyServerName);
+
+    // if address is INADDR_NONE then address was a name, not a number
+    if (m_ProxyAddr.sin_addr.s_addr == INADDR_NONE)
       {
-
-	    m_ProxyAddr.sin_family = AF_INET;
-	    m_ProxyAddr.sin_addr.s_addr = inet_addr(m_strProxyServerName);
-
-  // if address is INADDR_NONE then address was a name, not a number
-
-	    if (m_ProxyAddr.sin_addr.s_addr == INADDR_NONE)
-	     {
-        m_iConnectPhase = eConnectProxyNameLookup;
-
-        if (LookupHostName (m_strProxyServerName))
-          return FALSE;
-
-        return TRUE;    // we are waiting for proxy name lookup to finish
-
-	     }   // end of address not being an IP address
-
-      }   // end of not having converted the name to an address
-
+      m_iConnectPhase = eConnectProxyNameLookup;
+      return !LookupHostName (m_strProxyServerName);
+      }   // end of address not being an IP address
     }   // end of needing a proxy server address
 
-
-// it seems both the world and proxy server addresses are known - 
-// get on with connecting to one of them
-
+  // it seems both the world and proxy server addresses are known - 
+  // get on with connecting to one of them
   InitiateConnection ();
-
-	return TRUE;
+  return TRUE;
 }
 
 void CMUSHclientDoc::ProcessPendingRead() 
 {
-	ReceiveMsg();
+  ReceiveMsg();
 }
 
 // SendMsg sends a message (command) to the MUD.
@@ -1114,22 +1024,17 @@ void CMUSHclientDoc::SendMsg(CString strText,
                              const bool bEchoIt,
                              const bool bQueueIt,
                              const bool bLogIt)
-  {
-
+{
   // cannot change what we are sending in OnPluginSent
   if (m_bPluginProcessingSent)
     return;
 
-  bool bEcho = bEchoIt;
-
   // test to see if world has suppressed echoing
-
-  if (m_bNoEcho)
-     bEcho = false;
+  bool bEcho = (m_bNoEcho) ? false : bEchoIt;
 
   // strip trailing endline - that would trigger an extra blank line
   if (strText.Right (2) == ENDLINE)
-       strText = strText.Left (strText.GetLength () - 2);
+    strText = strText.Left (strText.GetLength () - 2);
 
   // fix up German umlauts
   if (m_bTranslateGerman)
@@ -1144,38 +1049,26 @@ void CMUSHclientDoc::SendMsg(CString strText,
   if (strList.IsEmpty ())
     strList.AddTail (""); 
 
-  for (POSITION pos = strList.GetHeadPosition (); pos; )
+  POSITION pos = strList.GetHeadPosition ();
+  while (pos != NULL)
     {
     CString strLine = strList.GetNext (pos);
 
     // it needs to be queued if queuing is requested
     // it also needs to be queued regardless if there is already something in the queue
-
-    if (m_iSpeedWalkDelay &&
-        (bQueueIt || !m_QueuedCommandsList.IsEmpty ()) )
+    if (m_iSpeedWalkDelay && (bQueueIt || !m_QueuedCommandsList.IsEmpty ()))
       {
-      CString strEchoFlag;
+      // work out how it is to be queued
+      CString strEchoFlag = (bQueueIt)
+          ? ((bEcho) ? QUEUE_WITH_ECHO : QUEUE_WITHOUT_ECHO)
+          : ((bEcho) ? IMMEDIATE_WITH_ECHO : IMMEDIATE_WITHOUT_ECHO);
 
-        // work out how it is to be queued
-
-      if (bQueueIt)
-        if (bEcho)
-           strEchoFlag = QUEUE_WITH_ECHO;
-        else
-           strEchoFlag = QUEUE_WITHOUT_ECHO;
-      else
-        if (bEcho)
-           strEchoFlag = IMMEDIATE_WITH_ECHO;
-        else
-           strEchoFlag = IMMEDIATE_WITHOUT_ECHO;
-
-       // nolog is the lower-case version of the flag
+      // nolog is the lower-case version of the flag
       if (!bLogIt)
         strEchoFlag.MakeLower ();
 
       // queue it
       m_QueuedCommandsList.AddTail (strEchoFlag + strLine);
-
       }    // end of having a speedwalk delay
     else
       DoSendMsg (strLine, bEcho, bLogIt);  // just send it
@@ -1183,70 +1076,63 @@ void CMUSHclientDoc::SendMsg(CString strText,
 
   if (!m_QueuedCommandsList.IsEmpty ())
     ShowQueuedCommands ();    // update status line
-  }
+}
 
 // DoSendMsg is the actual command (message) sender - it should not
 // be called directly, except from SendMsg or from CTimerWnd as it empties
 // the command queue.
 
-void CMUSHclientDoc::DoSendMsg(const CString & strText, 
+void CMUSHclientDoc::DoSendMsg(CString strText, 
                                const bool bEchoIt,
                                const bool bLogIt)
 {
-CString str = strText;
-
   // cannot change what we are sending in OnPluginSent
   if (m_bPluginProcessingSent)
     return;
-
-  if (!m_pSocket)
+  else if (!m_pSocket)
     return;
 
-// append an end-of-line if there isn't one already
+  // append an end-of-line if there isn't one already
+  if (strText.Right (2) != ENDLINE)
+    strText += ENDLINE;
 
-  if (str.Right (2) != ENDLINE)
-    str += ENDLINE;
-
-// count number of times we sent this
-
-  if (str == m_strLastCommandSent)
-    m_iLastCommandCount++;    // same one - count them
+  // count number of times we sent this
+  if (strText == m_strLastCommandSent)
+    ++m_iLastCommandCount;    // same one - count them
   else
     {
-    m_strLastCommandSent = str;   // new one - remember it
+    m_strLastCommandSent = strText;   // new one - remember it
     m_iLastCommandCount = 1;
     }
 
-  if (m_bEnableSpamPrevention &&  // provided they want it
-      m_iSpamLineCount > 2 &&   // otherwise we might loop
-      !m_strSpamMessage.IsEmpty ())   // not much point without something to send
+  if (m_bEnableSpamPrevention &&      // provided they want it
+      m_iSpamLineCount > 2 &&         // otherwise we might loop
+      !m_strSpamMessage.IsEmpty () && // not much point without something to send
+      m_iLastCommandCount > m_iSpamLineCount)
     {
-    if (m_iLastCommandCount > m_iSpamLineCount)
-      {
-      m_iLastCommandCount = 0;      // so we don't recurse again
-      DoSendMsg (m_strSpamMessage, m_display_my_input, LoggingInput ()); // recursive call
-      m_strLastCommandSent = str;   // remember it for next time
-      m_iLastCommandCount = 1;
-      }   // end of time to do it
-
+    m_iLastCommandCount = 0;      // so we don't recurse again
+    DoSendMsg (m_strSpamMessage, m_display_my_input, LoggingInput ()); // recursive call
+    m_strLastCommandSent = strText;   // remember it for next time
+    m_iLastCommandCount = 1;
     } // end of spam prevention active
 
   // "OnPluginSend" - script can cancel send
-
   if (!m_bPluginProcessingSend)
     {
     m_bPluginProcessingSend = true;  // so we don't go into a loop
-    bool bOK = true;
+
     // tell each plugin what we are about to send - it can return false to cancel send
-    for (POSITION pos = m_PluginList.GetHeadPosition(); pos; )
+    POSITION pos = m_PluginList.GetHeadPosition();
+    bool bOK = true;
+    while (pos != NULL)
       {
       CPlugin * pPlugin = m_PluginList.GetNext (pos);
-
-      if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+      if (!pPlugin->m_bEnabled)   // ignore disabled plugins
         continue;
 
       // see what the plugin makes of this, excluding the ENDLINE
-      if (!pPlugin->ExecutePluginScript (ON_PLUGIN_SEND, pPlugin->m_dispid_plugin_send, str.Left (str.GetLength () - 2)))
+      if (!pPlugin->ExecutePluginScript (ON_PLUGIN_SEND, pPlugin->m_dispid_plugin_send,
+          strText.Left (strText.GetLength () - 2)))
         bOK = false;
       }   // end of doing each plugin
 
@@ -1258,110 +1144,94 @@ CString str = strText;
 
   // "OnPluginSent" - we are definitely sending this
   // See: http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=7244
-
   if (!m_bPluginProcessingSent)
     {
     m_bPluginProcessingSent = true;  // so we don't go into a loop
 
     // tell each plugin what we are about to send
-    for (POSITION pos = m_PluginList.GetHeadPosition(); pos; )
+    POSITION pos = m_PluginList.GetHeadPosition();
+    while (pos != NULL)
       {
       CPlugin * pPlugin = m_PluginList.GetNext (pos);
-
-      if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+      if (!pPlugin->m_bEnabled)   // ignore disabled plugins
         continue;
 
       // see what the plugin makes of this, excluding the ENDLINE
-      pPlugin->ExecutePluginScript (ON_PLUGIN_SENT, pPlugin->m_dispid_plugin_sent, str.Left (str.GetLength () - 2));
+      pPlugin->ExecutePluginScript (ON_PLUGIN_SENT, pPlugin->m_dispid_plugin_sent,
+          strText.Left (strText.GetLength () - 2));
       }   // end of doing each plugin
 
     m_bPluginProcessingSent = false;
-
     }
 
-// echo sent text if required
-
+  // echo sent text if required
   if (bEchoIt)
-    DisplayMsg (str, str.GetLength (), USER_INPUT | (bLogIt ? LOG_LINE : 0));
+    DisplayMsg (strText, strText.GetLength (), USER_INPUT | (bLogIt ? LOG_LINE : 0));
 
-// log sent text if required
-
+  // log sent text if required
   if (bLogIt)
-    LogCommand (str);
+    LogCommand (strText);
 
-// add to mapper if required
-
+  // add to mapper if required
   if (m_bMapping)
-    AddToMap (str);
+    AddToMap (strText);
 
   // for MXP debugging
 #ifdef SHOW_ALL_COMMS
    Debug_MUD (_T("++Sending to MUD   : "), str);
 #endif
 
-   m_nTotalLinesSent++;   // count lines sent
+  ++m_nTotalLinesSent;   // count lines sent
 
-// double IAC to IAC IAC
+  // double IAC to IAC IAC
+  if (!m_bDoNotTranslateIACtoIACIAC)
+    strText.Replace (_T("\xFF"), _T("\xFF\xFF"));
 
-   if (!m_bDoNotTranslateIACtoIACIAC)
-     str.Replace (_T("\xFF"), _T("\xFF\xFF"));
-
-// send it
-
-   SendPacket (str, str.GetLength ());
-
+  // send it
+  SendPacket (strText, strText.GetLength ());
 }
 
 void CMUSHclientDoc::ReceiveMsg()
 {
-char buff [1000];
-int count = m_pSocket->Receive (buff, sizeof (buff) - 1);
-
-  if (count == SOCKET_ERROR)
-    {
-    // don't delete the socket if we are already closing it
-    if (m_iConnectPhase == eConnectDisconnecting)
-       return;
-
-    if (m_pSocket)
-      m_pSocket->OnClose (GetLastError ());
-
-		delete m_pSocket;
-		m_pSocket = NULL;
-    return;
-    }
+  char buff [1000];
+  int count = m_pSocket->Receive (buff, sizeof (buff) - 1);
 
   if (count <= 0)
+  {
+    // don't delete the socket if we are already closing it
+    if (count == SOCKET_ERROR && m_iConnectPhase != eConnectDisconnecting)
+      {
+      if (m_pSocket)
+        m_pSocket->OnClose (GetLastError ());
+
+      delete m_pSocket;
+      m_pSocket = NULL;
+      }
     return;
+  }
 
 //  TRACE1 ("Phase now = %i\n", m_iConnectPhase);
 //  TRACE2 ("Buff [0] = %i, Buff [1] = %i\n",
 //          (int) buff [0], (int) buff [1]);
 
-// if we are expecting a response from the proxy server, process that
-
-// SOCKS 5 - see RFC 1928
-
+  // if we are expecting a response from the proxy server, process that
+  // SOCKS 5 - see RFC 1928
   if (m_iConnectPhase == eConnectAwaitingProxyResponse1 ||
       m_iConnectPhase == eConnectAwaitingProxyResponse2 ||
       m_iConnectPhase == eConnectAwaitingProxyResponse3)
     {
     int iBytesToMove;
-
     switch (m_iConnectPhase)
       {
       case eConnectAwaitingProxyResponse1: 
          iBytesToMove = ProcessProxyResponse1 (buff, count);
          break;
-
       case eConnectAwaitingProxyResponse2: 
          iBytesToMove = ProcessProxyResponse2 (buff, count);
          break;
-
       case eConnectAwaitingProxyResponse3:
          iBytesToMove = ProcessProxyResponse3 (buff, count);
          break;
-      
       }   // end of switch
 
     if (iBytesToMove < 0)
@@ -1372,16 +1242,15 @@ int count = m_pSocket->Receive (buff, sizeof (buff) - 1);
       return;
 
     // throw away proxy response, and keep going
-    memmove (buff, &buff [iBytesToMove], count - iBytesToMove);
     count -= iBytesToMove;
-
+    memmove (buff, &buff [iBytesToMove], count);
     }   // end of processing proxy server response
 
   // we aren't connected - discard anything we get here
   if (m_iConnectPhase != eConnectConnectedToMud)
     return;
 
-  m_iInputPacketCount++;       // count packets
+  ++m_iInputPacketCount;       // count packets
   m_nBytesIn += count;    // count bytes in
 
   if (m_bCompress)   // if we are compressing, put data into zlib buffer
@@ -1395,25 +1264,26 @@ int count = m_pSocket->Receive (buff, sizeof (buff) - 1);
     // shuffle existing input to-be-processed to start of buffer
     if (m_zCompress.avail_in)
       memmove (m_CompressInput, m_zCompress.next_in, m_zCompress.avail_in);
+
     m_zCompress.next_in = m_CompressInput;
+
     // add new stuff
     memcpy (&m_zCompress.next_in [m_zCompress.avail_in], buff, count);
     m_zCompress.avail_in += count;
+
     // stats - count compressed bytes
     m_nTotalCompressed += count;
     }
 
   // now display the message, unless we are getting compressed data
-
   // decompress until something stops us (like the big goat)
   while (true)
     {
-
     // if we aren't in decompression mode, just process the text as usual
     if (!m_bCompress)   // not compressed yet
       {
       if (m_logfile && m_bLogRaw)  // raw log if wanted
-        WriteToLog (buff, count);  
+        WriteToLog (buff, count);
       DisplayMsg (buff, count, 0);
       }
 
@@ -1427,9 +1297,8 @@ int count = m_pSocket->Receive (buff, sizeof (buff) - 1);
     if (m_zCompress.avail_in <= 0)
        break;    // no data to process
 
-    LARGE_INTEGER start, 
-                  finish;
 
+    LARGE_INTEGER start;
     if (App.m_iCounterFrequency)
       QueryPerformanceCounter (&start);
 
@@ -1438,6 +1307,7 @@ int count = m_pSocket->Receive (buff, sizeof (buff) - 1);
 
     if (App.m_iCounterFrequency)
       {
+      LARGE_INTEGER finish;
       QueryPerformanceCounter (&finish);
       m_iCompressionTimeTaken += finish.QuadPart - start.QuadPart;
       }
@@ -1448,10 +1318,10 @@ int count = m_pSocket->Receive (buff, sizeof (buff) - 1);
       OnConnectionDisconnect ();    // close the world
       if (m_zCompress.msg)
         UMessageBox (TFormat ("Could not decompress text from MUD: %s",
-                          (LPCTSTR) m_zCompress.msg), MB_ICONEXCLAMATION);
+            (LPCTSTR) m_zCompress.msg), MB_ICONEXCLAMATION);
       else
         UMessageBox (TFormat ("Could not decompress text from MUD: %i",
-                          iCompressResult), MB_ICONEXCLAMATION);
+            iCompressResult), MB_ICONEXCLAMATION);
       return;
       }
 
@@ -1476,63 +1346,55 @@ int count = m_pSocket->Receive (buff, sizeof (buff) - 1);
 
     // if end of stream, turn decompression off
     if (iCompressResult == Z_STREAM_END)
-      {    // we can stop decompressing
+      {  // we can stop decompressing
       m_bCompress = false;
       // put remaining stuff back into buff
       memcpy (buff, m_zCompress.next_in, m_zCompress.avail_in);
       count = m_zCompress.avail_in;
       }   // end of Z_STREAM_END
-
     }   // end of decompression loop
-
 }
 
 
 void CMUSHclientDoc::StartNewLine_KeepPreviousStyle (const int flags)
-  {
-  CStyle * pPreviousStyle,
-         * pThisStyle;
-  CLine * pPreviousLine = m_pCurrentLine; // remember this line
+{
+  CStyle *pPreviousStyle, *pThisStyle;
+  CLine  *pPreviousLine = m_pCurrentLine; // remember this line
 
   // if saved_count is indeed zero we better start a new line anyway
-   StartNewLine (false, flags);
-   // get old style
-   pPreviousStyle = pPreviousLine->styleList.GetTail ();
-   // get new style
-   pThisStyle = m_pCurrentLine->styleList.GetTail ();
+  StartNewLine (false, flags);
+  pPreviousStyle = pPreviousLine->styleList.GetTail ();
+  pThisStyle     = m_pCurrentLine->styleList.GetTail ();
 
-   if (pThisStyle && pPreviousStyle)    // sanity check
-     {
-     // copy style across so new line has same style as old one
-     pThisStyle->iFlags = pPreviousStyle->iFlags & STYLE_BITS;
-     pThisStyle->iForeColour = pPreviousStyle->iForeColour;
-     pThisStyle->iBackColour = pPreviousStyle->iBackColour;
-     pThisStyle->pAction = pPreviousStyle->pAction;
-     if (pThisStyle->pAction)
-       pThisStyle->pAction->AddRef ();    // we are using it again
-     }  // end of valid pointers
-  }  // end of CMUSHclientDoc::StartNewLine_KeepPreviousStyle
+  if (!pThisStyle || !pPreviousStyle) // sanity check
+    return;
+
+  // copy style across so new line has same style as old one
+  pThisStyle->iFlags      = pPreviousStyle->iFlags & STYLE_BITS;
+  pThisStyle->iForeColour = pPreviousStyle->iForeColour;
+  pThisStyle->iBackColour = pPreviousStyle->iBackColour;
+  pThisStyle->pAction     = pPreviousStyle->pAction;
+
+  if (pThisStyle->pAction)
+    pThisStyle->pAction->AddRef ();    // we are using it again
+}  // end of CMUSHclientDoc::StartNewLine_KeepPreviousStyle
 
 // called from DisplayMsg to actually add to the current line
 // and also from the MXP routines to put stuff there
 void CMUSHclientDoc::AddToLine (LPCTSTR lpszText, const int flags)
-  {
-const char * p ;
-unsigned char c;
-int saved_count;
-
+{
   // incoming text from the MUD (only) is remembered also in m_strCurrentLine for triggers
 //  if (flags == 0)
 //    m_strCurrentLine += lpszText;
 
-  for (p = lpszText; c = *p; p++)
+  unsigned char c;
+  for (const char* p = lpszText; (c = *p) != '\0'; ++p)
     {
-
     int iLineLength = m_pCurrentLine->len;
 
     // for Unicode the width of the line is characters, not stored bytes
     if (m_bUTF_8)
-       iLineLength = MultiByteToWideChar (CP_UTF8, 0, m_pCurrentLine->text, m_pCurrentLine->len, NULL, 0);
+      iLineLength = MultiByteToWideChar (CP_UTF8, 0, m_pCurrentLine->text, m_pCurrentLine->len, NULL, 0);
 
 /*
 Unicode range              UTF-8 bytes
@@ -1548,36 +1410,30 @@ Unicode range              UTF-8 bytes
 
 */
   
-    int bNewCharacter = true;    // normally each character is a new one
-
+    // normally each character is a new one
     // but UTF-8 characters which have the high-order 2 bits == 80 are not
-    if (m_bUTF_8 && ((c & 0xC0) == 0x80))
-       bNewCharacter = false;
+    int bNewCharacter = !(m_bUTF_8 && ((c & 0xC0) == 0x80));
 
-  // in the Unicode case we are allocating 4 bytes per character so we shouldn't
-  // overshoot the allocated memory, but just in case, we test that we don't
-
-    if (((iLineLength >= m_nWrapColumn) && bNewCharacter) ||  // usual case
-        (m_pCurrentLine->len >= m_pCurrentLine->iMemoryAllocated))  // emergency bail-out
+    // in the Unicode case we are allocating 4 bytes per character so we shouldn't
+    // overshoot the allocated memory, but just in case, we test that we don't
+    if ((iLineLength >= m_nWrapColumn && bNewCharacter) ||       // usual case
+        m_pCurrentLine->len >= m_pCurrentLine->iMemoryAllocated) // emergency bail-out
       {
-
-// do auto line wrapping here
-
+      // do auto line wrapping here
       if (!m_wrap || 
-        m_pCurrentLine->last_space < 0 ||
-        (m_pCurrentLine->len - m_pCurrentLine->last_space) >= m_nWrapColumn)
-          StartNewLine_KeepPreviousStyle (flags);
+          m_pCurrentLine->last_space < 0 ||
+          m_pCurrentLine->len - m_pCurrentLine->last_space >= m_nWrapColumn)
+        StartNewLine_KeepPreviousStyle (flags);
       else
         {
-        saved_count = m_pCurrentLine->len - 
-                      m_pCurrentLine->last_space; 
+        int saved_count = m_pCurrentLine->len - m_pCurrentLine->last_space; 
 
         // note - saved_count should not be zero because length is 1-relative
         // (eg. 1) and last_space is zero-relative (eg. 0)
         if (!m_indent_paras)
           {
-          saved_count--;    // one less to copy
-          m_pCurrentLine->last_space++;  // one more on this line (the space)
+          --saved_count;    // one less to copy
+          ++m_pCurrentLine->last_space;  // one more on this line (the space)
           m_pCurrentLine->len = m_pCurrentLine->last_space; // this line is longer
           }   // end of indenting not wanted
 
@@ -1586,97 +1442,89 @@ Unicode range              UTF-8 bytes
           {
           // save portion of text destined for new line
           CString strText = CString (&m_pCurrentLine->text [m_pCurrentLine->last_space],
-                                     saved_count); 
+              saved_count); 
+
           m_pCurrentLine->len = m_pCurrentLine->last_space;
 
           CLine * pPreviousLine = m_pCurrentLine; // remember this line
 
           StartNewLine (false, flags);
 
-          CStyle * pStyle;
-
           // delete empty style item new line already has
-          pStyle = m_pCurrentLine->styleList.GetTail ();
-          DELETESTYLE (pStyle);
+          DELETESTYLE (m_pCurrentLine->styleList.GetTail ());
           m_pCurrentLine->styleList.RemoveTail ();
         
           memcpy (m_pCurrentLine->text, (LPCTSTR) strText, saved_count);
           m_pCurrentLine->len = saved_count;
 
           // now move the styles over to the new line
-
-          int iCount = 0,
+          int iCount     = 0,
               iOldLength = 0,
-              iLength = 0;
-          POSITION pos;
+              iLength    = 0;
 
           // find number that have to move
-          for (pos = pPreviousLine->styleList.GetHeadPosition(); pos; )
+          POSITION pos = pPreviousLine->styleList.GetHeadPosition();
+          CStyle* pStyle = NULL;
+          while (pos != NULL)
             {
             pStyle = pPreviousLine->styleList.GetNext (pos);
             iLength += pStyle->iLength;
             if (iLength > pPreviousLine->len)
-              iCount++;   // this one has to move
+              ++iCount;   // this one has to move
             else 
               iOldLength += pStyle->iLength;
             }   // end of counting number to move
 
           // move them  - copy from tail of old to head of new (going backwards)
-          for (pos = pPreviousLine->styleList.GetTailPosition(); iCount > 0 && pos; iCount--)
+          pos = pPreviousLine->styleList.GetTailPosition();
+          while (iCount > 0 && pos != NULL)
             {
-            pStyle = pPreviousLine->styleList.RemoveTail ();
-            m_pCurrentLine->styleList.AddHead (pStyle);
+            m_pCurrentLine->styleList.AddHead (pPreviousLine->styleList.RemoveTail ());
+            --iCount;
             }   // end of moving them
 
           // if one style is shared we have to make a copy and adjust lengths
           if (iOldLength < pPreviousLine->len)
             {
             int iDiff = pPreviousLine->len - iOldLength;  // amount we are short
-            // was copied - find out its details
 
+            // was copied - find out its details
             pStyle =  m_pCurrentLine->styleList.GetHead ();
             pStyle->iLength -= iDiff;  // this line is that much smaller
-            CAction * pAction = pStyle->pAction;
-          
+
             AddStyle (pStyle->iFlags & STYLE_BITS, 
                       pStyle->iForeColour, 
                       pStyle->iBackColour, 
                       iDiff,  // old line has this much
-                      pAction,
+                      pStyle->pAction,
                       pPreviousLine);  // add to end of previous line
-
             } // end of shared style
           }  // end of having something to move to the next line
         else  
-          {   // saved_count == 0
+          // saved_count == 0
           StartNewLine_KeepPreviousStyle (flags);
-          }  // end saved_count == 0
-
         } // end of line wrapping wanted and possible
       }   // end of line being full
-    else
-      if (c == ' ')
-        m_pCurrentLine->last_space = m_pCurrentLine->len;
+    else if (c == ' ')
+      m_pCurrentLine->last_space = m_pCurrentLine->len;
 
     ASSERT (m_pCurrentLine->text);
 
     // add character to line
     m_pCurrentLine->text [m_pCurrentLine->len] = c;
-    m_pCurrentLine->len++;    // line has one more character
+    ++m_pCurrentLine->len;    // line has one more character
 //BUG    m_pCurrentLine->flags = flags;  // ensure we retain existing flags
 
     // style spans one more character now
-    m_pCurrentLine->styleList.GetTail ()->iLength++; 
-
+    m_pCurrentLine->styleList.GetTail ()->iLength += 1;
     } // end of processing each character
-  } // end of AddToLine
+} // end of AddToLine
 
 
 // called when starting a new line to get colours right
 
 void CMUSHclientDoc::SetNewLineColour (const int flags)
-  {
-
+{
   // find current style
   CStyle * pStyle = m_pCurrentLine->styleList.GetTail ();
 
@@ -1695,38 +1543,36 @@ void CMUSHclientDoc::SetNewLineColour (const int flags)
     pStyle->iForeColour = m_echo_colour;
     pStyle->iBackColour = BLACK;
     } // end of user input 
-  else
-    if (flags & COMMENT)
-      { // user input and (same colour not wanted)
-      if (m_bNotesInRGB)
+  else if (flags & COMMENT)
+    { // user input and (same colour not wanted)
+    if (m_bNotesInRGB)
+      {
+      pStyle->iFlags = COLOUR_RGB | m_iNoteStyle;  
+      pStyle->iForeColour = m_iNoteColourFore;
+      pStyle->iBackColour = m_iNoteColourBack;
+      } // end of RGB notes
+    else if (m_iNoteTextColour == SAMECOLOUR)
+      {
+      if (m_bCustom16isDefaultColour)
         {
-        pStyle->iFlags = COLOUR_RGB | m_iNoteStyle;  
-        pStyle->iForeColour = m_iNoteColourFore;
-        pStyle->iBackColour = m_iNoteColourBack;
-        } // end of RGB notes
+        pStyle->iFlags = COLOUR_CUSTOM | m_iNoteStyle;  
+        pStyle->iForeColour = 15;
+        pStyle->iBackColour = 0;
+        }
       else
-        if (m_iNoteTextColour == SAMECOLOUR)
-          {
-          if (m_bCustom16isDefaultColour)
-            {
-            pStyle->iFlags = COLOUR_CUSTOM | m_iNoteStyle;  
-            pStyle->iForeColour = 15;
-            pStyle->iBackColour = 0;
-            }
-          else
-            {
-            pStyle->iFlags = COLOUR_ANSI | m_iNoteStyle;  
-            pStyle->iForeColour = WHITE;
-            pStyle->iBackColour = BLACK;
-            }
-          } // end of "same colour"
-        else
-          {
-          pStyle->iFlags = COLOUR_CUSTOM | m_iNoteStyle;  
-          pStyle->iForeColour = m_iNoteTextColour;
-          pStyle->iBackColour = BLACK;
-          }
-      } // end of note 
+        {
+        pStyle->iFlags = COLOUR_ANSI | m_iNoteStyle;  
+        pStyle->iForeColour = WHITE;
+        pStyle->iBackColour = BLACK;
+        }
+      } // end of "same colour"
+    else
+      {
+      pStyle->iFlags = COLOUR_CUSTOM | m_iNoteStyle;  
+      pStyle->iForeColour = m_iNoteTextColour;
+      pStyle->iBackColour = BLACK;
+      }
+    } // end of note 
 
 /*
   finally I think I will get this right! :)
@@ -1746,29 +1592,19 @@ void CMUSHclientDoc::SetNewLineColour (const int flags)
 */
 
   m_pCurrentLine->flags = flags;    // mark line as user input or comment as required
-
-  } // end of CMUSHclientDoc::SetNewLineColour
+} // end of CMUSHclientDoc::SetNewLineColour
 
 void CMUSHclientDoc::DisplayMsg(LPCTSTR lpszText, int size, const int flags)
 {
-const char * p ;
-unsigned char c;
-int spaces,
-    i;
-char cOneCharacterLine [2] = {0, 0};
-
-CLine * pOriginalLine = m_pCurrentLine;
-CString strOriginalText;
-CString strLine (lpszText, size);
+  CLine * pOriginalLine = m_pCurrentLine;
+  CString strOriginalText;
+  CString strLine = CString(lpszText, size);
 
   // decompressed data has a size, not a null terminator.
-  // Also, compressed data may have imbedded nulls.
-
-
+  // Also, compressed data may have embedded nulls.
   if (!(flags & NOTE_OR_COMMAND))  // input from MUD
     {
-
-      // for MXP debugging
+    // for MXP debugging
     #ifdef SHOW_ALL_COMMS
       Debug_MUD ("++Received from MUD: ", strLine);
     #endif
@@ -1780,19 +1616,17 @@ CString strLine (lpszText, size);
     m_iCurrentActionSource = eInputFromServer;
 
     // tell each plugin what we have received
-    for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+    POSITION pluginpos = m_PluginList.GetHeadPosition();
+    while (pluginpos != NULL)
       {
       CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
-
-
-      if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+      if (!pPlugin->m_bEnabled)   // ignore disabled plugins
         continue;
 
       // see what the plugin makes of this,
       pPlugin->ExecutePluginScript (ON_PLUGIN_PACKET_RECEIVED,
-                                    strLine,  // input and output line
-                                    pPlugin->m_dispid_plugin_packet_received); 
-
+          strLine,  // input and output line
+          pPlugin->m_dispid_plugin_packet_received); 
       }   // end of doing each plugin
 
     m_iCurrentActionSource = eUnknownActionSource;
@@ -1822,21 +1656,15 @@ CString strLine (lpszText, size);
       {
       if (m_bKeepCommandsOnSameLine)  // for Simen Brekken
         {   // switch to command colour
-
-// warning (bug?) triggers will not match if the command is on the same line
-
+        // warning (bug?) triggers will not match if the command is on the same line
         if ((flags & USER_INPUT) && m_echo_colour != SAMECOLOUR)
-          { // user input and (same colour not wanted)
+          // user input and (same colour not wanted)
           // create new style item
           AddStyle (COLOUR_CUSTOM, m_echo_colour, BLACK, 0, NULL);
-          } // end of user input 
         } // end of commands on the same line
-      else
-        {
-        if ((flags & NOTE_OR_COMMAND) != (m_pCurrentLine->flags & NOTE_OR_COMMAND) && 
-            m_pCurrentLine->len > 0)
-            StartNewLine (true, flags);
-        } // end of commands going onto a new line
+      else if ((flags & NOTE_OR_COMMAND) != (m_pCurrentLine->flags & NOTE_OR_COMMAND) && 
+          m_pCurrentLine->len > 0)
+        StartNewLine (true, flags);
       }   // end of not changing to/from a note
     }
   else
@@ -1849,16 +1677,17 @@ CString strLine (lpszText, size);
   if (m_pCurrentLine->len == 0)
     SetNewLineColour (flags);
 
-  for (p = lpszText; size > 0; p++, size--)
+  int spaces, i;
+  char cOneCharacterLine [2] = {0, 0};
+  for (const char * p = lpszText; size > 0; ++p, --size)
     {
-
-    c = *p;
+    unsigned char c = *p;
 
     // note that CR, LF, ESC and IAC can appear inside telnet negotiation now (version 4.48)
     if (m_phase != HAVE_SB &&
         m_phase != HAVE_SUBNEGOTIATION && 
         m_phase != HAVE_SUBNEGOTIATION_IAC &&
-        ! (m_phase == HAVE_IAC && c == IAC) )
+        !(m_phase == HAVE_IAC && c == IAC) )
       {
       // the following characters will terminate any collection/negotiation phases
       //  newline, carriage-return, escape, IAC
@@ -1873,136 +1702,129 @@ CString strLine (lpszText, size);
           case HAVE_MXP_COMMENT:
           case HAVE_MXP_QUOTE:
           case HAVE_MXP_ENTITY:
-              switch (c)
-                {
-                case '\r':
-                case '\n':   pReason = "got <NEWLINE>"; break;
-                case '\x1B': pReason = "got <ESC>"; break;
-                case '\xFF': pReason = "got <IAC>"; break;
-
-                } // end of switch
-              MXP_unterminated_element (pReason);
-              break;
+            switch (c)
+              {
+              case '\r':
+              case '\n':   pReason = "got <NEWLINE>"; break;
+              case '\x1B': pReason = "got <ESC>"; break;
+              case '\xFF': pReason = "got <IAC>"; break;
+              } // end of switch
+            MXP_unterminated_element (pReason);
+            break;
           case HAVE_MXP_ROOM_NAME:
           case HAVE_MXP_ROOM_DESCRIPTION:
           case HAVE_MXP_ROOM_EXITS:
           case HAVE_MXP_WELCOME:
-              MXP_mode_change (-1);
-              break;
+            MXP_mode_change (-1);
+            break;
           } // end of switch
 
         m_phase = NONE;   // cannot be in middle of escape sequence
         }
-
       } // end of not collecting telnet subnegotiation
     
-// my own input won't interfere with incoming escape sequences
-
+    // my own input won't interfere with incoming escape sequences
     if (!(flags & NOTE_OR_COMMAND))
       {
-
       switch (m_phase)
         {
-        case HAVE_ESC:            Phase_ESC (c); continue;
+        case HAVE_ESC:
+          Phase_ESC (c);
+          continue;
 
         case HAVE_FOREGROUND_256_START:    // these 4 are similar to Phase_ANSI
         case HAVE_FOREGROUND_256_FINISH:
         case HAVE_BACKGROUND_256_START:
         case HAVE_BACKGROUND_256_FINISH:
         case DOING_CODE:          
-          Phase_ANSI (c); continue;
+          Phase_ANSI (c);
+          continue;
 
         case HAVE_IAC: 
-          
           if (c != IAC)
             Phase_IAC (c);      // not IAC IAC? Process single IAC
-
-          if (c)                // eg. IAC GA becomes \n, and IAC IAC becomes IAC
-            break;
-          else
+          if (!c)               // eg. IAC GA becomes \n, and IAC IAC becomes IAC
             continue;
+          break;
 
         case HAVE_WILL:           Phase_WILL (c); continue;
         case HAVE_WONT:           Phase_WONT (c); continue;
-        case HAVE_DO:             Phase_DO (c); continue;
+        case HAVE_DO:             Phase_DO   (c); continue;
         case HAVE_DONT:           Phase_DONT (c); continue;
-        case HAVE_SB:             Phase_SB (c); continue;
+        case HAVE_SB:             Phase_SB   (c); continue;
         case HAVE_SUBNEGOTIATION: Phase_SUBNEGOTIATION (c); continue;
         case HAVE_COMPRESS:       Phase_COMPRESS (c); continue;
         
         case HAVE_COMPRESS_WILL:  
+          {
+          bool bWasCompressing = m_bCompress;
+          Phase_COMPRESS_WILL (c); 
+          // just turned on compression?  special case, can't keep treating the
+          // data as it it was not compressed
+          if (!bWasCompressing && m_bCompress)
             {
-            bool bWasCompressing = m_bCompress;
-            Phase_COMPRESS_WILL (c); 
-            // just turned on compression?  special case, can't keep treating the
-            // data as it it was not compressed
-            if (!bWasCompressing && m_bCompress)
-              {
-              p++;    // skip SE  (normally done at end of loop)
-              size--; // one less of these
-              if (size)  // copy compressed data to compression buffer
-                memmove (m_CompressInput, p, size);
-              m_zCompress.next_in = m_CompressInput;
-              m_zCompress.avail_in = size;
-              m_zCompress.next_out = m_CompressOutput;
-              m_zCompress.avail_out = COMPRESS_BUFFER_LENGTH;
-              m_nTotalCompressed += size;
-              return;  // done with this loop, now it needs to be decompressed
-              }
+            ++p;    // skip SE  (normally done at end of loop)
+            --size; // one less of these
+            if (size)  // copy compressed data to compression buffer
+              memmove (m_CompressInput, p, size);
+
+            m_zCompress.next_in   = m_CompressInput;
+            m_zCompress.avail_in  = size;
+            m_zCompress.next_out  = m_CompressOutput;
+            m_zCompress.avail_out = COMPRESS_BUFFER_LENGTH;
+            m_nTotalCompressed += size;
+            return;  // done with this loop, now it needs to be decompressed
             }
-            continue;
+          continue;
+          }
             
         case HAVE_SUBNEGOTIATION_IAC: 
           {
-            bool bWasCompressing = m_bCompress;
-            Phase_SUBNEGOTIATION_IAC (c); 
-            // just turned on compression?  special case, can't keep treating the
-            // data as it it was not compressed
-            if (!bWasCompressing && m_bCompress)
-              {
-              p++;    // skip SE  (normally done at end of loop)
-              size--; // one less of these
-              if (size)  // copy compressed data to compression buffer
-                memmove (m_CompressInput, p, size);
-              m_zCompress.next_in = m_CompressInput;
-              m_zCompress.avail_in = size;
-              m_zCompress.next_out = m_CompressOutput;
-              m_zCompress.avail_out = COMPRESS_BUFFER_LENGTH;
-              m_nTotalCompressed += size;
-              return;  // done with this loop, now it needs to be decompressed
-              }
+          bool bWasCompressing = m_bCompress;
+          Phase_SUBNEGOTIATION_IAC (c); 
+          // just turned on compression?  special case, can't keep treating the
+          // data as it it was not compressed
+          if (!bWasCompressing && m_bCompress)
+            {
+            ++p;    // skip SE  (normally done at end of loop)
+            --size; // one less of these
+            if (size)  // copy compressed data to compression buffer
+              memmove (m_CompressInput, p, size);
 
-            continue;
-
+            m_zCompress.next_in   = m_CompressInput;
+            m_zCompress.avail_in  = size;
+            m_zCompress.next_out  = m_CompressOutput;
+            m_zCompress.avail_out = COMPRESS_BUFFER_LENGTH;
+            m_nTotalCompressed += size;
+            return;  // done with this loop, now it needs to be decompressed
+            }
+          continue;
           }   // end of HAVE_SUBNEGOTIATION_IAC
 
         // MXP phases             
-        case HAVE_MXP_ELEMENT:     Phase_MXP_ELEMENT (c); continue;
-        case HAVE_MXP_COMMENT:     Phase_MXP_COMMENT (c); continue;
-        case HAVE_MXP_QUOTE:       Phase_MXP_QUOTE (c); continue;
-        case HAVE_MXP_ENTITY:      Phase_MXP_ENTITY (c); continue;
+        case HAVE_MXP_ELEMENT: Phase_MXP_ELEMENT (c); continue;
+        case HAVE_MXP_COMMENT: Phase_MXP_COMMENT (c); continue;
+        case HAVE_MXP_QUOTE:   Phase_MXP_QUOTE   (c); continue;
+        case HAVE_MXP_ENTITY:  Phase_MXP_ENTITY  (c); continue;
 
         case HAVE_MXP_ROOM_NAME:
         case HAVE_MXP_ROOM_DESCRIPTION:
         case HAVE_MXP_ROOM_EXITS:
         case HAVE_MXP_WELCOME:
-              Phase_MXP_COLLECT_SPECIAL (c); continue;
+          Phase_MXP_COLLECT_SPECIAL (c);
+          continue;
 
         default: 
           break; // keep going (phase NONE)
         }   // end of switch on phase
-
       }   // end of not being my own input
 
-// special test for MXP
-
-//  1. Cancel once-only secure mode unless we get a <
-//  2. Throw away incoming text if we are in script collection mode
-//     unless it seems likely that script collection will be cancelled.
-
+    // special test for MXP
+    //  1. Cancel once-only secure mode unless we get a <
+    //  2. Throw away incoming text if we are in script collection mode
+    //     unless it seems likely that script collection will be cancelled.
     if (m_bMXP && !(flags & NOTE_OR_COMMAND))
       {
-
       if (m_bMXP_script && !MXP_Secure ())
         continue;   // discard incoming script
       
@@ -2019,16 +1841,12 @@ CString strLine (lpszText, size);
       // in <p> mode treat tabs as spaces
       if (c == '\t' && m_bInParagraph)
         c = ' ';
-
       } // end of special MXP tests on incoming data
 
-// kludgy test for Pueblo - assumes it is all in one packet - bleech!
+    // kludgy test for Pueblo - assumes it is all in one packet - bleech!
 
     // work out the length once to save time
-    static int iPuebloStartLength = 0;
-
-    if (iPuebloStartLength == 0)
-      iPuebloStartLength = strlen (PUEBLO_START);
+    static int iPuebloStartLength = strlen (PUEBLO_START);
 
     // quick initial tests
     if (!(flags & NOTE_OR_COMMAND) &&   // only on incoming stuff
@@ -2036,241 +1854,222 @@ CString strLine (lpszText, size);
         !m_bMXP &&            // and not MXP 
         m_bPueblo &&          // Pueblo wanted
         !m_bPuebloActive &&   // and not active yet
-        size >= iPuebloStartLength)
-      if (memcmp (p, PUEBLO_START, iPuebloStartLength) == 0)
-        {
-        MXP_On (true);  // turn Pueblo on
-        m_iMXP_defaultMode = m_iMXP_mode = eMXP_perm_secure;  // assume secure mode
-        TRACE ("Pueblo on.\n");
-        p += iPuebloStartLength - 1;     // one is added at end of loop
-        size -= iPuebloStartLength - 1;  // ditto
-        continue;   // back to main loop
-        } // end of Pueblo startup
+        size >= iPuebloStartLength &&
+        memcmp (p, PUEBLO_START, iPuebloStartLength) == 0)
+      {
+      MXP_On (true);  // turn Pueblo on
+      m_iMXP_defaultMode = m_iMXP_mode = eMXP_perm_secure;  // assume secure mode
+      TRACE ("Pueblo on.\n");
+      p += iPuebloStartLength - 1;     // one is added at end of loop
+      size -= iPuebloStartLength - 1;  // ditto
+      continue;   // back to main loop
+      } // end of Pueblo startup
 
-// here when phase is none
-
+    // here when phase is none
     cOneCharacterLine [0] = c;    // in case we need to use it
-
     switch (c)
       {
       case '\n':      // start a new line
-            m_iNoteStyle = NORMAL;  // new line cancels style flags
-            m_nTotalLinesReceived++;
+        m_iNoteStyle = NORMAL;  // new line cancels style flags
+        m_nTotalLinesReceived++;
 
-            if (m_bMXP && !(flags & NOTE_OR_COMMAND) && !m_bPuebloActive)
+        if (m_bMXP && !(flags & NOTE_OR_COMMAND) && !m_bPuebloActive)
+          {
+          if (!MXP_Open ())
+            MXP_CloseOpenTags (); // close all open tags
+          MXP_mode_change (-1);  // switch to default mode
+          }   // end of MXP stuff
+
+        if (m_bInParagraph && !(flags & NOTE_OR_COMMAND))  // for <P>
+          {
+          if (m_cLastChar == c)
+            {  // two newlines in a row - start a real new line
+            // we'll do two because the original text had a blank line.
+            StartNewLine (true, flags);
+            m_pCurrentLine->flags = flags;    // remember flags for this line
+            StartNewLine (true, flags);   // and another
+            m_pCurrentLine->flags = flags;    // remember flags for this line
+            }  // end of \n\n
+          else
+            {
+            // don't run words together - if a newline follows a word,
+            // insert a space
+            if (m_pCurrentLine->last_space != (m_pCurrentLine->len - 1))
               {
-              if (!MXP_Open ())
-                MXP_CloseOpenTags (); // close all open tags
-              MXP_mode_change (-1);  // switch to default mode
-              }   // end of MXP stuff
-            if (m_bInParagraph && !(flags & NOTE_OR_COMMAND))  // for <P>
-              {
-              if (m_cLastChar == c)
-                {  // two newlines in a row - start a real new line
-                // we'll do two because the original text had a blank line.
-                StartNewLine (true, flags);
-                m_pCurrentLine->flags = flags;    // remember flags for this line
-                StartNewLine (true, flags);   // and another
-                m_pCurrentLine->flags = flags;    // remember flags for this line
-                }  // end of \n\n
+              if (m_cLastChar == '.' && m_pCurrentLine->len < m_nWrapColumn)
+                AddToLine ("  ", flags);  // two spaces after period
               else
-                {
-                // don't run words together - if a newline follows a word,
-                // insert a space
-                if (m_pCurrentLine->last_space != (m_pCurrentLine->len - 1))
-                  {
-                  if (m_cLastChar == '.' && m_pCurrentLine->len < m_nWrapColumn)
-                    AddToLine ("  ", flags);  // two spaces after period
-                  else
-                    AddToLine (" ", flags);  // convert newline to space
-                  }   // end of newline which does not follow a space
-                }  // end of not two newlines in a row
-              m_cLastChar = c;  // remember it was a newline
-              }  // end of <p> mode 
-            else
-              if (!(m_bSuppressNewline && m_bMXP) ||    //   -  unless told not to
-                  (!m_bSuppressNewline && m_bPreMode) || // <PRE> mode honours newlines
-                  (flags & NOTE_OR_COMMAND)           // input/note mode honours newlines
-                  )
-                {
-                StartNewLine (true, flags);
-                SetNewLineColour (flags);
-                }
-            break;  // end of newline
+                AddToLine (" ", flags);  // convert newline to space
+              }   // end of newline which does not follow a space
+            }  // end of not two newlines in a row
+          m_cLastChar = c;  // remember it was a newline
+          }  // end of <p> mode 
+        else if (!(m_bSuppressNewline && m_bMXP) ||    //   -  unless told not to
+            (!m_bSuppressNewline && m_bPreMode) || // <PRE> mode honours newlines
+            (flags & NOTE_OR_COMMAND))           // input/note mode honours newlines
+          {
+          StartNewLine (true, flags);
+          SetNewLineColour (flags);
+          }
+        break;  // end of newline
 
       case '\r':      // return - ignore, or clear line content
+        if (m_bCarriageReturnClearsLine && !(flags & NOTE_OR_COMMAND) && p [1] != '\n')
+          {
+          // delete existing styles list
+          POSITION pos = m_pCurrentLine->styleList.GetHeadPosition();
+          while (pos != NULL)
+            DELETESTYLE (m_pCurrentLine->styleList.GetNext (pos));
 
-            if (m_bCarriageReturnClearsLine && !(flags & NOTE_OR_COMMAND) && p [1] != '\n')
-              {
+          m_pCurrentLine->styleList.RemoveAll();
 
-              // delete existing styles list
+          // add back one default style
 
-              for (POSITION pos = m_pCurrentLine->styleList.GetHeadPosition(); pos; )
-                  DELETESTYLE (m_pCurrentLine->styleList.GetNext (pos));
+          CStyle * pStyle = NEWSTYLE; 
 
-              m_pCurrentLine->styleList.RemoveAll();
+          // have at least one style item in the list
+          m_pCurrentLine->styleList.AddTail (pStyle);
 
-              // add back one default style
+          pStyle->iFlags = 0;
+          pStyle->iForeColour = WHITE;
+          pStyle->iBackColour = BLACK;
 
-              CStyle * pStyle; 
-
-              // have at least one style item in the list
-              m_pCurrentLine->styleList.AddTail (pStyle = NEWSTYLE);
-
-              pStyle->iFlags = 0;
-              pStyle->iForeColour = WHITE;
-              pStyle->iBackColour = BLACK;
-
-              m_pCurrentLine->hard_return = false;
-              m_pCurrentLine->len = 0;
-              m_pCurrentLine->last_space = -1;
-
-              }   // end of letting a \r delete line contents
-
-            break;
+          m_pCurrentLine->hard_return = false;
+          m_pCurrentLine->len = 0;
+          m_pCurrentLine->last_space = -1;
+          }   // end of letting a \r delete line contents
+        break;
             
       case '\a':      // beep
-            if (m_enable_beeps)
-               if (m_strBeepSound.IsEmpty ())
-                 ::MessageBeep (MB_ICONEXCLAMATION);
-               else
-                 PlaySoundFile (m_strBeepSound);
-            break;    // end of beep
+        if (m_enable_beeps)
+           if (m_strBeepSound.IsEmpty ())
+             ::MessageBeep (MB_ICONEXCLAMATION);
+           else
+             PlaySoundFile (m_strBeepSound);
+        break;    // end of beep
 
       case ' ':     // space
-            if (m_bInParagraph && !(flags & NOTE_OR_COMMAND))  // for <P>
-              {
-              // multiple consecutive spaces - discard extras
-              if (m_pCurrentLine->last_space == (m_pCurrentLine->len - 1))
-                {
-                if (m_cLastChar != '\n')
-                    m_cLastChar = c;  // remember it
-                break;
-                }
-
-              // if you have period-space, make it period-space-space
-              if ((m_cLastChar == '.' || m_cLastChar == '!' || m_cLastChar == '?')
-                  && m_pCurrentLine->len < m_nWrapColumn)
-                {
-                AddToLine ("  ", flags);
+        if (m_bInParagraph && !(flags & NOTE_OR_COMMAND))  // for <P>
+          {
+          // multiple consecutive spaces - discard extras
+          if (m_pCurrentLine->last_space == (m_pCurrentLine->len - 1))
+            {
+            if (m_cLastChar != '\n')
                 m_cLastChar = c;  // remember it
-                break;
-                }
+            break;
+            }
 
-              }   // end of <p> mode            
+          // if you have period-space, make it period-space-space
+          if ((m_cLastChar == '.' || m_cLastChar == '!' || m_cLastChar == '?')
+              && m_pCurrentLine->len < m_nWrapColumn)
+            {
+            AddToLine ("  ", flags);
+            m_cLastChar = c;  // remember it
+            break;
+            }
+          }   // end of <p> mode            
 
+        AddToLine (" ", flags);
+
+        // a newline followed by only a space still counts as a newline
+        if (m_cLastChar != '\n' && !(flags & NOTE_OR_COMMAND))
+          m_cLastChar = c;  // remember it
+
+        break;  // end of space
+
+      case '\t':
+        i = ((m_pCurrentLine->len + 8) & 0xFFF8);
+        if (m_pCurrentLine->len >= m_nWrapColumn)
+          StartNewLine (false, flags);
+        else
+          {
+          spaces = i - m_pCurrentLine->len;  // no. of spaces
+          for (i = 0; i < spaces; i++)
             AddToLine (" ", flags);
+          }   // end of being inside wrap column
+        break;    // end of tab
 
-            // a newline followed by only a space still counts as a newline
-            if (m_cLastChar != '\n' && !(flags & NOTE_OR_COMMAND))
-              m_cLastChar = c;  // remember it
-            break;  // end of space
-
-      case '\t':  i = ((m_pCurrentLine->len + 8) & 0xFFF8);
-                  if (m_pCurrentLine->len >= m_nWrapColumn)
-                    StartNewLine (false, flags);
-                  else
-                    {
-                    spaces = i - m_pCurrentLine->len;  // no. of spaces
-                    for (i = 0; i < spaces; i++)
-                        AddToLine (" ", flags);
-
-                    }   // end of being inside wrap column
-                  break;    // end of tab
-
-      case ESC:   if (!(flags & NOTE_OR_COMMAND))
-                    m_phase = HAVE_ESC;   // start of ANSI escape sequence
-                  break;
+      case ESC:
+        if (!(flags & NOTE_OR_COMMAND))
+          m_phase = HAVE_ESC;   // start of ANSI escape sequence
+        break;
 
       case IAC:   // Interpret As Command (however IAC IAC is just IAC)
-                
-                  if (!(flags & NOTE_OR_COMMAND)) 
-                    {
-                    if (m_phase == HAVE_IAC)
-                      {
-                      AddToLine (cOneCharacterLine, flags);
-                      m_cLastChar = c;  // remember it
-                      m_phase = NONE;
-                      }
-                    else
-                      m_phase = HAVE_IAC;   // start of telnet protocol
-                    break;    
-                    }
-                  // note NO break here, if not input from MUD we FALL THROUGH
+        if (!(flags & NOTE_OR_COMMAND)) 
+          {
+          if (m_phase == HAVE_IAC)
+            {
+            AddToLine (cOneCharacterLine, flags);
+            m_cLastChar = c;  // remember it
+            m_phase = NONE;
+            }
+          else
+            m_phase = HAVE_IAC;   // start of telnet protocol
+          break;    
+          }
+        // note NO break here, if not input from MUD we FALL THROUGH
 
-      case '<':   if (!(flags & NOTE_OR_COMMAND) && 
-                      m_bMXP && 
-                      (MXP_Open () || MXP_Secure ())
-                     )
-                  {
-                  m_strMXPstring.Empty ();    // no string yet
-                  m_phase = HAVE_MXP_ELEMENT;
+      case '<':
+        if (!(flags & NOTE_OR_COMMAND) && 
+            m_bMXP && 
+            (MXP_Open () || MXP_Secure ()))
+          {
+          m_strMXPstring.Empty ();    // no string yet
+          m_phase = HAVE_MXP_ELEMENT;
 //                  TRACE ("\nStarting MXP element collection.\n");
-                  break;
-                  } // end of starting an MXP element
-                  // note NO break here, if not in MXP mode we FALL THROUGH
+          break;
+          } // end of starting an MXP element
+        // note NO break here, if not in MXP mode we FALL THROUGH
 
-      case '&':   if (!(flags & NOTE_OR_COMMAND) && 
-                      m_bMXP && 
-                      (MXP_Open () || MXP_Secure ())
-                     )
-                  {
-                  m_strMXPstring.Empty ();    // no string yet
-                  m_phase = HAVE_MXP_ENTITY;
+      case '&':
+        if (!(flags & NOTE_OR_COMMAND) && 
+            m_bMXP && 
+            (MXP_Open () || MXP_Secure ()))
+          {
+          m_strMXPstring.Empty ();    // no string yet
+          m_phase = HAVE_MXP_ENTITY;
 //                  TRACE ("\nStarting MXP entity collection.\n");
-                  break;
-                  } // end of starting an MXP entity
-                  // note NO break here, if not in MXP mode we FALL THROUGH
+          break;
+          } // end of starting an MXP entity
+        // note NO break here, if not in MXP mode we FALL THROUGH
 
       default:
-                  AddToLine (cOneCharacterLine, flags);
-                  if (!(flags & NOTE_OR_COMMAND))
-                    m_cLastChar = c;  // remember it
-                  break;
+        AddToLine (cOneCharacterLine, flags);
+        if (!(flags & NOTE_OR_COMMAND))
+          m_cLastChar = c;  // remember it
+        break;
       } // end of switch    
-
   } // end of processing input
-      
+
 
   // to avoid flicker, only update the line if:
   //   a) It is MUD output (eg. a prompt line); or
   //   b) The line has changed
 
   if (!(flags & NOTE_OR_COMMAND) || pOriginalLine != m_pCurrentLine)
-
     // don't update views if no change to current line (some nulls maybe?)
     if (pOriginalLine != m_pCurrentLine ||
         strOriginalText != CString (m_pCurrentLine->text, m_pCurrentLine->len))
       {
       // get the view to refresh
-
-      for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
-	      {
-	      CView* pView = GetNextView(pos);
-	      
-	      if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	      {
-		      CMUSHView* pmyView = (CMUSHView*)pView;
-
-		      pmyView->addedstuff();
-	        }	
+      POSITION pos = GetFirstViewPosition();
+      while (pos != NULL)
+        {
+        CView* pView = GetNextView(pos);
+        if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+		  ((CMUSHView*)pView)->addedstuff();
         }
 
       // new - for people on the forum who insist on getting lines without a \n at
       // the end - tell plugins about this line
-
       SendLineToPlugin ();
-
       }   // end of this line changing
-
 }
 
 
 
 void CMUSHclientDoc::StartNewLine (const bool hard_break, const int flags)
-  {
-POSITION pos;
-
+{
   // we may not have a current line
   if (m_pCurrentLine)
     {
@@ -2280,7 +2079,6 @@ POSITION pos;
 
     // new - for people on the forum who insist on getting lines without a \n at
     // the end - tell plugins about this line
-
     if (!(flags & NOTE_OR_COMMAND))
       SendLineToPlugin ();
 
@@ -2290,8 +2088,7 @@ POSITION pos;
       {
       CLine * pSavedLine = m_pCurrentLine;
       LARGE_INTEGER saved_time = m_pCurrentLine->m_lineHighPerformanceTime;
-      if (ProcessPreviousLine () &&
-          m_pCurrentLine->len == 0)
+      if (ProcessPreviousLine () && m_pCurrentLine->len == 0)
         return;   // return if omit from output (no need to add another line)
 
       // if the line has changed then the trigger or script added a new one,
@@ -2306,75 +2103,60 @@ POSITION pos;
           saved_time.QuadPart != m_pCurrentLine->m_lineHighPerformanceTime.QuadPart) &&
           m_pCurrentLine->len == 0)
         return;
-
       }
     }
 
-
   // if our buffer is full, remove the JUMP_SIZE items
-
   if (m_LineList.GetCount () >= m_maxlines)
     {
-
     RemoveChunk ();   // get rid of JUMP_SIZE lines
 
-  // notify view to update their selection ranges
+    // notify view to update their selection ranges
+    POSITION pos = GetFirstViewPosition();
+  	while (pos != NULL)
+      {
+      CView* pView = GetNextView(pos);
 
-  	for(pos = GetFirstViewPosition(); pos != NULL; )
-    	{
-  		CView* pView = GetNextView(pos);
-		
-  		if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  	{
-  			CMUSHView* pmyView = (CMUSHView*)pView;
-
-  			pmyView->did_jump ();
-  		  }	  // end of being an output view
+      if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+        ((CMUSHView*)pView)->did_jump ();
   	  }   // end of doing each view
-  
     }     // end of buffer full
 
-// try, oh try, to allocate a new line
-
+  // try, oh try, to allocate a new line
   try
     {
-
-  // we may not have a current line
+    // we may not have a current line
     if (m_pCurrentLine)
       {
+      // We are about to move onto a new line. For space reasons, reallocate them
+      // memory used by the pointers. However to keep from getting a null pointer,
+      // keep at least a single character
 
-  // We are about to move onto a new line. For space reasons, reallocate them
-  // memory used by the pointers. However to keep from getting a null pointer,
-  // keep at least a single character
+      // save current line text
+      CString strLine = CString (m_pCurrentLine->text, m_pCurrentLine->len);
 
-    // save current line text
-     CString strLine = CString (m_pCurrentLine->text, m_pCurrentLine->len);
-
-     m_pCurrentLine->iMemoryAllocated = MAX (m_pCurrentLine->len, 1);
+      m_pCurrentLine->iMemoryAllocated = MAX (m_pCurrentLine->len, 1);
 
 #ifdef USE_REALLOC
       m_pCurrentLine->text  = (char *) realloc (m_pCurrentLine->text, 
                                                m_pCurrentLine->iMemoryAllocated);
 
 #else
-
-    delete [] m_pCurrentLine->text;
-    m_pCurrentLine->text = new char [m_pCurrentLine->iMemoryAllocated];
-
-
+      delete [] m_pCurrentLine->text;
+      m_pCurrentLine->text = new char [m_pCurrentLine->iMemoryAllocated];
 #endif
-      
-    ASSERT (m_pCurrentLine->text);
 
-    // put text back
-    memcpy (m_pCurrentLine->text, (LPCTSTR) strLine, m_pCurrentLine->len);
+      ASSERT (m_pCurrentLine->text);
+
+      // put text back
+      memcpy (m_pCurrentLine->text, (LPCTSTR) strLine, m_pCurrentLine->len);
 
       // if we have more than one style, and the last one is empty, get rid of it
       // unless it is a start tag marker
-      /*
 
-  // Commented out because of bug #418 - a style change at the very end
-  // of the line was being discarded.    Changed in version 3.18.
+      /*
+      // Commented out because of bug #418 - a style change at the very end
+      // of the line was being discarded.    Changed in version 3.18.
 
       if (m_pCurrentLine->styleList.GetCount () > 1)
         {
@@ -2391,9 +2173,8 @@ POSITION pos;
 
       } // end of having a current line
 
-// start a new line
-
-    int      iFlags = m_iFlags;             
+    // start a new line
+    int      iFlags      = m_iFlags;             
     COLORREF iForeColour = m_iForeColour;  
     COLORREF iBackColour = m_iBackColour;  
 
@@ -2403,41 +2184,39 @@ POSITION pos;
       iForeColour = m_echo_colour;
       iBackColour = BLACK;
       } // end of user input 
-    else
-      if (flags & COMMENT) 
+    else if (flags & COMMENT) 
+      {
+      if (m_iNoteTextColour == SAMECOLOUR)
         {
-        if (m_iNoteTextColour == SAMECOLOUR)
-          {
-          if (m_bCustom16isDefaultColour)
-            {
-            iFlags = COLOUR_CUSTOM;  
-            iForeColour = 15;
-            iBackColour = 0;
-            }
-          else
-            {
-            iFlags = COLOUR_ANSI;  
-            iForeColour = WHITE;
-            iBackColour = BLACK;
-            }
-          } // end of "same colour"
-        else
+        if (m_bCustom16isDefaultColour)
           {
           iFlags = COLOUR_CUSTOM;  
-          iForeColour = m_iNoteTextColour;
+          iForeColour = 15;
+          iBackColour = 0;
+          }
+        else
+          {
+          iFlags = COLOUR_ANSI;  
+          iForeColour = WHITE;
           iBackColour = BLACK;
           }
-        } // end of note 
+        } // end of "same colour"
+      else
+        {
+        iFlags = COLOUR_CUSTOM;  
+        iForeColour = m_iNoteTextColour;
+        iBackColour = BLACK;
+        }
+      } // end of note 
 
-    m_pCurrentLine = new CLine (++m_total_lines, 
-                                m_nWrapColumn,
-                                iFlags,       // style flags
-                                iForeColour,  
-                                iBackColour,
-                                m_bUTF_8);
+    ++m_total_lines;
+    m_pCurrentLine = new CLine (m_total_lines, 
+        m_nWrapColumn,
+        iFlags,       // style flags
+        iForeColour, iBackColour,
+        m_bUTF_8);
 
     m_pCurrentLine->flags = flags;
-    pos = m_LineList.AddTail (m_pCurrentLine);
 
 // add every "JUMP_SIZE" line positions to the positions array
 
@@ -2445,124 +2224,101 @@ POSITION pos;
 // added to the line count, so the line count is 1-relative, not 0-relative, however
 // we want to place the line in the line positions array zero relative.
 
+    POSITION pos = m_LineList.AddTail (m_pCurrentLine);
     if (m_LineList.GetCount () % JUMP_SIZE == 1)
       m_pLinePositions [m_LineList.GetCount () / JUMP_SIZE] = pos;
-
     }   // end of try block
-
-// here for memory exception - free up some memory, warn the user and close the world
-
   catch (CMemoryException * e)
-    {
-
+    { // here for memory exception - free up some memory, warn the user and close the world
     RemoveChunk ();   // get rid of JUMP_SIZE lines
     OnConnectionDisconnect ();    // close the world
     TMessageBox ("Ran out of memory. The world has been closed.");
-
     e->Delete ();
-
     } // end of catch block
 
-      
-// if this document does not have an active view, note we have a new message for it
-
+  // if this document does not have an active view, note we have a new message for it
   if (m_pActiveCommandView == NULL && m_pActiveOutputView == NULL)
     {
-    if (0 == m_new_lines)
+    if (m_new_lines == 0)
       {
-
-// play the new activity sound if requested
-
+      // play the new activity sound if requested
       if (!m_new_activity_sound.IsEmpty () && m_new_activity_sound != NOSOUNDLIT)
         PlaySoundFile (m_new_activity_sound);
-
       }   // end of being first new stuff
-
-    m_new_lines++;    // count unseen lines
-
+    ++m_new_lines;    // count unseen lines
     }   // end of not having an active view
 
-// amend activity dialog if we have one (regardless, because we want to count total lines)
-
+  // amend activity dialog if we have one (regardless, because we want to count total lines)
   App.m_bUpdateActivity = TRUE;
-
-  }   // end of CMUSHclientDoc::StartNewLine
+}   // end of CMUSHclientDoc::StartNewLine
 
 const bool CMUSHclientDoc::CheckScriptingAvailable (const char * sWhat,
                                                     const DISPID dispid,
                                                     const char * sScript)
-  {
-
-  if (sScript [0] == 0)
+{
+  if (sScript [0] == '\0')
     return false;   // OK return - no script name given
 
   if (!GetScriptEngine ())   // no script engine?
     {
-    if (!m_bWarnIfScriptingInactive)    // no warning
-      return true;
-    ColourNote ("white", "red", 
-                TFormat ("%s function \"%s\" cannot execute "
-                         "- scripting disabled/parse error.", 
-               sWhat,     // trigger/alias/timer
-               sScript)); // name of function
+    if (m_bWarnIfScriptingInactive)
+      ColourNote ("white", "red", TFormat (
+          "%s function \"%s\" cannot execute - scripting disabled/parse error.",
+          sWhat,     // trigger/alias/timer
+          sScript)); // name of function
     return true;
     }
 
   if (dispid == DISPID_UNKNOWN)        // no dispatch id?
     {
-    if (!m_bWarnIfScriptingInactive)    // no warning
-      return true;
-    ColourNote ("white", "red", 
-                TFormat ("%s function \"%s\" not found "
-                         "or had a previous error.", 
-               sWhat,     // trigger/alias/timer
-               sScript)); // name of function
+    if (m_bWarnIfScriptingInactive)
+      ColourNote ("white", "red", TFormat (
+          "%s function \"%s\" not found or had a previous error.",\
+          sWhat,     // trigger/alias/timer
+          sScript)); // name of function
     return true;    // error return
     }
 
   return false;   // OK return
-  }
+}
 
 void CMUSHclientDoc::ExecuteTriggerScript (CTrigger * trigger_item,
-                                            const CString strCurrentLine,
-                                            CPaneLine & StyledLine)
-  {
-
+                                           const CString strCurrentLine,
+                                           CPaneLine & StyledLine)
+{
   if (CheckScriptingAvailable ("Trigger", trigger_item->dispid, trigger_item->strProcedure))
-     return;
+    return;
 
   CString strType = "trigger";
-  CString strReason =  TFormat ("processing trigger \"%s\"", 
-                            (LPCTSTR) trigger_item->strLabel);
+  CString strReason = TFormat ("processing trigger \"%s\"", 
+      (LPCTSTR) trigger_item->strLabel);
 
   // get unlabelled trigger's internal name
   const char * pLabel = trigger_item->strLabel;
-  if (pLabel [0] == 0)
+  if (pLabel [0] == '\0')
      pLabel = GetTriggerRevMap () [trigger_item].c_str ();
 
   if (GetScriptEngine () && GetScriptEngine ()->IsLua ())
     {
     list<double> nparams;
+
     list<string> sparams;
     sparams.push_back (pLabel);
     sparams.push_back ((LPCTSTR) strCurrentLine);
+
     trigger_item->bExecutingScript = true;     // cannot be deleted now
     GetScriptEngine ()->ExecuteLua (trigger_item->dispid, 
-                                   trigger_item->strProcedure, 
-                                   eTriggerFired,
-                                   strType, 
-                                   strReason, 
-                                   nparams,
-                                   sparams, 
-                                   trigger_item->nInvocationCount,
-                                   trigger_item->regexp,
-                                   NULL,        // no map of strings
-                                   &StyledLine);  // but we *do* have a styled line
+        trigger_item->strProcedure, 
+        eTriggerFired,
+        strType, strReason, 
+        nparams, sparams, 
+        trigger_item->nInvocationCount,
+        trigger_item->regexp,
+        NULL,        // no map of strings
+        &StyledLine);  // but we *do* have a styled line
     trigger_item->bExecutingScript = false;     // can be deleted now
     return;
     }   // end of Lua
-
-long i = 1;
 
   // prepare for the arguments:
   //   1. Trigger name
@@ -2579,7 +2335,6 @@ long i = 1;
     eArgCount,     // this MUST be last
     };    
 
-  COleSafeArray sa;   // for wildcard list
   COleVariant args [eArgCount]; // arguments to script
   DISPPARAMS params = { args, NULL, eArgCount, 0 };
 
@@ -2589,67 +2344,60 @@ long i = 1;
   args [eCurrentLine] = strCurrentLine;
 
   // --------------- set up wildcards array ---------------------------
+  COleSafeArray sa;   // for wildcard list
   sa.Clear ();
   // nb - to be consistent with %1, %2 etc. we will make array 1-relative
   sa.CreateOneDim (VT_VARIANT, MAX_WILDCARDS, NULL, 1);
-  for (i = 1; i < MAX_WILDCARDS; i++)
-    {
-    COleVariant v (trigger_item->wildcards [i].c_str ());
-    sa.PutElement (&i, &v);
-    }
+  long i;
+  for (i = 1; i < MAX_WILDCARDS; ++i)
+    sa.PutElement (&i, &((COleVariant)trigger_item->wildcards [i].c_str ()));
+
   // i should be MAX_WILDCARDS (10) now ;)
-  COleVariant v (trigger_item->wildcards [0].c_str ()); // the whole matching line
-  sa.PutElement (&i, &v);
+  sa.PutElement (&i, &((COleVariant)trigger_item->wildcards [0].c_str ())); // the whole matching line
   args [eWildcards] = sa;
 
   trigger_item->bExecutingScript = true;     // cannot be deleted now
   ExecuteScript (trigger_item->dispid,  
-                 trigger_item->strProcedure,
-                 eTriggerFired,
-                 strType, 
-                 strReason,
-                 params, 
-                 trigger_item->nInvocationCount); 
+      trigger_item->strProcedure,
+      eTriggerFired,
+      strType, strReason,
+      params, 
+      trigger_item->nInvocationCount); 
   trigger_item->bExecutingScript = false;     // can be deleted now
+} // end of CMUSHclientDoc::ExecuteTriggerScript 
 
-  } // end of CMUSHclientDoc::ExecuteTriggerScript 
-
-void CMUSHclientDoc::ExecuteHotspotScript (DISPID & dispid,  // dispatch ID, will be set to DISPID_UNKNOWN on an error
-                          LPCTSTR szProcedure,      // what name was in the hotspot callback
-                          long iFlags,              // flags: ctrl, shift, whatever
-                          LPCTSTR szHotspotID       // which hotspot
-                          )
-
-  {
-  long nInvocationCount = 0;     // don't care
-
+void CMUSHclientDoc::ExecuteHotspotScript (DISPID & dispid,     // dispatch ID, will be set to DISPID_UNKNOWN on an error
+                                           LPCTSTR szProcedure, // what name was in the hotspot callback
+                                           long iFlags,         // flags: ctrl, shift, whatever
+                                           LPCTSTR szHotspotID) // which hotspot
+{
   if (CheckScriptingAvailable ("Hotspot", dispid, szProcedure))
    return;
 
   CString strType = "hotspot";
   CString strReason =  Translate ("processing hotspot callback");
+  long nInvocationCount = 0;     // don't care
 
   if (GetScriptEngine () && GetScriptEngine ()->IsLua ())
     {
     list<double> nparams;
+
     list<string> sparams;
     nparams.push_back (iFlags);
     sparams.push_back ((LPCTSTR) szHotspotID);
+
     GetScriptEngine ()->ExecuteLua (dispid, 
-                                   szProcedure, 
-                                   eHotspotCallback,
-                                   strType, 
-                                   strReason, 
-                                   nparams,
-                                   sparams, 
-                                   nInvocationCount,
-                                   NULL,        // no regexp
-                                   NULL,        // no map of strings
-                                   NULL);       // no styled line
+      szProcedure, 
+      eHotspotCallback,
+      strType, strReason, 
+      nparams, sparams, 
+      nInvocationCount,
+      NULL,  // no regexp
+      NULL,  // no map of strings
+      NULL); // no styled line
+
     return;
     }   // end of Lua
-
-long i = 1;
 
   // prepare for the arguments:
   //   1. Flags
@@ -2667,54 +2415,41 @@ long i = 1;
   COleVariant args [eArgCount]; // arguments to script
   DISPPARAMS params = { args, NULL, eArgCount, 0 };
 
-
   args [eHotspotID] = szHotspotID;
-  args [eFlags] = iFlags;
+  args [eFlags]     = iFlags;
 
   ExecuteScript (dispid,  
-                 szProcedure,
-                 eHotspotCallback,
-                 strType, 
-                 strReason,
-                 params, 
-                 nInvocationCount); 
-
-  }   // end of CMUSHclientDoc::ExecuteHotspotScript
+    szProcedure,
+    eHotspotCallback,
+    strType, strReason,
+    params, nInvocationCount); 
+}   // end of CMUSHclientDoc::ExecuteHotspotScript
 
 void CMUSHclientDoc::OnFileLogsession() 
 {
-
-// close log file if already open
-
+  // close log file if already open
   if (m_logfile)
-   {
-
+    {
     // check they want to close it, if desired
-    if (App.m_bConfirmLogFileClose)
-      {
-      CString str;
-      str = TFormat ("Close log file %s?", (const char *) m_logfile_name);
-      if (UMessageBox (str, MB_OKCANCEL | MB_ICONQUESTION)
-            == IDCANCEL)
-        return;
-      }   // end of confirmation wanted
-
-    CloseLog ();    // this writes out the log file postamble as well
+    if (!App.m_bConfirmLogFileClose ||
+        UMessageBox (TFormat ("Close log file %s?", (const char *) m_logfile_name),
+            MB_OKCANCEL | MB_ICONQUESTION) != IDCANCEL)
+      CloseLog ();    // this writes out the log file postamble as well
     return;
     }
 
-BOOL bAppendToLogFile = false;
-int iLines = 0;  
-BOOL bWriteWorldName;
-CString strPreamble;
+  BOOL bAppendToLogFile = false;
+  int iLines = 0;  
+  BOOL bWriteWorldName;
+  CString strPreamble;
 
-if (!m_bLogRaw)
-  {
-  CLogDlg dlg;
-  int lines_then = m_LineList.GetCount ();
+  if (!m_bLogRaw)
+    {
+    int lines_then = m_LineList.GetCount ();
 
+    CLogDlg dlg;
     dlg.m_doc = this;
-    dlg.m_lines = m_LineList.GetCount ();   // maximum number of lines to capture
+    dlg.m_lines = lines_then;   // maximum number of lines to capture
     dlg.m_bAppendToLogFile = App.m_bAppendToLogFiles;
     dlg.m_bWriteWorldName = m_bWriteWorldNameToLog;
     dlg.m_strPreamble = m_strLogFilePreamble;
@@ -2726,34 +2461,24 @@ if (!m_bLogRaw)
       return;
 
     // remember whether they wanted to log notes and/or input
-
     m_bLogOutput = dlg.m_bLogOutput;
-    m_log_input = dlg.m_bLogInput;
-    m_bLogNotes = dlg.m_bLogNotes;
+    m_log_input  = dlg.m_bLogInput;
+    m_bLogNotes  = dlg.m_bLogNotes;
 
-  // allow for extra lines added to the buffer since we put up the dialog
-
+    // allow for extra lines added to the buffer since we put up the dialog
     if (dlg.m_lines > 0 && m_LineList.GetCount () > lines_then)
       dlg.m_lines += m_LineList.GetCount () - lines_then;
 
     bAppendToLogFile = dlg.m_bAppendToLogFile;
-    iLines = dlg.m_lines;
-    bWriteWorldName = dlg.m_bWriteWorldName;
-    strPreamble = dlg.m_strPreamble;
-
+    iLines           = dlg.m_lines;
+    bWriteWorldName  = dlg.m_bWriteWorldName;
+    strPreamble      = dlg.m_strPreamble;
   }   // end of not a raw log
 
-// find the output file name
-
-  CString suggested_name;
-  CString filename;
+  // find the output file name
+  CString suggested_name, filename;
   if (!m_strAutoLogFileName.IsEmpty ())
-    {
-    CTime theTime;
-    theTime = CTime::GetCurrentTime();
-
-    suggested_name = FormatTime (theTime, m_strAutoLogFileName);
-    }
+    suggested_name = FormatTime (CTime::GetCurrentTime(), m_strAutoLogFileName);
   else
     {
     CString strWorldName = m_mush_name;
@@ -2762,36 +2487,34 @@ if (!m_bLogRaw)
     int i;
     while ((i = strWorldName.FindOneOf ("<>\"|?:#%;/\\")) != -1)
       strWorldName = strWorldName.Left (i) + strWorldName.Mid (i + 1);
-    suggested_name = Make_Absolute_Path (App.m_strDefaultLogFileDirectory);
-    suggested_name += strWorldName;
-    suggested_name += " log";
+
+    suggested_name = Make_Absolute_Path (App.m_strDefaultLogFileDirectory)
+        + strWorldName
+        + " log";
     }
 
-  CFileDialog filedlg (FALSE,   // saving the file
-                   "txt",    // default extension
-                   "",
-                   OFN_HIDEREADONLY | OFN_NOCHANGEDIR |
-                   (bAppendToLogFile ? 0 : OFN_OVERWRITEPROMPT),
-                   "Text files (*.txt)|*.txt|All files (*.*)|*.*||",    // filter 
-                   NULL);  // parent window
-
+  CFileDialog filedlg = CFileDialog(
+      FALSE, // saving the file
+      "txt", // default extension
+      "",
+        OFN_HIDEREADONLY |
+        OFN_NOCHANGEDIR  |
+        (bAppendToLogFile ? 0 : OFN_OVERWRITEPROMPT),
+      "Text files (*.txt)|*.txt|All files (*.*)|*.*||", // filter 
+      NULL); // parent window
 
   filedlg.m_ofn.lpstrTitle = "Log file name";
   filedlg.m_ofn.lpstrFile = filename.GetBuffer (_MAX_PATH); // needed!! (for Win32s)  
-  if (App.platform == VER_PLATFORM_WIN32s)
-    strcpy (filedlg.m_ofn.lpstrFile, "");
-  else
-    strcpy (filedlg.m_ofn.lpstrFile, suggested_name);
+  strcpy (filedlg.m_ofn.lpstrFile, (App.platform == VER_PLATFORM_WIN32s) ? "" : suggested_name);
 
   ChangeToFileBrowsingDirectory ();
-	int nResult = filedlg.DoModal();
+  int nResult = filedlg.DoModal();
   ChangeToStartupDirectory ();
 
   if (nResult != IDOK)
     return;
 
   m_logfile_name = filedlg.GetPathName ();
-
   m_logfile = fopen (m_logfile_name, bAppendToLogFile ? "a+" : "w");
 	
   // close and re-open to make sure it is in the disk directory
@@ -2801,71 +2524,47 @@ if (!m_bLogRaw)
     m_logfile = fopen (m_logfile_name, bAppendToLogFile ? "a+" : "w");
     }
 
-	if (!m_logfile)
-	  {
-    CString str;
-
-    str = TFormat ("Unable to open log file \"%s\"", (LPCTSTR) m_logfile_name);
-	  UMessageBox (str);
-	  
+  if (!m_logfile)
+    {
+    UMessageBox (TFormat ("Unable to open log file \"%s\"", (LPCTSTR) m_logfile_name));
     return;
-	  }	
+	}
 
   // no preamble or other crap for a raw log file
-   if (m_bLogRaw)
-     return;
+  if (m_bLogRaw)
+    return;
 
-POSITION pos = NULL;
-int line;
-
-// if they want previous part of session written, do it
-
+  POSITION pos = NULL;
+  // if they want previous part of session written, do it
   if (iLines > 0)
     {
-
-// if they want to use whole buffer, just use it
-
+    // if they want to use whole buffer, just use it
     if (iLines >= m_LineList.GetCount ())
       pos = m_LineList.GetHeadPosition ();
+    // otherwise count backwards the required number of lines
     else
       {
-
-// otherwise count backwards the required number of lines
-
       pos = m_LineList.GetTailPosition ();
-
-      for (line = 0; line < iLines && pos; line++)
+      for (int line = 0; line < iLines && pos != NULL; --line)
         m_LineList.GetPrev (pos);
 
-// if no pos, start at top
-
+      // if no pos, start at top
       if (!pos)
         pos = m_LineList.GetHeadPosition ();
       }   // end of not starting from the top
-
     } // end of wanting retrospective logging
-  else
-    pos = NULL;
 
   CLine * pLine;
-  CString strTime;
-  CTime theTime;
 
-  if (pos)
-    theTime = m_LineList.GetAt (pos)->m_theTime;
-  else
-    theTime = CTime::GetCurrentTime();
+  CTime theTime = (pos != NULL) ? m_LineList.GetAt (pos)->m_theTime : CTime::GetCurrentTime();
 
-// write log file preamble if wanted
-
+  // write log file preamble if wanted
   if (!strPreamble.IsEmpty ())
     {
     // allow %n for newline
     strPreamble.Replace ("%n", "\n");
-
     // allow for time-substitution strings
     strPreamble = FormatTime (theTime, strPreamble, m_bLogHTML);
-
     // this is open in text mode, don't want \r\r\n
     strPreamble.Replace (ENDLINE, "\n");
 
@@ -2875,15 +2574,9 @@ int line;
 
   if (bWriteWorldName)
     {
-
-  // write preamble so they know what this is all about
-
-
-    strTime = theTime.Format (TranslateTime ("%A, %B %d, %Y, %#I:%M %p"));
-
-    CString strPreamble = m_mush_name;
-    strPreamble += " - ";
-    strPreamble += strTime;
+    // write preamble so they know what this is all about
+    CString strPreamble = m_mush_name + " - " + theTime.Format (
+        TranslateTime ("%A, %B %d, %Y, %#I:%M %p"));
 
     if (m_bLogHTML)
       {
@@ -2900,127 +2593,115 @@ int line;
       WriteToLog ("\n", 1);
       }
 
-  // turn previous line into a line of hyphens, and print that
-
-    CString strHyphens ('-', strPreamble.GetLength ());
+    // turn previous line into a line of hyphens, and print that
+    CString strHyphens = CString('-', strPreamble.GetLength ());
 
     WriteToLog (strHyphens); 
     if (m_bLogHTML)
        WriteToLog ("<br><br>");
     else
-      WriteToLog ("\n\n");
+       WriteToLog ("\n\n");
     }   // end of wanting world name written
 
-// now output retrospective log lines, if any
-
+  // now output retrospective log lines, if any
   bool bNewLine = true;
-
-  while (pos)
+  while (pos != NULL)
     {
     pLine = m_LineList.GetNext (pos);
 
     // respect "log my input" flags
-    if ((pLine->flags & LOG_LINE) || (pLine->flags & NOTE_OR_COMMAND))   // log this line
-      if (!((pLine->flags & USER_INPUT) && !m_log_input)) // this is input and we want it
-        if (!((pLine->flags & COMMENT) && !m_bLogNotes))    // this is a note and we want it
+    if (((pLine->flags & LOG_LINE) || (pLine->flags & NOTE_OR_COMMAND)) &&    // log this line
+        !((pLine->flags & USER_INPUT) && !m_log_input) && // this is input and we want it
+        !((pLine->flags & COMMENT) && !m_bLogNotes))   // this is a note and we want it
+      {
+      if (bNewLine)
+        {
+        // get appropriate preamble
+        CString strPreamble;
+        if (pLine->flags & USER_INPUT)
+          strPreamble = m_strLogLinePreambleInput;
+        else if (pLine->flags & COMMENT)
+          strPreamble = m_strLogLinePreambleNotes;
+        else
+          strPreamble = m_strLogLinePreambleOutput;
+
+        // allow %n for newline
+        strPreamble.Replace ("%n", "\n");
+        if (strPreamble.Find ('%') != -1)
+          strPreamble = FormatTime (pLine->m_theTime, strPreamble, m_bLogHTML);
+
+        // line preamble
+        WriteToLog (strPreamble); 
+        }   // end of starting a new line
+
+      // line itself
+      CString strLine = CString (pLine->text, pLine->len);
+
+      // fix up HTML sequences
+      if (m_bLogHTML && m_bLogInColour)
+        {
+        if (!pLine->styleList.IsEmpty ())
           {
-          if (bNewLine)
+          POSITION style_pos = pLine->styleList.GetHeadPosition();
+          int iCol = 0;
+          while (style_pos != NULL)
             {
-            // get appropriate preamble
-            CString strPreamble = m_strLogLinePreambleOutput;
-            if (pLine->flags & USER_INPUT)
-               strPreamble = m_strLogLinePreambleInput;
-            else if (pLine->flags & COMMENT)
-               strPreamble = m_strLogLinePreambleNotes;
+            CStyle * pStyle = pLine->styleList.GetNext (style_pos);
 
-            // allow %n for newline
-            strPreamble.Replace ("%n", "\n");
+            int iLength = pStyle->iLength;
+            // ignore zero length styles
+            if (iLength <= 0)
+               continue;
 
-            if (strPreamble.Find ('%') != -1)
-              strPreamble = FormatTime (pLine->m_theTime, strPreamble, m_bLogHTML);
+            COLORREF colour1, colour2;
+            GetStyleRGB (pStyle, colour1, colour2); // find what colour this style is
 
-            // line preamble
-            WriteToLog (strPreamble); 
-            }   // end of starting a new line
+            WriteToLog (CFormat ("<font color=\"#%02X%02X%02X\">",
+                GetRValue (colour1), GetGValue (colour1), GetBValue (colour1)
+                ));
 
-          // line itself
-          CString strLine = CString (pLine->text, pLine->len);
+            if (pStyle->iFlags & UNDERLINE)
+              WriteToLog ("<u>");
 
-          // fix up HTML sequences
+            WriteToLog (FixHTMLString (strLine.Mid (iCol, iLength)));
 
-          if (m_bLogHTML && m_bLogInColour)
-            {
-             if (!pLine->styleList.IsEmpty ())
-               {
+            if (pStyle->iFlags & UNDERLINE)
+              WriteToLog ("</u>");
 
-                int iCol = 0;
+            iCol += iLength; // new column
+            WriteToLog ("</font>");
+            }   // end of doing each style
+          }  // end of having at least one style
+        WriteToLog ("\n", 1);
+        }
+      else if (m_bLogHTML)
+        WriteToLog (FixHTMLString (strLine));
+      else                 
+        WriteToLog (strLine);
 
-                for (POSITION style_pos = pLine->styleList.GetHeadPosition(); style_pos; )
-                  {
-                  COLORREF colour1,
-                           colour2;
+      if (pLine->hard_return)
+        {
+        // get appropriate Postamble
+        CString strPostamble;
+        if (pLine->flags & USER_INPUT)
+          strPostamble = m_strLogLinePostambleInput;
+        else if (pLine->flags & COMMENT)
+          strPostamble = m_strLogLinePostambleNotes;
+        else
+          strPostamble = m_strLogLinePostambleOutput;
 
-                  CStyle * pStyle = pLine->styleList.GetNext (style_pos);
+        // allow %n for newline
+        strPostamble.Replace ("%n", "\n");
+        if (strPostamble.Find ('%') != -1)
+          strPostamble = FormatTime (pLine->m_theTime, strPostamble, m_bLogHTML);
 
-                  int iLength = pStyle->iLength;
+        // line Postamble
+        WriteToLog (strPostamble); 
 
-                  // ignore zero length styles
-                  if (iLength <= 0)
-                     continue;
-
-                  GetStyleRGB (pStyle, colour1, colour2); // find what colour this style is
-
-                  WriteToLog (CFormat ("<font color=\"#%02X%02X%02X\">",
-                                        GetRValue (colour1),
-                                        GetGValue (colour1),
-                                        GetBValue (colour1)));
-
-                  if (pStyle->iFlags & UNDERLINE)
-                    WriteToLog ("<u>");
-
-                  WriteToLog (FixHTMLString (strLine.Mid (iCol, iLength)));
-
-                  if (pStyle->iFlags & UNDERLINE)
-                    WriteToLog ("</u>");
-
-                  iCol += iLength; // new column
-                  WriteToLog ("</font>");
-
-                  }   // end of doing each style
-
-               }  // end of having at least one style
-
-            WriteToLog ("\n", 1);
-
-            }
-          else if (m_bLogHTML)
-            WriteToLog (FixHTMLString (strLine));
-          else                 
-            WriteToLog (strLine);
-
-          if (pLine->hard_return)
-            {
-            // get appropriate Postamble
-            CString strPostamble = m_strLogLinePostambleOutput;
-            if (pLine->flags & USER_INPUT)
-               strPostamble = m_strLogLinePostambleInput;
-            else if (pLine->flags & COMMENT)
-               strPostamble = m_strLogLinePostambleNotes;
-
-            // allow %n for newline
-            strPostamble.Replace ("%n", "\n");
-
-            if (strPostamble.Find ('%') != -1)
-              strPostamble = FormatTime (pLine->m_theTime, strPostamble, m_bLogHTML);
-
-            // line Postamble
-            WriteToLog (strPostamble); 
-
-            if (!(m_bLogHTML && m_bLogInColour))  // colour logging has already got a newline
-              WriteToLog ("\n", 1);
-            }
-
-          }   // end of logging this line
+        if (!(m_bLogHTML && m_bLogInColour))  // colour logging has already got a newline
+          WriteToLog ("\n", 1);
+        }
+      }   // end of logging this line
 
     // remember so we know whether to write a preamble at the start of the
     // *next* line
@@ -3028,35 +2709,28 @@ int line;
     }
 
   fflush (m_logfile);
-
 } // end of CMUSHclientDoc::OnFileLogsession
 
 void CMUSHclientDoc::OnUpdateFileLogsession(CCmdUI* pCmdUI) 
 {
   DoFixMenus (pCmdUI);  // remove accelerators from menus
-
   pCmdUI->SetCheck (m_logfile != NULL);
-
 }
 
 void CMUSHclientDoc::OnUpdateStatuslineLines(CCmdUI* pCmdUI) 
 {
   DoFixMenus (pCmdUI);  // remove accelerators from menus
 
-CString str;
+  long nLines = m_total_lines;
 
-long nLines;
-
-  nLines = m_total_lines;
-
-// if last line is empty, don't count it
-
+  // if last line is empty, don't count it
   if (m_pCurrentLine->len == 0)
     nLines--;
 
   if (nLines < 0)
     nLines = 0;
 
+  CString str;
   str.Format ("%ld", nLines);
 
   pCmdUI->Enable(TRUE);
@@ -3071,32 +2745,25 @@ void CMUSHclientDoc::OnUpdateStatuslineMushname(CCmdUI* pCmdUI)
 }
 
 
-
 void CMUSHclientDoc::WriteToLog (const char * text, size_t len)
-  {
+{
   if (!m_logfile || len <= 0)
     return;
 
-size_t count;
-
-  count = fwrite (text, 1, len, m_logfile);
-
+  size_t count = fwrite (text, 1, len, m_logfile);
   if (count != len)
     {
-    CString str;
-    str = TFormat ("An error occurred writing to log file \"%s\"",
-                (LPCTSTR) m_logfile_name);
     fclose (m_logfile);
     m_logfile = NULL;
-    UMessageBox (str);
+    UMessageBox (TFormat ("An error occurred writing to log file \"%s\"",
+        (LPCTSTR) m_logfile_name));
     }   // end of error on write
-
-  } // end of WriteToLog
+} // end of WriteToLog
 
 void CMUSHclientDoc::WriteToLog (const CString & strText)
-  {
+{
   WriteToLog (strText, strText.GetLength ());
-  }  // end of WriteToLog
+}  // end of WriteToLog
 
 
 void CMUSHclientDoc::OnGameWraplines() 
@@ -3107,60 +2774,53 @@ void CMUSHclientDoc::OnGameWraplines()
 
 void CMUSHclientDoc::OnUpdateGameWraplines(CCmdUI* pCmdUI) 
 {
-DoFixMenus (pCmdUI);  // remove accelerators from menus
-pCmdUI->SetCheck (m_wrap);
+  DoFixMenus (pCmdUI);  // remove accelerators from menus
+  pCmdUI->SetCheck (m_wrap);
 }
 
 
 void CMUSHclientDoc::OnUpdateStatuslineTime(CCmdUI* pCmdUI) 
 {
-DoFixMenus (pCmdUI);  // remove accelerators from menus
-CString strMsg;
+  DoFixMenus (pCmdUI);  // remove accelerators from menus
 
   if (m_LineList.IsEmpty ())
     return;
 
   CTimeSpan ts = CTime::GetCurrentTime() - m_tStatusTime;
 
+  CString strMsg;
   if (m_iConnectPhase != eConnectConnectedToMud)
     strMsg = "";
+  else if (ts.GetDays () > 0)
+    strMsg = ts.Format ("%Dd %Hh %Mm %Ss");
+  else if (ts.GetHours () > 0)
+    strMsg = ts.Format ("%Hh %Mm %Ss");
+  else if (ts.GetMinutes () > 0)
+    strMsg = ts.Format ("%Mm %Ss");
   else
-    if (ts.GetDays () > 0)
-      strMsg = ts.Format ("%Dd %Hh %Mm %Ss");
-    else
-      if (ts.GetHours () > 0)
-        strMsg = ts.Format ("%Hh %Mm %Ss");
-      else
-        if (ts.GetMinutes () > 0)
-          strMsg = ts.Format ("%Mm %Ss");
-        else
-          strMsg = ts.Format ("%Ss");
+    strMsg = ts.Format ("%Ss");
 
   pCmdUI->Enable(TRUE);
   pCmdUI->SetText(strMsg);	
-	
 }
 
 void CMUSHclientDoc::OnUpdateStatuslineLog(CCmdUI* pCmdUI) 
 {
-DoFixMenus (pCmdUI);  // remove accelerators from menus
-pCmdUI->Enable (m_logfile != NULL);
-pCmdUI->SetText("LOG");
+  DoFixMenus (pCmdUI);  // remove accelerators from menus
+  pCmdUI->Enable (m_logfile != NULL);
+  pCmdUI->SetText("LOG");
 }
 
 BOOL CMUSHclientDoc::OnOpenDocument(LPCTSTR lpszPathName) 
 {
-	if (!CDocument::OnOpenDocument(lpszPathName))
-		return FALSE;
-	
+  if (!CDocument::OnOpenDocument(lpszPathName))
+    return FALSE;
+
   SetUpOutputWindow ();
   OpenSession ();
-  
+
   return TRUE;
-
-
 }
-
 
 
 void CMUSHclientDoc::ChangeFont (const int nHeight, 
@@ -3172,28 +2832,22 @@ void CMUSHclientDoc::ChangeFont (const int nHeight,
                                  const BOOL bShowUnderline,
                                  const unsigned short iLineSpacing)
 {
-
-// Load the font we want to use.
-
-int i;
-
-  for (i = 0; i < 8; i++)  
+  for (int i = 0; i < 8; ++i)
     {
     delete m_font [i];         // get rid of old font
     m_font [i] = NULL;
     }
 
   CDC dc;
-
   dc.CreateCompatibleDC (NULL);
 
-  for (i = 0; i < 8; i++)  
+  for (int i = 0; i < 8; ++i)
     {
-     m_font [i] = new CFont;    // create new font
+    m_font [i] = new CFont();    // create new font
 
-     if (!m_font [i])
+    if (!m_font [i])
       {
-      for (int j = 0; j < 8; j++)  
+      for (int j = 0; j < i; ++j)  
         {
         delete m_font [j];         // get rid of old font
         m_font [j] = NULL;
@@ -3201,57 +2855,42 @@ int i;
       TMessageBox ("Unable to allocate memory for screen font");
       return;
       }
-
     
-     // if height is zero, default to 10 so it doesn't look stupid
-     int lfHeight = -MulDiv(nHeight ? nHeight : 10, dc.GetDeviceCaps(LOGPIXELSY), 72);
+    // if height is zero, default to 10 so it doesn't look stupid
+    int lfHeight = -MulDiv(nHeight ? nHeight : 10, dc.GetDeviceCaps(LOGPIXELSY), 72);
 
-     m_font [i]->CreateFont(lfHeight, // int nHeight, 
-				    0, // int nWidth, 
-				    0, // int nEscapement, 
-				    0, // int nOrientation, 
-            bShowBold ? ((i & HILITE) ? FW_BOLD : FW_NORMAL) : nWeight, // int nWeight, 
-            bShowItalic ? (i & BLINK) != 0 : 0, // BYTE bItalic, 
-            bShowUnderline ? (i & UNDERLINE) != 0 : 0, // BYTE bUnderline, 
-            0, // BYTE cStrikeOut, 
-            iFontCharset, // BYTE nCharSet, 
-            0, // BYTE nOutPrecision, 
-            0, // BYTE nClipPrecision, 
-            0, // BYTE nQuality, 
-            MUSHCLIENT_FONT_FAMILY, // BYTE nPitchAndFamily,    // was  FF_DONTCARE
-            lpszFacename);// LPCTSTR lpszFacename );
-
+    m_font [i]->CreateFont(lfHeight, // int nHeight, 
+        0, // int nWidth, 
+        0, // int nEscapement, 
+        0, // int nOrientation, 
+        bShowBold ? ((i & HILITE) ? FW_BOLD : FW_NORMAL) : nWeight, // int nWeight, 
+        bShowItalic ? (i & BLINK) != 0 : 0, // BYTE bItalic, 
+        bShowUnderline ? (i & UNDERLINE) != 0 : 0, // BYTE bUnderline, 
+        0, // BYTE cStrikeOut, 
+        (BYTE) iFontCharset, // BYTE nCharSet, 
+        0, // BYTE nOutPrecision, 
+        0, // BYTE nClipPrecision, 
+        0, // BYTE nQuality, 
+        MUSHCLIENT_FONT_FAMILY, // BYTE nPitchAndFamily,    // was  FF_DONTCARE
+        lpszFacename);// LPCTSTR lpszFacename );
     }   // end of allocating 8 fonts
 
-   // Get the metrics of the font - use the bold one - it will probably be wider
-
-    dc.SelectObject(m_font [HILITE]);
+  // Get the metrics of the font - use the bold one - it will probably be wider
+  dc.SelectObject(m_font [HILITE]);
     
-    TEXTMETRIC tm;
-    dc.GetTextMetrics(&tm);
+  TEXTMETRIC tm;
+  dc.GetTextMetrics(&tm);
 
-    if (iLineSpacing)
-      m_FontHeight = iLineSpacing;    // override
-    else
-      m_FontHeight = tm.tmHeight; 
+  m_FontHeight = (iLineSpacing != 0) ? iLineSpacing : tm.tmHeight;
+  m_FontWidth  = tm.tmAveCharWidth; 
 
-    m_FontWidth = tm.tmAveCharWidth; 
-
-    for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
-    	{
-    	CView* pView = GetNextView(pos);
-	
-    	if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-      	{
-    		CMUSHView* pmyView = (CMUSHView*)pView;
-
-    		pmyView->sizewindow ();
-
-    	  }	
-      }
-
-    
-
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      ((CMUSHView*)pView)->sizewindow ();
+    }
 } // end of CMUSHclientDoc::ChangeFont
 
 void CMUSHclientDoc::ChangeInputFont (const int nHeight, 
@@ -3260,126 +2899,118 @@ void CMUSHclientDoc::ChangeInputFont (const int nHeight,
                             const DWORD iCharset,
                             const BYTE bItalic)
 {
-// Load the font we want to use.
+  delete m_input_font;         // get rid of old font
+  m_input_font = new CFont();  // create new font
 
-   delete m_input_font;         // get rid of old font
-
-   m_input_font = new CFont;    // create new font
-
-   if (!m_input_font)
+  if (!m_input_font)
     {
     TMessageBox ("Unable to allocate memory for screen font");
     return;
     }
 
-CDC dc;
+  CDC dc;
+  dc.CreateCompatibleDC (NULL);
 
-dc.CreateCompatibleDC (NULL);
+  int lfHeight = -MulDiv(nHeight ? nHeight : 10, dc.GetDeviceCaps(LOGPIXELSY), 72);
 
-   int lfHeight = -MulDiv(nHeight ? nHeight : 10, dc.GetDeviceCaps(LOGPIXELSY), 72);
+  m_input_font->CreateFont(lfHeight, // int nHeight, 
+      0, // int nWidth, 
+	  0, // int nEscapement, 
+      0, // int nOrientation, 
+      nWeight, // int nWeight, 
+      bItalic, // BYTE bItalic, 
+      0, // BYTE bUnderline, 
+      0, // BYTE cStrikeOut, 
+      (BYTE) iCharset, // BYTE nCharSet, 
+      0, // BYTE nOutPrecision, 
+      0, // BYTE nClipPrecision, 
+      0, // BYTE nQuality, 
+      MUSHCLIENT_FONT_FAMILY, // BYTE nPitchAndFamily,   // was FF_DONTCARE
+      lpszFacename);// LPCTSTR lpszFacename );
 
-   m_input_font->CreateFont(lfHeight, // int nHeight, 
-				  0, // int nWidth, 
-				  0, // int nEscapement, 
-				  0, // int nOrientation, 
-				  nWeight, // int nWeight, 
-				  bItalic, // BYTE bItalic, 
-				  0, // BYTE bUnderline, 
-          0, // BYTE cStrikeOut, 
-          iCharset, // BYTE nCharSet, 
-          0, // BYTE nOutPrecision, 
-          0, // BYTE nClipPrecision, 
-          0, // BYTE nQuality, 
-          MUSHCLIENT_FONT_FAMILY, // BYTE nPitchAndFamily,   // was FF_DONTCARE
-          lpszFacename);// LPCTSTR lpszFacename );
-
-    // Get the metrics of the font.
-
-    dc.SelectObject(m_input_font);
+  // Get the metrics of the font.
+  dc.SelectObject(m_input_font);
     
-    TEXTMETRIC tm;
-    dc.GetTextMetrics(&tm);
+  TEXTMETRIC tm;
+  dc.GetTextMetrics(&tm);
 
-    m_InputFontHeight = tm.tmHeight; 
-    m_InputFontWidth = tm.tmAveCharWidth; 
+  m_InputFontHeight = tm.tmHeight; 
+  m_InputFontWidth = tm.tmAveCharWidth; 
 
-    // fix up all input windows
-    if (m_input_font)
-      for(POSITION pos=GetFirstViewPosition();pos!=NULL;)
+  // fix up all input windows
+  if (m_input_font)
+    {
+    POSITION pos = GetFirstViewPosition();
+    while (pos != NULL)
+      {
+      CView* pView = GetNextView(pos);
+      if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
         {
-        CView* pView = GetNextView(pos);
-
-        if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-          {
-          CSendView* pmyView = (CSendView*)pView;
-
-          pmyView->SendMessage (WM_SETFONT,
-                                     (WPARAM) m_input_font->m_hObject,
-                                     MAKELPARAM (TRUE, 0));
-
-          pmyView->AdjustCommandWindowSize ();
-          }	  // end of being a CSendView
-        }
-
+        CSendView* pmyView = (CSendView*)pView;
+        pmyView->SendMessage (WM_SETFONT,
+            (WPARAM) m_input_font->m_hObject,
+            MAKELPARAM (TRUE, 0));
+        pmyView->AdjustCommandWindowSize ();
+        }	  // end of being a CSendView
+      }
+    }
 } // end of CMUSHclientDoc::ChangeInputFont
 
 
+void CMUSHclientDoc::setupstrings ()
+{
+  m_macros [MAC_UP]        = "up";
+  m_macros [MAC_DOWN]      = "down";   
+  m_macros [MAC_NORTH]     = "north";  
+  m_macros [MAC_SOUTH]     = "south";  
+  m_macros [MAC_EAST]      = "east";   
+  m_macros [MAC_WEST]      = "west";   
+  m_macros [MAC_EXAMINE]   = "examine ";
+  m_macros [MAC_LOOK]      = "look ";   
+  m_macros [MAC_PAGE]      = "page ";   
+  m_macros [MAC_SAY]       = "say ";    
+  m_macros [MAC_WHISPER]   = "whisper ";
+  m_macros [MAC_DOING]     = "DOING";  
+  m_macros [MAC_WHO]       = "WHO";    
+  m_macros [MAC_DROP]      = "drop ";   
+  m_macros [MAC_TAKE]      = "take ";   
+  m_macros [MAC_LOGOUT]    = "LOGOUT";   
+  m_macros [MAC_QUIT]      = "QUIT";   
 
-void CMUSHclientDoc::setupstrings (void)
-  {
-  m_macros  [MAC_UP]        = "up";
-  m_macros  [MAC_DOWN]      = "down";   
-  m_macros  [MAC_NORTH]     = "north";  
-  m_macros  [MAC_SOUTH]     = "south";  
-  m_macros  [MAC_EAST]      = "east";   
-  m_macros  [MAC_WEST]      = "west";   
-  m_macros  [MAC_EXAMINE]   = "examine ";
-  m_macros  [MAC_LOOK]      = "look ";   
-  m_macros  [MAC_PAGE]      = "page ";   
-  m_macros  [MAC_SAY]       = "say ";    
-  m_macros  [MAC_WHISPER]   = "whisper ";
-  m_macros  [MAC_DOING]     = "DOING";  
-  m_macros  [MAC_WHO]       = "WHO";    
-  m_macros  [MAC_DROP]      = "drop ";   
-  m_macros  [MAC_TAKE]      = "take ";   
-  m_macros  [MAC_LOGOUT]    = "LOGOUT";   
-  m_macros  [MAC_QUIT]      = "QUIT";   
+  m_keypad [eKeypad_0]     = "look";        
+  m_keypad [eKeypad_1]     = "sw";        
+  m_keypad [eKeypad_2]     = "south";        
+  m_keypad [eKeypad_3]     = "se";        
+  m_keypad [eKeypad_4]     = "west";        
+  m_keypad [eKeypad_5]     = "WHO";        
+  m_keypad [eKeypad_6]     = "east";        
+  m_keypad [eKeypad_7]     = "nw";        
+  m_keypad [eKeypad_8]     = "north";        
+  m_keypad [eKeypad_9]     = "ne";        
+  m_keypad [eKeypad_Dot]   = "hide";      
+  m_keypad [eKeypad_Slash] = "inventory";    
+  m_keypad [eKeypad_Star]  = "score";     
+  m_keypad [eKeypad_Dash]  = "up";     
+  m_keypad [eKeypad_Plus]  = "down";      
 
-  m_keypad  [eKeypad_0    ]  = "look";        
-  m_keypad  [eKeypad_1    ]  = "sw";        
-  m_keypad  [eKeypad_2    ]  = "south";        
-  m_keypad  [eKeypad_3    ]  = "se";        
-  m_keypad  [eKeypad_4    ]  = "west";        
-  m_keypad  [eKeypad_5    ]  = "WHO";        
-  m_keypad  [eKeypad_6    ]  = "east";        
-  m_keypad  [eKeypad_7    ]  = "nw";        
-  m_keypad  [eKeypad_8    ]  = "north";        
-  m_keypad  [eKeypad_9    ]  = "ne";        
-  m_keypad  [eKeypad_Dot  ]  = "hide";      
-  m_keypad  [eKeypad_Slash]  = "inventory";    
-  m_keypad  [eKeypad_Star ]  = "score";     
-  m_keypad  [eKeypad_Dash ]  = "up";     
-  m_keypad  [eKeypad_Plus ]  = "down";      
-
-  m_macro_type  [MAC_UP]       = SEND_NOW;
-  m_macro_type  [MAC_DOWN]     = SEND_NOW;   
-  m_macro_type  [MAC_NORTH]    = SEND_NOW;  
-  m_macro_type  [MAC_SOUTH]    = SEND_NOW;  
-  m_macro_type  [MAC_EAST]     = SEND_NOW;   
-  m_macro_type  [MAC_WEST]     = SEND_NOW;   
-  m_macro_type  [MAC_EXAMINE]  = REPLACE_COMMAND;
-  m_macro_type  [MAC_LOOK]     = REPLACE_COMMAND;   
-  m_macro_type  [MAC_PAGE]     = REPLACE_COMMAND;   
-  m_macro_type  [MAC_SAY]      = REPLACE_COMMAND;    
-  m_macro_type  [MAC_WHISPER]  = REPLACE_COMMAND;
-  m_macro_type  [MAC_DOING]    = SEND_NOW;  
-  m_macro_type  [MAC_WHO]      = SEND_NOW;    
-  m_macro_type  [MAC_DROP]     = REPLACE_COMMAND;   
-  m_macro_type  [MAC_TAKE]     = REPLACE_COMMAND;   
-  m_macro_type  [MAC_LOGOUT]   = SEND_NOW;   
-  m_macro_type  [MAC_QUIT]     = SEND_NOW;   
-
-  } // end of CMUSHclientDoc::setupstrings
+  m_macro_type [MAC_UP]      = SEND_NOW;
+  m_macro_type [MAC_DOWN]    = SEND_NOW;   
+  m_macro_type [MAC_NORTH]   = SEND_NOW;  
+  m_macro_type [MAC_SOUTH]   = SEND_NOW;  
+  m_macro_type [MAC_EAST]    = SEND_NOW;   
+  m_macro_type [MAC_WEST]    = SEND_NOW;   
+  m_macro_type [MAC_EXAMINE] = REPLACE_COMMAND;
+  m_macro_type [MAC_LOOK]    = REPLACE_COMMAND;   
+  m_macro_type [MAC_PAGE]    = REPLACE_COMMAND;   
+  m_macro_type [MAC_SAY]     = REPLACE_COMMAND;    
+  m_macro_type [MAC_WHISPER] = REPLACE_COMMAND;
+  m_macro_type [MAC_DOING]   = SEND_NOW;  
+  m_macro_type [MAC_WHO]     = SEND_NOW;    
+  m_macro_type [MAC_DROP]    = REPLACE_COMMAND;   
+  m_macro_type [MAC_TAKE]    = REPLACE_COMMAND;   
+  m_macro_type [MAC_LOGOUT]  = SEND_NOW;   
+  m_macro_type [MAC_QUIT]    = SEND_NOW;   
+} // end of CMUSHclientDoc::setupstrings
 
 bool CMUSHclientDoc::SendToMushHelper (CFile * f, 
                                        CString & strPreamble,
@@ -3391,58 +3022,49 @@ bool CMUSHclientDoc::SendToMushHelper (CFile * f,
                                        const long nPerLines,
                                        const BOOL bConfirm,
                                        const BOOL bEcho)
-  {
-CString str;
-CString full_line;
+{
+  CString str, full_line;
+  CConfirmPreamble dlg;
 
-CConfirmPreamble dlg;
-
-// find paste size and number of lines
-
-DWORD nLength = f->GetLength ();
-DWORD nLines = 0,
-      nCurrentLine = 0;
-
+  // find paste size and number of lines
+  DWORD nLength      = (DWORD) f->GetLength (),
+        nLines       = 0,
+        nCurrentLine = 0;
 
   try
     {
-    CArchive ar (f, CArchive::load);
+    CArchive ar(f, CArchive::load);
     while (ar.ReadString (str))
-      nLines++;
+      ++nLines;
     ar.Close ();
     }
   catch (...)
     {
-    TMessageBox ("An error occurred calculating amount to send to world", 
-                      MB_ICONEXCLAMATION);
+    TMessageBox ("An error occurred calculating amount to send to world", MB_ICONEXCLAMATION);
     return false;
     } // end of catching an exception
-
+  // back to the start of the file
   f->SeekToBegin ();
-  
-// ask user to confirm preamble, postamble etc., and warn them of file size
 
+  // ask user to confirm preamble, postamble etc., and warn them of file size
   dlg.m_strPasteMessage.Format ("About to send: %ld character%s, %ld line%s to %s.",
-                                nLength,
-                                nLength == 1 ? "" : "s",
-                                nLines,
-                                nLines == 1 ? "" : "s",
-                                (LPCTSTR) m_mush_name);
+      nLength, PLURAL(nLength),
+      nLines, PLURAL(nLines),
+      (LPCTSTR) m_mush_name);
       
-  dlg.m_strPreamble = strPreamble;
-  dlg.m_strLinePreamble = strLinePreamble;
-  dlg.m_strLinePostamble = strLinePostamble;
-  dlg.m_strPostamble = strPostamble;
+  dlg.m_strPreamble        = strPreamble;
+  dlg.m_strLinePreamble    = strLinePreamble;
+  dlg.m_strLinePostamble   = strLinePostamble;
+  dlg.m_strPostamble       = strPostamble;
   dlg.m_bCommentedSoftcode = bCommentedSoftcode;
-  dlg.m_iLineDelay = nLineDelay;
+  dlg.m_iLineDelay         = nLineDelay;
   dlg.m_nLineDelayPerLines = nPerLines;
-  dlg.m_bEcho = bEcho;
+  dlg.m_bEcho              = bEcho;
  
-  if (bConfirm)
-    if (dlg.DoModal () != IDOK)
-      return false;
+  if (bConfirm && dlg.DoModal () != IDOK)
+    return false;
 
-  CArchive ar (f, CArchive::load);
+  CArchive ar(f, CArchive::load);
 
   CProgressDlg ProgressDlg;                   
   ProgressDlg.Create ();                           
@@ -3452,9 +3074,7 @@ DWORD nLines = 0,
 
   try
     {
-
     // send preamble
-
     if (!dlg.m_strPreamble.IsEmpty ())
       SendMsg (dlg.m_strPreamble, dlg.m_bEcho, false, LoggingInput ());
     
@@ -3465,8 +3085,7 @@ DWORD nLines = 0,
 
     while (ar.ReadString (str))
       {
-
-      nCurrentLine++;
+      ++nCurrentLine;
       ProgressDlg.SetPos (nCurrentLine); 
 
       if (ProgressDlg.CheckCancelButton())     // abort if user cancels
@@ -3474,7 +3093,6 @@ DWORD nLines = 0,
 
       if (dlg.m_bCommentedSoftcode)
         {
-
         str.TrimLeft ();
 
         // commented softcode will ignore blank lines
@@ -3490,14 +3108,13 @@ DWORD nLines = 0,
         // a line containing "-" ends the line
         if (str == "-")
           {
-          full_line = dlg.m_strLinePreamble;
-          full_line += strSoftcode;
-          full_line += dlg.m_strLinePostamble;
+          full_line = dlg.m_strLinePreamble + strSoftcode + dlg.m_strLinePostamble;
 
           SendMsg (full_line, dlg.m_bEcho, false, LoggingInput ());   // send the line
           if (dlg.m_iLineDelay > 0)
             {
-            if (++iLineCount >= dlg.m_nLineDelayPerLines)
+            ++iLineCount;
+            if (iLineCount >= dlg.m_nLineDelayPerLines)
               {
               Sleep (dlg.m_iLineDelay);
               iLineCount = 0;
@@ -3517,9 +3134,7 @@ DWORD nLines = 0,
           {
           int iPos = str.Find ("@@");   // find the @@
           if (iPos != -1)
-            {
             str = str.Left (iPos);
-            } // end of finding @@
           } // not hash commenting
 
 //        str.TrimRight ();  // no trailing spaces
@@ -3529,15 +3144,13 @@ DWORD nLines = 0,
         continue;   // don't write this line yet
         } // end of commented softcode
 
-// send the final line - attach preamble and postamble
-
-      full_line = dlg.m_strLinePreamble;
-      full_line += str;
-      full_line += dlg.m_strLinePostamble;
+      // send the final line - attach preamble and postamble
+      full_line = dlg.m_strLinePreamble + str + dlg.m_strLinePostamble;
       SendMsg (full_line, dlg.m_bEcho, false, LoggingInput ());   // send the line
       if (dlg.m_iLineDelay > 0)
         {
-        if (++iLineCount >= dlg.m_nLineDelayPerLines)
+        ++iLineCount;
+        if (iLineCount >= dlg.m_nLineDelayPerLines)
           {
           Sleep (dlg.m_iLineDelay);
           iLineCount = 0;
@@ -3547,22 +3160,19 @@ DWORD nLines = 0,
 
     if (dlg.m_bCommentedSoftcode)
       {
-      full_line = dlg.m_strLinePreamble;
-      full_line += strSoftcode;
-      full_line += dlg.m_strLinePostamble;
+      full_line = dlg.m_strLinePreamble + strSoftcode + dlg.m_strLinePostamble;
       SendMsg (full_line, dlg.m_bEcho, false, LoggingInput ());   // send the line
       if (dlg.m_iLineDelay > 0)
         {
-        if (++iLineCount >= dlg.m_nLineDelayPerLines)
+        ++iLineCount;
+        if (iLineCount >= dlg.m_nLineDelayPerLines)
           {
           Sleep (dlg.m_iLineDelay);
           iLineCount = 0;
           }
         }
       }   // end of sending commented softcode
-    
     } // end of try block
-
   catch (...)
     {
     TMessageBox ("An error occurred when sending/pasting to this world", MB_ICONEXCLAMATION);
@@ -3570,59 +3180,47 @@ DWORD nLines = 0,
 
   ar.Close ();
 
-// send postamble
-
+  // send postamble
   if (!dlg.m_strPostamble.IsEmpty ())
     SendMsg (dlg.m_strPostamble, dlg.m_bEcho, false, LoggingInput ());
 
   return true;
-  } // end of CMUSHclientDoc::SendToMushHelper
+} // end of CMUSHclientDoc::SendToMushHelper
 
 void CMUSHclientDoc::OnGamePastefile() 
 {
+  CFileDialog filedlg = CFileDialog(TRUE,   // loading the file
+      "txt",    //default extension
+      "",  // suggested name
+      OFN_HIDEREADONLY | OFN_FILEMUSTEXIST,
+        "MUD files (*.mud;*.mush)|*.mud; *.mush|"
+        "Text files (*.txt)|*.txt|All files (*.*)|*.*||",    // filter 
+      NULL);  // parent window
 
-CStdioFile * f = NULL;
-CString str;
-CString filename;
-
-  CFileDialog filedlg (TRUE,   // loading the file
-                       "txt",    // default extension
-                       "",  // suggested name
-                       OFN_HIDEREADONLY | OFN_FILEMUSTEXIST,
-                       "MUD files (*.mud;*.mush)|*.mud; *.mush|"
-                       "Text files (*.txt)|*.txt|All files (*.*)|*.*||",    // filter 
-                       NULL);  // parent window
-
-  str = "File to paste into ";
-  str += m_mush_name;
-  filedlg.m_ofn.lpstrTitle = str;
+  CString filename;
+  filedlg.m_ofn.lpstrTitle = "File to paste into " + m_mush_name;
   filedlg.m_ofn.lpstrFile = filename.GetBuffer (_MAX_PATH); // needed!! (for Win32s)  
-  strcpy (filedlg.m_ofn.lpstrFile, "");
+  filedlg.m_ofn.lpstrFile[0] = '\0';
 
   ChangeToFileBrowsingDirectory ();
-	int nResult = filedlg.DoModal();
+  int nResult = filedlg.DoModal();
   ChangeToStartupDirectory ();
 
   if (nResult != IDOK)
     return;    // cancelled dialog
 
+  CStdioFile * f = NULL;
   try
     {
     f = new CStdioFile (filedlg.GetPathName (), CFile::modeRead | CFile::shareDenyWrite);
-
-    SendToMushHelper (f, 
-                     m_file_preamble,
-                     m_line_preamble,
-                     m_line_postamble,
-                     m_file_postamble,
-                     m_bFileCommentedSoftcode,
-                     m_nFileDelay,
-                     m_nFileDelayPerLines,
-                     m_bConfirmOnSend,
-                     m_bSendEcho);
-    
+    SendToMushHelper (f,
+        m_file_preamble,  m_line_preamble,
+        m_line_postamble, m_file_postamble,
+        m_bFileCommentedSoftcode,
+        m_nFileDelay, m_nFileDelayPerLines,
+        m_bConfirmOnSend,
+        m_bSendEcho);
     } // end of try block
-
   catch (CFileException * e)
     {
     if (e->m_cause != CFileException::endOfFile)
@@ -3631,27 +3229,19 @@ CString filename;
     } // end of catching a file exception
 
   delete f;       // delete file
-
 }
 
 BOOL GetClipboardContents (CString & strClipboard, const bool bUnicode, const bool bWarning)
-  {
-
+{
   strClipboard.Empty ();
 
-// get the contents of the clipboard into a local string
-
-HGLOBAL hData = NULL;  
-bool bHaveUnicode = false;
-
-// Open clipboard
-
+  // Open clipboard
   if (!::OpenClipboard(NULL) )
-       {
-       if (bWarning)
-          TMessageBox( "Cannot open the Clipboard" );
-       return FALSE;
-       }
+    {
+    if (bWarning)
+      TMessageBox( "Cannot open the Clipboard" );
+    return FALSE;
+    }
 
 
 /* debugging - enumerate clipboard formats 
@@ -3668,57 +3258,57 @@ UINT iEnum = 0;
 
 */
 
-// Get the clipboard data - Unicode first if required
+  HGLOBAL hData = NULL;  
+  bool bHaveUnicode = false;
 
+  // Get the clipboard data - Unicode first if required
   if (bUnicode)
-    hData = ::GetClipboardData( CF_UNICODETEXT);
+    hData = ::GetClipboardData(CF_UNICODETEXT);
 
-  bHaveUnicode = hData != NULL;
+  bHaveUnicode = (hData != NULL);
 
-// No Unicode? Try text ,,,
-
+  // No Unicode? Try text ,,,
   if (!bHaveUnicode)
-    if ( (hData = ::GetClipboardData( CF_TEXT )) == NULL )
-     {
+    {
+    hData = ::GetClipboardData(CF_TEXT);
+    if (hData == NULL)
+      {
         if (bWarning)
           TMessageBox( "Unable to get Clipboard data" );
         ::CloseClipboard();
         return FALSE;
-     }
-
-// Lock the handle in order to get a pointer to real memory
-
-   char * p = (char *) GlobalLock (hData);
-
-   if (!p)
-      {
-      if (bWarning)
-        TMessageBox( "Unable to lock memory for Clipboard data" );
-      ::CloseClipboard();
-      return FALSE;
       }
+    }
 
-   // convert Unicode to UTF-8
-   if (bHaveUnicode)
-     {
-     // count number of bytes needed
-     int iLength = WideCharToMultiByte (CP_UTF8, 0, (LPCWSTR) p, -1, NULL, 0, NULL, NULL);
-     char * buf = strClipboard.GetBuffer (iLength);
-     WideCharToMultiByte (CP_UTF8, 0, (LPCWSTR) p, -1, buf, iLength, NULL, NULL);
-     strClipboard.ReleaseBuffer (iLength);
-     }
-   else
-     strClipboard = CString (p, strlen (p));
+  // Lock the handle in order to get a pointer to real memory
+  char * p = (char *) GlobalLock (hData);
+  if (!p)
+    {
+    if (bWarning)
+      TMessageBox( "Unable to lock memory for Clipboard data" );
+    ::CloseClipboard();
+    return FALSE;
+    }
 
-   GlobalUnlock (hData);
+  // convert Unicode to UTF-8
+  if (bHaveUnicode)
+    {
+    // count number of bytes needed
+    int iLength = WideCharToMultiByte (CP_UTF8, 0, (LPCWSTR) p, -1, NULL, 0, NULL, NULL);
+    char * buf = strClipboard.GetBuffer (iLength);
+    WideCharToMultiByte (CP_UTF8, 0, (LPCWSTR) p, -1, buf, iLength, NULL, NULL);
+    strClipboard.ReleaseBuffer (iLength);
+    }
+  else
+    strClipboard = CString (p, strlen (p));
 
-// Close the clipboard
+  GlobalUnlock (hData);
 
-   CloseClipboard();
+  // Close the clipboard
+  CloseClipboard();
 
-   return TRUE;
-
-  } // end of GetClipboardContents
+  return TRUE;
+} // end of GetClipboardContents
 
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++ */
 /*                                                     */
@@ -3730,159 +3320,123 @@ UINT iEnum = 0;
 // puts "data" onto the clipboard
 
 BOOL putontoclipboard (const CString & data, const bool bUnicode)
-  {
-
-// Open clipboard
-
+{
+  // Open clipboard
   if (!::OpenClipboard(NULL) )
-       {
-       TMessageBox( "Cannot open the Clipboard" );
-       return TRUE;
-       }
+    {
+    TMessageBox( "Cannot open the Clipboard" );
+    return TRUE;
+    }
 
-// Empty the clipboard, which also gives ownership to us
-
-    ::EmptyClipboard ();
-
-// Allocate memory for the clipboard
-
-
-   HGLOBAL hData = GlobalAlloc (GMEM_MOVEABLE, strlen (data) + 1);
-
-   if (!hData)
-      {
-      TMessageBox( "Unable to allocate memory for Clipboard data" );
-      ::CloseClipboard();
-      return TRUE;
-      }
-
-// Lock the handle in order to get a pointer to real memory
-
-   char * p = (char *) GlobalLock (hData);
-
-   if (!p)
-      {
-      TMessageBox( "Unable to lock memory for Clipboard text data" );
-      ::CloseClipboard();
-      return TRUE;
-      }
-
-// Copy the field into the allocated memory
-
-   strncpy (p, data, strlen (data) + 1);
-
-   GlobalUnlock (hData);
-
-// Set the clipboard data
-
-   if ( ::SetClipboardData( CF_TEXT, hData ) == NULL )
-     {
-      TMessageBox( "Unable to set Clipboard text data" );
-      ::CloseClipboard();
-      return TRUE;
-     }
-
-
-   if (bUnicode)
-     {
+  // Empty the clipboard, which also gives ownership to us
+  ::EmptyClipboard ();
 
   // Allocate memory for the clipboard
-
-     int iLength = MultiByteToWideChar (CP_UTF8, 0, data, -1, NULL, 0);
-
-     HGLOBAL hData = GlobalAlloc (GMEM_MOVEABLE, (iLength + 1) * sizeof WCHAR);
-
-     if (!hData)
-        {
-        TMessageBox( "Unable to allocate memory for Clipboard Unicode data" );
-        ::CloseClipboard();
-        return TRUE;
-        }
+  HGLOBAL hData = GlobalAlloc (GMEM_MOVEABLE, strlen (data) + 1);
+  if (!hData)
+    {
+    TMessageBox( "Unable to allocate memory for Clipboard data" );
+    ::CloseClipboard();
+    return TRUE;
+    }
 
   // Lock the handle in order to get a pointer to real memory
-
-     char * p = (char *) GlobalLock (hData);
-
-     if (!p)
-        {
-        TMessageBox( "Unable to lock memory for Clipboard data" );
-        ::CloseClipboard();
-        return TRUE;
-        }
+  char * p = (char *) GlobalLock (hData);
+  if (!p)
+    {
+    TMessageBox( "Unable to lock memory for Clipboard text data" );
+    ::CloseClipboard();
+    return TRUE;
+    }
 
   // Copy the field into the allocated memory
+  strncpy (p, data, strlen (data) + 1);
 
-     MultiByteToWideChar (CP_UTF8, 0,    
-                            data, -1,  // input
-                            (LPWSTR) p, iLength);         // output
-
-     GlobalUnlock (hData);
-
+  GlobalUnlock (hData);
   // Set the clipboard data
+  if ( ::SetClipboardData( CF_TEXT, hData ) == NULL )
+    {
+    TMessageBox( "Unable to set Clipboard text data" );
+    ::CloseClipboard();
+    return TRUE;
+    }
 
-     if ( ::SetClipboardData( CF_UNICODETEXT, hData ) == NULL )
-       {
-        TMessageBox( "Unable to set Clipboard Unicode data" );
-        ::CloseClipboard();
-        return TRUE;
-       }
+  if (bUnicode)
+    {
+    // Allocate memory for the clipboard
+    int iLength = MultiByteToWideChar (CP_UTF8, 0, data, -1, NULL, 0);
 
+    HGLOBAL hData = GlobalAlloc (GMEM_MOVEABLE, (iLength + 1) * sizeof WCHAR);
+    if (!hData)
+      {
+      TMessageBox( "Unable to allocate memory for Clipboard Unicode data" );
+      ::CloseClipboard();
+      return TRUE;
+      }
 
-     }  // end of Unicode as well
+    // Lock the handle in order to get a pointer to real memory
+    char * p = (char *) GlobalLock (hData);
+    if (!p)
+      {
+      TMessageBox( "Unable to lock memory for Clipboard data" );
+      ::CloseClipboard();
+      return TRUE;
+      }
 
-// Close the clipboard
+    // Copy the field into the allocated memory
+    MultiByteToWideChar (CP_UTF8, 0,    
+        data, -1,             // input
+        (LPWSTR) p, iLength); // output
 
+    GlobalUnlock (hData);
+
+    // Set the clipboard data
+    if ( ::SetClipboardData( CF_UNICODETEXT, hData ) == NULL )
+      {
+      TMessageBox( "Unable to set Clipboard Unicode data" );
+      ::CloseClipboard();
+      return TRUE;
+      }
+    }  // end of Unicode as well
+
+  // Close the clipboard
   ::CloseClipboard();
-
   return FALSE;
-
-  } // end of putontoclipboard 
+} // end of putontoclipboard 
 
 // returns TRUE if bad label
 
 BOOL CheckLabel (const CString & strLabel, const bool bScript)
-  {
-
+{
   if (strLabel.IsEmpty ())
     return TRUE;
 
-// first character must be letter
-
+  // first character must be letter
   if (!isalpha (strLabel [0]))
     return TRUE;
 
   for (int i = 1; i < strLabel.GetLength (); i++)
-    if (!isalpha (strLabel [i]) &&
-        !isdigit (strLabel [i]) &&
-        strLabel [i] != '_' &&
-        (strLabel [i] != '.' || !bScript))
-        return TRUE;
+    if (!isalpha (strLabel [i]) && !isdigit (strLabel [i]) &&
+        strLabel [i] != '_' && (strLabel [i] != '.' || !bScript))
+      return TRUE;
 
   return FALSE;   // ok exit
-
-  } // end of CheckLabel
+} // end of CheckLabel
 
 void CMUSHclientDoc::OnEditPastetomush() 
 {
+  CString strClipboard;
+  if (!GetClipboardContents (strClipboard, m_bUTF_8))
+    return;
 
-CString strClipboard;
-
-if (!GetClipboardContents (strClipboard, m_bUTF_8))
-  return;
-
-CMemFile f ((unsigned char *) (const char *) strClipboard, strClipboard.GetLength ());
-
-  SendToMushHelper (&f, 
-                   m_paste_preamble,
-                   m_pasteline_preamble,
-                   m_pasteline_postamble,
-                   m_paste_postamble,
-                   m_bPasteCommentedSoftcode,
-                   m_nPasteDelay,
-                   m_nPasteDelayPerLines,
-                   m_bConfirmOnPaste,
-                   m_bPasteEcho);
-
+  CMemFile f = CMemFile((unsigned char *)(const char*)strClipboard, strClipboard.GetLength ());
+  SendToMushHelper (&f,
+      m_paste_preamble,      m_pasteline_preamble,
+      m_pasteline_postamble, m_paste_postamble,
+      m_bPasteCommentedSoftcode,
+      m_nPasteDelay, m_nPasteDelayPerLines,
+      m_bConfirmOnPaste,
+      m_bPasteEcho);
 }
 
 void CMUSHclientDoc::OnUpdateSessionOpen(CCmdUI* pCmdUI) 
@@ -3893,33 +3447,30 @@ void CMUSHclientDoc::OnUpdateSessionOpen(CCmdUI* pCmdUI)
 
 
 void CMUSHclientDoc::OnConnect(int nErrorCode)
-  {
-BOOL connected = nErrorCode == 0;
+{
+  BOOL connected = (nErrorCode == 0);
 
   TRACE ("CMUSHclientDoc::OnConnect\n");
-
   if (!connected)
     {
-
     TRACE ("However, not connected.\n");
+
     m_bDisconnectOK = true;     // don't want reconnect
+
     int iOldPhase = m_iConnectPhase;
     m_iConnectPhase = eConnectNotConnected;
 
     App.m_bUpdateActivity = TRUE;   // new activity!
-
     UpdateAllViews (NULL);
 
     if (App.m_bNotifyIfCannotConnect)
       {
-      CString strMsg;
-
-      strMsg = TFormat ("Unable to connect to \"%s\", code = %i (%s)\n\n"
-                      "Error occurred during phase: %s", 
-                      (const char *) m_mush_name, 
-                      nErrorCode,
-                      GetSocketError (nErrorCode),
-                      (const char *) GetConnectionStatus (iOldPhase));
+      CString strMsg = TFormat (
+          "Unable to connect to \"%s\", code = %i (%s)\n\nError occurred during phase: %s",
+          (const char *) m_mush_name, 
+          nErrorCode,
+          GetSocketError (nErrorCode),
+          (const char *) GetConnectionStatus (iOldPhase));
 
       // i18n TODO - fix this up
       switch (iOldPhase)
@@ -3936,7 +3487,6 @@ BOOL connected = nErrorCode == 0;
           break; 
         } // end of switch
 
-
       if (App.m_bErrorNotificationToOutputWindow)
         {
         Note (strMsg);
@@ -3949,7 +3499,6 @@ BOOL connected = nErrorCode == 0;
                    "deepskyblue", "black", TRUE);
         Note ("");
         Note ("");
-
         }
       else
         {
@@ -3964,11 +3513,8 @@ BOOL connected = nErrorCode == 0;
         UMessageBox (strMsg);
         }
       } // end of notification wanted
-
     return;
-
     }
-
 
   // we have connected, and have no proxy server, so get on with it
   if (m_iSocksProcessing == eProxyServerNone)
@@ -3978,7 +3524,6 @@ BOOL connected = nErrorCode == 0;
     }
 
   // we have connected to the proxy server - tell them who we really want to talk to
-
   TRACE ("\nSending SOCKS authentication request\n");
 
   if (m_iSocksProcessing == eProxyServerSocks4)
@@ -3995,21 +3540,25 @@ BOOL connected = nErrorCode == 0;
     short port = m_sockAddr.sin_port;       // MUD port
     unsigned char socks_address [3 + 255 + sizeof address + sizeof port] = { 4, 1 };
     int socks_address_length = 2;  // ie. the 2 bytes above
+
     // port
     memcpy (&socks_address [socks_address_length], &port, sizeof port);
     socks_address_length += sizeof port;     // ie. 2
+
     // address
     memcpy (&socks_address [socks_address_length], &address, sizeof address);
     socks_address_length += sizeof address;     // ie. 4
+
     // username, might be empty
     if (m_strProxyUserName.GetLength () <= 255)
       {
       memcpy (&socks_address [socks_address_length], 
-              (LPCTSTR) m_strProxyUserName, 
-              m_strProxyUserName.GetLength ());
+          (LPCTSTR) m_strProxyUserName,
+          m_strProxyUserName.GetLength ());
       // adjust index to bypass name
       socks_address_length += m_strProxyUserName.GetLength ();   
       } // end of username in range 0 to 255
+
     // name terminator
     socks_address [socks_address_length++] = 0;
     // send it
@@ -4036,20 +3585,14 @@ BOOL connected = nErrorCode == 0;
       SendPacket (socks_identifier, sizeof socks_identifier);
       }
     } // end SOCKS 5
-
-  
-  
-  } // end of OnConnect
+} // end of OnConnect
 
 
 void CMUSHclientDoc::HostNameResolved (WPARAM wParam, LPARAM lParam)
-  {
-
+{
   m_hNameLookup = NULL;
-
   if (WSAGETASYNCERROR (lParam))
     {
-
     TRACE ("Cannot resolve host name\n");
 
     delete [] m_pGetHostStruct;   // delete buffer used by host name lookup
@@ -4058,76 +3601,61 @@ void CMUSHclientDoc::HostNameResolved (WPARAM wParam, LPARAM lParam)
     m_iConnectPhase = eConnectNotConnected;
 
     App.m_bUpdateActivity = TRUE;   // new activity!
-
     UpdateAllViews (NULL);
-
     CString strWhich = m_server;
 
     if (m_iConnectPhase == eConnectProxyNameLookup)
-       strWhich = m_strProxyServerName;
+      strWhich = m_strProxyServerName;
 
     if (App.m_bNotifyIfCannotConnect)
       {
-      CString strMsg;
-      strMsg = TFormat ("Unable to resolve host name for \"%s\", code = %i (%s)", 
-                      (const char *) strWhich,
-                      WSAGETASYNCERROR (lParam),
-                      GetSocketError (WSAGETASYNCERROR (lParam)));
+      CString strMsg = TFormat ("Unable to resolve host name for \"%s\", code = %i (%s)", 
+          (const char *) strWhich,
+          WSAGETASYNCERROR (lParam),
+          GetSocketError (WSAGETASYNCERROR (lParam)));
       if (App.m_bErrorNotificationToOutputWindow)
         Note (strMsg);
       else
         UMessageBox (strMsg);
       }
-
     return;
-
     }
 
-struct hostent * pHostent = (struct hostent * ) m_pGetHostStruct;
+  struct hostent * pHostent = (struct hostent * ) m_pGetHostStruct;
 
   // we looked up the MUD address
   if (m_iConnectPhase == eConnectMudNameLookup)
     m_sockAddr.sin_addr.s_addr = ((LPIN_ADDR)pHostent->h_addr)->s_addr;
   // we looked up the proxy address
   else if (m_iConnectPhase == eConnectProxyNameLookup)
-      m_ProxyAddr.sin_addr.s_addr = ((LPIN_ADDR)pHostent->h_addr)->s_addr;
+    m_ProxyAddr.sin_addr.s_addr = ((LPIN_ADDR)pHostent->h_addr)->s_addr;
   else
     {
-     TMessageBox ("Unexpected phase in HostNameResolved function");
+    TMessageBox ("Unexpected phase in HostNameResolved function");
     return;
     }
 
   delete [] m_pGetHostStruct;   // delete buffer used by host name lookup
   m_pGetHostStruct = NULL;
 
-
-  if (m_iConnectPhase == eConnectMudNameLookup &&
-      m_iSocksProcessing != eProxyServerNone)
+  if (m_iConnectPhase == eConnectMudNameLookup && m_iSocksProcessing != eProxyServerNone &&
+      (m_ProxyAddr.sin_family != AF_INET || m_ProxyAddr.sin_addr.s_addr == INADDR_NONE))
     {
-    if (m_ProxyAddr.sin_family != AF_INET || m_ProxyAddr.sin_addr.s_addr == INADDR_NONE)
-      {
+	m_ProxyAddr.sin_family = AF_INET;
+	m_ProxyAddr.sin_addr.s_addr = inet_addr(m_strProxyServerName);
 
-	    m_ProxyAddr.sin_family = AF_INET;
-	    m_ProxyAddr.sin_addr.s_addr = inet_addr(m_strProxyServerName);
-
-  // if address is INADDR_NONE then address was a name, not a number
-
-	    if (m_ProxyAddr.sin_addr.s_addr == INADDR_NONE)
-	     {
-        m_iConnectPhase = eConnectProxyNameLookup;
-        LookupHostName (m_strProxyServerName);
-        return;
-	     }   // end of address not being an IP address
-
-      }   // end of not having converted the name to an address
+    // if address is INADDR_NONE then address was a name, not a number
+	if (m_ProxyAddr.sin_addr.s_addr == INADDR_NONE)
+	  {
+      m_iConnectPhase = eConnectProxyNameLookup;
+      LookupHostName (m_strProxyServerName);
+      return;
+	  }   // end of address not being an IP address
     } // end of wanting proxy server address
 
-// if here we must have both addresses known - get on with the connection ...
-
+  // if here we must have both addresses known - get on with the connection ...
   InitiateConnection ();
-
-
-  } // end of CMUSHclientDoc::HostNameResolved
+} // end of CMUSHclientDoc::HostNameResolved
 
 void CMUSHclientDoc::OnConnectionConnect() 
 {
@@ -4137,13 +3665,11 @@ void CMUSHclientDoc::OnConnectionConnect()
 void CMUSHclientDoc::OnUpdateConnectionConnect(CCmdUI* pCmdUI) 
 {
   DoFixMenus (pCmdUI);  // remove accelerators from menus
-	pCmdUI->Enable (m_iConnectPhase == eConnectNotConnected && 
-                  m_server != "0.0.0.0");
+  pCmdUI->Enable (m_iConnectPhase == eConnectNotConnected && m_server != "0.0.0.0");
 }
 
 void CMUSHclientDoc::OnConnectionDisconnect() 
 {
-
   TRACE ("CMUSHclientDoc::OnConnectionDisconnect\n");
 
   m_bDisconnectOK = true;     // don't want reconnect on manual disconnect
@@ -4151,8 +3677,7 @@ void CMUSHclientDoc::OnConnectionDisconnect()
   // work out how long they were connected
   m_tsConnectDuration += CTime::GetCurrentTime() - m_tConnectTime;
 
-// first cancel any host name lookup that might be in progress
-
+  // first cancel any host name lookup that might be in progress
   if (m_hNameLookup)
     WSACancelAsyncRequest (m_hNameLookup);  // cancel host name lookup in progress
 
@@ -4161,278 +3686,229 @@ void CMUSHclientDoc::OnConnectionDisconnect()
   m_hNameLookup = NULL;
 
   App.m_bUpdateActivity = TRUE;   // new activity!
-
   MXP_Off (true);   // turn off MXP now
 
-// close the socket
-
-	if (m_pSocket)
-	{
-
+  // close the socket
+  if (m_pSocket)
+    {
     ShutDownSocket (*m_pSocket);
-
     m_pSocket->OnClose (0);
 
-// delete the socket
-
+    // delete the socket
     delete m_pSocket;
     m_pSocket = NULL;
-
     }
 
   m_iConnectPhase = eConnectNotConnected;
-
-  }
+}
 
 void CMUSHclientDoc::OnUpdateConnectionDisconnect(CCmdUI* pCmdUI) 
 {
   DoFixMenus (pCmdUI);  // remove accelerators from menus
-	pCmdUI->Enable (m_iConnectPhase != eConnectNotConnected);
+  pCmdUI->Enable (m_iConnectPhase != eConnectNotConnected);
 }
 
 BOOL CMUSHclientDoc::FixUpOutputBuffer (int nNewBufferSize)
-  {
-
-POSITION pos;
-long i;
-
+{
   if (!m_pCurrentLine)
     return FALSE;             // too early for this crap
 
   Frame.SetStatusMessageNow (Translate ("Recalculating line positions"));
 
-// delete from head the excess lines
-
+  // delete from head the excess lines
   while (m_LineList.GetCount () > nNewBufferSize)
     RemoveChunk ();
 
-// do a new line positions array
-
+  // do a new line positions array
   delete [] m_pLinePositions;
   m_pLinePositions = new POSITION [(nNewBufferSize / JUMP_SIZE) + 1];
 
-// clear all elements
-
-  for (i = 0; i <= nNewBufferSize / JUMP_SIZE; i++)
+  // clear all elements
+  for (long i = 0; i <= nNewBufferSize / JUMP_SIZE; i++)
     m_pLinePositions [i] = NULL;
 
 // re-seed positions array
+  POSITION pos = m_LineList.GetHeadPosition();
+  for(long i = 0; pos != NULL; ++i)
+    {
+    if (i % JUMP_SIZE == 0)
+      m_pLinePositions [i / JUMP_SIZE] = pos;
+    m_LineList.GetNext (pos);
+    } // end of for loop
 
-  for(i = 0, pos=m_LineList.GetHeadPosition();
-      pos;
-      i++)
-        {
-        if (i % JUMP_SIZE == 0)
-          m_pLinePositions [i / JUMP_SIZE] = pos;
-        m_LineList.GetNext (pos);
-        } // end of for loop
-
-// refresh view to show different scroll bars
-
-  for(pos=GetFirstViewPosition();pos!=NULL;)
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-
-		  pmyView->addedstuff();
-	    }	
+  // refresh view to show different scroll bars
+  pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      ((CMUSHView*)pView)->addedstuff();
     }
 
   ShowStatusLine ();
-
   return TRUE;
-
-  } // end of FixUpOutputBuffer
-
+} // end of FixUpOutputBuffer
 
 
 void CMUSHclientDoc::OnUpdateEditPastetomush(CCmdUI* pCmdUI) 
 {
   DoFixMenus (pCmdUI);  // remove accelerators from menus
   pCmdUI->Enable (m_iConnectPhase == eConnectConnectedToMud && 
-                  IsClipboardFormatAvailable (CF_TEXT));
+      IsClipboardFormatAvailable (CF_TEXT));
 }
 
 void CMUSHclientDoc::OnUpdateGamePreferences(CCmdUI* pCmdUI) 
 {
   DoFixMenus (pCmdUI);  // remove accelerators from menus
   pCmdUI->Enable (m_iConnectPhase == eConnectNotConnected ||
-                  m_iConnectPhase == eConnectConnectedToMud);   // no changing of address whilst connecting
+      m_iConnectPhase == eConnectConnectedToMud);   // no changing of address whilst connecting
 }
 
 
 // finds a line in the line list
 
 POSITION CMUSHclientDoc::GetLinePosition (long nLine)
-  {
-POSITION pos = NULL;
+{
+  POSITION pos = NULL;
 
   // sanity check  (Santa Claus)
   if (nLine > m_LineList.GetCount ())
     nLine = m_LineList.GetCount ();
-
-  if (nLine < 0)
+  else if (nLine < 0)
     nLine = 0;
 
-static long iCount = 0;
-int nIndex = nLine / JUMP_SIZE,
-    nItem = nIndex * JUMP_SIZE;
+  static long iCount = 0;
+  int nIndex = nLine / JUMP_SIZE;
+  int nItem  = nIndex * JUMP_SIZE;
 
   if (m_pLinePositions)
     {
     pos = m_pLinePositions [nIndex];
-
-  // not there, try previous item
-
-    if (!pos && nIndex > 0)
+    // not there, try previous item
+    if (pos == NULL && nIndex > 0)
       {
       pos = m_pLinePositions [nIndex - 1];
       nItem -= JUMP_SIZE;
       }
     }   // end of having a positions array
 
-// as a last resort, use the start of the list
-
-  if (!pos)
+  // as a last resort, use the start of the list
+  if (pos == NULL)
     {
     pos = m_LineList.GetHeadPosition ();
     nItem = 0;
     }
 
-// now count forwards until we hit the actual one we want
-
-  for (long i = nItem; i < nLine && pos; i++)
+  // now count forwards until we hit the actual one we want
+  for (long i = nItem; i < nLine && pos != NULL; i++)
     {
-    iCount++;
+    ++iCount;
     m_LineList.GetNext (pos);
     }
 
-// not there? assume last one in the list
-
+  // not there? assume last one in the list
   if (!pos)
     pos = m_LineList.GetTailPosition ();
 
-// return the desired position
-
+  // return the desired position
   return pos;
+} // end of CMUSHclientDoc::GetLinePosition
 
-  } // end of CMUSHclientDoc::GetLinePosition
-
-long CMUSHclientDoc::GetLastLine (void)
-  {
-
+long CMUSHclientDoc::GetLastLine ()
+{
   // before this is allocated, we have no lines
   if (!m_pCurrentLine)
     return 0;
 
   long lastline = m_LineList.GetCount () - 1;
-  if (m_pCurrentLine->len > 0)
-    lastline++;
+  return (m_pCurrentLine->len > 0) ? lastline + 1 : lastline;
+} // end of  CMUSHclientDoc::GetLastLine
 
-  return lastline;
-
-  } // end of  CMUSHclientDoc::GetLastLine
-
- void CMUSHclientDoc::RemoveChunk (void)
-   {
-  int i;
-
-// remove JUMP_SIZE lines
-
-  for (i = 0; i < JUMP_SIZE; i++)
+void CMUSHclientDoc::RemoveChunk ()
+{
+  // remove JUMP_SIZE lines
+  for (int i = 0; i < JUMP_SIZE; ++i)
     {
     delete m_LineList.GetHead ();   // delete contents of head iten
     m_LineList.RemoveHead ();
     }
 
-// shuffle positions backwards
+  // shuffle positions backwards
+  memmove(m_pLinePositions, m_pLinePositions + 1, sizeof(m_pLinePositions) * (m_maxlines / JUMP_SIZE));
+  m_pLinePositions[m_maxlines / JUMP_SIZE] = NULL;    // last one is now empty
 
-  for (i = 0; i < (m_maxlines / JUMP_SIZE); i++)
-    m_pLinePositions [i] = m_pLinePositions [i + 1];
-
-  m_pLinePositions [i] = NULL;    // last one is now empty
-
-// our "last found" line needs adjusting
-
+  // our "last found" line needs adjusting
   m_DisplayFindInfo.m_nCurrentLine -= JUMP_SIZE;
 
   if (m_DisplayFindInfo.m_nCurrentLine < 0)
     m_DisplayFindInfo.m_nCurrentLine = 0;
-
-   }  // end of CMUSHclientDoc::RemoveChunk
+}  // end of CMUSHclientDoc::RemoveChunk
 
 void CMUSHclientDoc::ResetOneTimer (CTimer * timer_item)
-  {
-CmcDateTime tNow = CmcDateTime::GetTimeNow();
-CmcDateTimeSpan tsOneDay (1, 0, 0, 0);
+{
+  CmcDateTime tNow = CmcDateTime::GetTimeNow();
+  CmcDateTimeSpan tsOneDay (1, 0, 0, 0);
 
   if (!timer_item->bEnabled)    // ignore un-enabled timers
     return;
 
-// so we can see when it is likely to fire next 
-
+  // so we can see when it is likely to fire next 
   timer_item->tWhenFired = tNow;
 
-// for timers that go off "at" a time, find today's date, and move the time in
-
+  // for timers that go off "at" a time, find today's date, and move the time in
   if (timer_item->iType == CTimer::eAtTime)
     {
+    timer_item->tFireTime = CmcDateTime (tNow.GetYear (), tNow.GetMonth (), tNow.GetDay (),
+        timer_item->iAtHour, timer_item->iAtMinute, timer_item->fAtSecond);
 
-    timer_item->tFireTime = CmcDateTime (tNow.GetYear (), tNow.GetMonth (), 
-                                         tNow.GetDay (),  timer_item->iAtHour, 
-                                         timer_item->iAtMinute, timer_item->fAtSecond);
-
-// if this time has passed, go onto tomorrow
-
+    // if this time has passed, go onto tomorrow
     if (timer_item->tFireTime < tNow)
       timer_item->tFireTime += tsOneDay;
     }
   else    // for periodic timers, find "now" and add the period to it
-    timer_item->tFireTime = tNow + CmcDateTimeSpan (0,    // now plus the interval
-                                              timer_item->iEveryHour, 
-                                              timer_item->iEveryMinute, 
-                                              timer_item->fEverySecond)
-                                 - CmcDateTimeSpan (0,    // minus the offset
-                                              timer_item->iOffsetHour, 
-                                              timer_item->iOffsetMinute, 
-                                              timer_item->fOffsetSecond);
+    timer_item->tFireTime = tNow
+        + CmcDateTimeSpan (0,    // now plus the interval
+            timer_item->iEveryHour, 
+            timer_item->iEveryMinute, 
+            timer_item->fEverySecond)
+        - CmcDateTimeSpan (0,    // minus the offset
+            timer_item->iOffsetHour, 
+            timer_item->iOffsetMinute, 
+            timer_item->fOffsetSecond);
 
-  } // end of CMUSHclientDoc::ResetOneTimer
+} // end of CMUSHclientDoc::ResetOneTimer
 
 void CMUSHclientDoc::ResetAllTimers (CTimerMap & TimerMap)
-  {
-  CTimer * pTimer;
+{
+  POSITION pos = TimerMap.GetStartPosition();
+  CTimer * pTimer = NULL;
   CString strTimerName;
-
-  for (POSITION pos = TimerMap.GetStartPosition(); pos; )
+  while (pos != NULL)
     {
     TimerMap.GetNextAssoc (pos, strTimerName, pTimer);
     ResetOneTimer (pTimer);
     }
-
-  } // end of CMUSHclientDoc::ResetAllTimers
+} // end of CMUSHclientDoc::ResetAllTimers
 
 void CMUSHclientDoc::CheckTimerList (CTimerMap & TimerMap)
-  {
-CTimer * timer_item;
-CString strTimerName;
-CmcDateTime tNow = CmcDateTime::GetTimeNow();
-CmcDateTimeSpan tsOneDay (1, 0, 0, 0);
+{
+  CTimer * timer_item = NULL;
+  CString strTimerName;
+  CmcDateTime tNow = CmcDateTime::GetTimeNow();
+  CmcDateTimeSpan tsOneDay (1, 0, 0, 0);
 
-// TRACE1 ("Time now = %10.8f\n", tNow.m_dt);
+  // TRACE1 ("Time now = %10.8f\n", tNow.m_dt);
 
-double t =  (tNow.m_dt - ((int) tNow.m_dt) ) * 86400.0;
+  double t =  (tNow.m_dt - ((int) tNow.m_dt) ) * 86400.0;
 
-//  TRACE1 ("Seconds = %10.3f\n", t);
+  //  TRACE1 ("Seconds = %10.3f\n", t);
 
-// check for deleted chat sessions
-
-  for (POSITION chatpos = m_ChatList.GetHeadPosition (); chatpos; )
+  // check for deleted chat sessions
+  POSITION chatpos = m_ChatList.GetHeadPosition ();
+  POSITION oldpos = NULL;
+  while (chatpos != NULL)
     {
-    POSITION oldpos = chatpos;
+    oldpos = chatpos;
     CChatSocket * pSocket = m_ChatList.GetNext (chatpos);
     if (pSocket->m_bDeleteMe)
       {
@@ -4442,71 +3918,60 @@ double t =  (tNow.m_dt - ((int) tNow.m_dt) ) * 86400.0;
       }
     }
 
-// iterate through all timers for this document
-
-  for (POSITION pos = TimerMap.GetStartPosition(); pos; )
+  // iterate through all timers for this document
+  POSITION pos = TimerMap.GetStartPosition();
+  while (pos != NULL)
     {
-
-
     TimerMap.GetNextAssoc (pos, strTimerName, timer_item);
 
-    if (!timer_item->bEnabled)    // ignore un-enabled timers
+    // ignore un-enabled timers
+    if (!timer_item->bEnabled)
+      continue;
+    // no timer activity whilst closed or in the middle of connecting, or if not enabled
+    else if (!timer_item->bActiveWhenClosed &&
+        m_iConnectPhase != eConnectConnectedToMud)
+      continue;
+    // if not ready to fire yet, ignore it
+    else if (timer_item->tFireTime > tNow)
       continue;
 
-  // no timer activity whilst closed or in the middle of connecting, or if not enabled
-
-  if (!timer_item->bActiveWhenClosed)
-    if (m_iConnectPhase != eConnectConnectedToMud)
-      continue;
-
-// if not ready to fire yet, ignore it
-
-    if (timer_item->tFireTime > tNow)
-      continue;
-
-    timer_item->nMatched++;   // count timer matches
+    timer_item->nMatched += 1;   // count timer matches
     timer_item->tWhenFired = tNow;  // when it fired
 
-    m_iTimersFiredCount++;
-    m_iTimersFiredThisSessionCount++;
+    m_iTimersFiredCount += 1;
+    m_iTimersFiredThisSessionCount += 1;
 
-//    TRACE1 ("Fired at = %10.8f\n", timer_item->tWhenFired.m_dt);
+    //    TRACE1 ("Fired at = %10.8f\n", timer_item->tWhenFired.m_dt);
 
     if (timer_item->strLabel.IsEmpty ())
       Trace ("Fired unlabelled timer ");
     else
       Trace ("Fired timer %s", (LPCTSTR) timer_item->strLabel);
 
-//    TRACE1 ("Fire time = %10.8f\n", timer_item->tFireTime.m_dt);
+    //    TRACE1 ("Fire time = %10.8f\n", timer_item->tFireTime.m_dt);
 
-// update fire time - before calling the script, in case it takes a long time
-
+    // update fire time - before calling the script, in case it takes a long time
     if (timer_item->iType == CTimer::eAtTime)
       timer_item->tFireTime += tsOneDay;
     else
-      timer_item->tFireTime += CmcDateTimeSpan (0,    // add the interval
-                                          timer_item->iEveryHour, 
-                                          timer_item->iEveryMinute, 
-                                          timer_item->fEverySecond);
+      timer_item->tFireTime += CmcDateTimeSpan (0, // add the interval
+          timer_item->iEveryHour, 
+          timer_item->iEveryMinute, 
+          timer_item->fEverySecond);
 
     // in case clock changes or some such thing, make sure timer will be due to
     // fire in the future, not the past, or it might go mad and keep firing
-
     if (timer_item->tFireTime <= tNow)
       ResetOneTimer (timer_item);
 
     // if one-shot, disable it, so if the timer routine finds it again while
     // it is still executing (eg. due to a syntax error dialog box) then
     // it won't fire again.
-
     if (timer_item->bOneShot)
       timer_item->bEnabled = false;
 
-
-// send timer message, if this timer list is "active"
-
+    // send timer message, if this timer list is "active"
     CString strExtraOutput;
-    bool bNoLog = false;
 
     timer_item->bExecutingScript = true;     // cannot be deleted now
     m_iCurrentActionSource = eTimerFired;
@@ -4522,26 +3987,23 @@ double t =  (tNow.m_dt - ((int) tNow.m_dt) ) * 86400.0;
     timer_item->bExecutingScript = false;     // can be deleted now
 
     // display any stuff sent to output window
-
     if (!strExtraOutput.IsEmpty ())
        DisplayMsg (strExtraOutput, strExtraOutput.GetLength (), COMMENT);
 
-// invoke script subroutine, if any
+    // invoke script subroutine, if any
+    if (!timer_item->strProcedure.IsEmpty () &&
+        CheckScriptingAvailable ("Timer", timer_item->dispid, timer_item->strProcedure))
+      continue;
 
-    if (!timer_item->strProcedure.IsEmpty ())
-      if (CheckScriptingAvailable ("Timer", timer_item->dispid, timer_item->strProcedure))
-         continue;
-
-    if (timer_item->dispid != DISPID_UNKNOWN)        // if we have a dispatch id
+    if (timer_item->dispid != DISPID_UNKNOWN) // if we have a dispatch id
       {
-      
       CString strType = "timer";
       CString strReason =  TFormat ("processing timer \"%s\"", 
                                     (LPCTSTR) timer_item->strLabel);
 
       // get unlabelled timer's internal name
       const char * pLabel = timer_item->strLabel;
-      if (pLabel [0] == 0)
+      if (pLabel [0] == '\0')
         pLabel = GetTimerRevMap () [timer_item].c_str ();
 
       if (GetScriptEngine () && GetScriptEngine ()->IsLua ())
@@ -4549,15 +4011,13 @@ double t =  (tNow.m_dt - ((int) tNow.m_dt) ) * 86400.0;
         list<double> nparams;
         list<string> sparams;
         sparams.push_back (pLabel);
+
         timer_item->bExecutingScript = true;     // cannot be deleted now
-        bool bResult = GetScriptEngine ()->ExecuteLua (timer_item->dispid, 
-                                       timer_item->strProcedure, 
-                                       eTimerFired,
-                                       strType, 
-                                       strReason,
-                                       nparams,
-                                       sparams, 
-                                       timer_item->nInvocationCount);
+        bool bResult = GetScriptEngine ()->ExecuteLua (
+            timer_item->dispid, timer_item->strProcedure, 
+            eTimerFired, strType, strReason,
+            nparams, sparams,
+            timer_item->nInvocationCount);
         timer_item->bExecutingScript = false;     // can be deleted now
         /*  version 4.28 -- removed this   - one-shot timers weren't being deleted
         if (bResult)
@@ -4569,7 +4029,6 @@ double t =  (tNow.m_dt - ((int) tNow.m_dt) ) * 86400.0;
         // prepare for the arguments (so far, 1 which is the timer name)
   
         // WARNING - arguments should appear in REVERSE order to what the sub expects them!
-
         enum
           {
           eTimerName,
@@ -4578,17 +4037,14 @@ double t =  (tNow.m_dt - ((int) tNow.m_dt) ) * 86400.0;
 
         COleVariant args [eArgCount];
         DISPPARAMS params = { args, NULL, eArgCount, 0 };
-
-  //      args [eTimerName] = strTimerName;
         args [eTimerName] = pLabel;
+
         timer_item->bExecutingScript = true;     // cannot be deleted now
-        bool bResult = ExecuteScript (timer_item->dispid,  
-                       timer_item->strProcedure,
-                       eTimerFired,
-                       strType, 
-                       strReason,
-                       params, 
-                       timer_item->nInvocationCount);
+        bool bResult = ExecuteScript (
+            timer_item->dispid, timer_item->strProcedure,
+            eTimerFired, strType, strReason,
+            params,
+            timer_item->nInvocationCount);
         timer_item->bExecutingScript = false;     // can be deleted now
 
         /*  version 4.28 -- removed this   - one-shot timers weren't being deleted
@@ -4607,8 +4063,7 @@ double t =  (tNow.m_dt - ((int) tNow.m_dt) ) * 86400.0;
     if (!TimerMap.Lookup (strTimerName, timer_item))
       return;
 
-// if one-shot timer, delete from list
-
+    // if one-shot timer, delete from list
     if (timer_item->bOneShot)
       {
       TimerMap.RemoveKey (strTimerName);
@@ -4616,12 +4071,11 @@ double t =  (tNow.m_dt - ((int) tNow.m_dt) ) * 86400.0;
       SortTimers ();
       }
     }   // end of processing each timer
-
-  } // end of CMUSHclientDoc::CheckTimerMap
+} // end of CMUSHclientDoc::CheckTimerMap
 
 
 void CMUSHclientDoc::ShowStatusLine (const bool bNow)
-  {
+{
   // don't overwrite mapper status for 5 seconds
   if (m_bShowingMapperStatus)
     {
@@ -4631,17 +4085,19 @@ void CMUSHclientDoc::ShowStatusLine (const bool bNow)
 
   // only show status messages for active windows
   if (m_pActiveCommandView || m_pActiveOutputView)
+  {
     if (bNow)
       Frame.SetStatusMessageNow (m_strStatusMessage);
     else
       Frame.SetStatusMessage (m_strStatusMessage);
-  m_tStatusDisplayed = CTime::GetCurrentTime ();
   }
+
+  m_tStatusDisplayed = CTime::GetCurrentTime ();
+}
 
 
 void CMUSHclientDoc::CheckTimers ()
-  {
-
+{
   // make sure status line is showing the right thing (after 5 seconds)
   if (m_pActiveCommandView || m_pActiveOutputView)
     {
@@ -4663,15 +4119,10 @@ void CMUSHclientDoc::CheckTimers ()
       
       fclose (m_logfile);
       m_logfile = fopen (m_logfile_name, "a+");
-
       }
-
     }   // end of log file open
-  
-// if reconnection wanted, attempt it now ...
 
-// if they want automatic reconnection, do it
-
+  // if they want automatic reconnection, do it
   if (App.m_bReconnectOnLinkFailure && 
       !m_bDisconnectOK &&
       m_iConnectPhase == eConnectNotConnected)
@@ -4682,26 +4133,27 @@ void CMUSHclientDoc::CheckTimers ()
 
   if (m_bEnableTimers)
     {
-
     // timer has kicked in unexpectedly - ignore it
     if (m_CurrentPlugin)
       return;
 
     CheckTimerList (GetTimerMap ());
+
     // do plugins
-    for (POSITION pos = m_PluginList.GetHeadPosition (); pos; )
+    POSITION pos = m_PluginList.GetHeadPosition ();
+    while (pos != NULL)
       {
       m_CurrentPlugin = m_PluginList.GetNext (pos);
       if (m_CurrentPlugin->m_bEnabled)
         CheckTimerList (GetTimerMap ());
       } // end of doing each plugin
+
     m_CurrentPlugin = NULL;
     }
-  } // end of CMUSHclientDoc::CheckTimers
+} // end of CMUSHclientDoc::CheckTimers
 
 void CMUSHclientDoc::CheckTickTimers ()
-  {
-
+{
   // timer has kicked in unexpectedly - ignore it
   if (m_CurrentPlugin)
     return;
@@ -4709,47 +4161,41 @@ void CMUSHclientDoc::CheckTickTimers ()
   // check for selection change in command window
   // I know, this is a crappy way of doing it, but the CEditView does 
   // not notify of selection changes.
-
-  for(POSITION commandpos=GetFirstViewPosition();commandpos!=NULL;)
+  POSITION commandpos = GetFirstViewPosition();
+  while (commandpos != NULL)
     {
     CView* pView = GetNextView(commandpos);
-
     if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-      {
-      CSendView* pmyView = (CSendView*)pView;
-
-      pmyView->CheckForSelectionChange ();
-      }	  // end of being a CSendView
+      ((CSendView*)pView)->CheckForSelectionChange ();
     }
 
   // tell each plugin about the tick
-  for (POSITION pos = m_PluginList.GetHeadPosition(); pos; )
+  POSITION pos = m_PluginList.GetHeadPosition();
+  CPlugin * pPlugin = NULL;
+  while (pos != NULL)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pos);
-
-    if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
-      continue;
-
-    pPlugin->ExecutePluginScript (ON_PLUGIN_TICK, pPlugin->m_dispid_plugin_tick);
+    pPlugin = m_PluginList.GetNext (pos);
+    if (pPlugin->m_bEnabled) // only do enabled plugins
+      pPlugin->ExecutePluginScript (ON_PLUGIN_TICK, pPlugin->m_dispid_plugin_tick);
     }   // end of doing each plugin
 
-    m_CurrentPlugin = NULL;
-
-  } // end of CMUSHclientDoc::CheckTickTimers
+  m_CurrentPlugin = NULL;
+} // end of CMUSHclientDoc::CheckTickTimers
 
 
 BOOL CMUSHclientDoc::SaveModified() 
 {
-CString str;
+  CString str;
 
   if (m_pSocket && 
       m_iConnectPhase == eConnectConnectedToMud && 
       App.m_bConfirmBeforeClosingWorld)
     {
-    str = TFormat ("This will end your %s session.", (const char *) m_mush_name);
+    int result = UMessageBox(TFormat ("This will end your %s session.",
+          (const char *) m_mush_name),
+        MB_OKCANCEL | MB_ICONINFORMATION);
   
-    if (UMessageBox (str, MB_OKCANCEL | MB_ICONINFORMATION)
-          == IDCANCEL)
+    if (result == IDCANCEL)
       return FALSE;
     }
 	
@@ -4761,55 +4207,47 @@ CString str;
       m_bVariablesChanged &&
       App.m_bConfirmBeforeSavingVariables)
     {
-	  // get name/title of document
-	  CString name;
-	  if (m_strPathName.IsEmpty())
-	    {
-		  // get name based on caption
-		  name = m_strTitle;
-		  if (name.IsEmpty())
-			  VERIFY(name.LoadString(AFX_IDS_UNTITLED));
-	    }
-	  else
-	    {
-		  // get name based on file title of path name
-		  name = m_strPathName;
-	    }
+    // get name/title of document
+    CString name;
+    if (m_strPathName.IsEmpty())
+      {
+      // get name based on caption
+      name = m_strTitle;
+      if (name.IsEmpty())
+      VERIFY(name.LoadString(AFX_IDS_UNTITLED));
+      }
+    else
+      // get name based on file title of path name
+      name = m_strPathName;
 
     int i = UMessageBox (TFormat ("World internal variables (only) have changed.\n\n"
-                             "Save changes to %s?",
-                             (LPCTSTR) name),
-           MB_YESNOCANCEL | MB_ICONQUESTION);
-
+          "Save changes to %s?", (LPCTSTR) name),
+        MB_YESNOCANCEL | MB_ICONQUESTION);
     switch (i)
       {
       case IDCANCEL: return FALSE;
       case IDYES:    DoSave (m_strPathName, TRUE); break;
+      case IDNO:     break;
       }
     } // end of variables only changing
 
-  m_bWorldClosing =  CDocument::SaveModified();
-
+  m_bWorldClosing = CDocument::SaveModified();
   if (m_bWorldClosing)
     MXP_Off (true);   // turn MXP off
 
   // execute "close" script
-  if (m_bWorldClosing && m_ScriptEngine)
+  if (m_bWorldClosing && m_ScriptEngine &&
+      SeeIfHandlerCanExecute (m_strWorldClose))
     {
-    if (SeeIfHandlerCanExecute (m_strWorldClose))
-      {
-      DISPPARAMS params = { NULL, NULL, 0, 0 };
-      long nInvocationCount = 0;
+    DISPPARAMS params = { NULL, NULL, 0, 0 };
+    long nInvocationCount = 0;
 
-      ExecuteScript (m_dispidWorldClose,  
-                   m_strWorldClose,
-                   eWorldAction,
-                   "world close", 
-                   "closing world",
-                   params, 
-                   nInvocationCount); 
-      }
-    } // end of executing close script
+    ExecuteScript (
+      m_dispidWorldClose, m_strWorldClose,
+      eWorldAction, "world close", "closing world",
+      params,
+      nInvocationCount); 
+  } // end of executing close script
 
   return m_bWorldClosing;
 }
@@ -4817,37 +4255,32 @@ CString str;
 
 // we do our own DoSave, because the default one stops at the first space
 BOOL CMUSHclientDoc::DoSave(LPCTSTR lpszPathName, BOOL bReplace)
-  {
-	CString newName = lpszPathName;
+{
+  CString newName = lpszPathName;
 
   // empty name - possibly caused by "save as"
   if (newName.IsEmpty ())
     {
-
     // if we know the path name, suggest that, otherwise take the mush name
-	  newName = m_strPathName;
-	  if (bReplace && newName.IsEmpty())
-	   {
-    
+    newName = m_strPathName;
+    if (bReplace && newName.IsEmpty())
+      {
       newName = m_mush_name;
 
       // fix up name to remove characters that are invalid
-
       int i;
       while ((i = newName.FindOneOf ("<>\"|?:#%;/\\")) != -1)
         newName = newName.Left (i) + newName.Mid (i + 1);
-
       }   // end of no path name known
 
-	  CDocTemplate* pTemplate = GetDocTemplate();
-	  ASSERT(pTemplate != NULL);
+    CDocTemplate* pTemplate = GetDocTemplate();
+    ASSERT(pTemplate != NULL);
 
     // save in default world directory
-    int iCount;
     CString strDirectory;
 
     // find length of current directory
-    iCount = GetCurrentDirectory (0, NULL);	
+    int iCount = GetCurrentDirectory (0, NULL);
     // get current directory
     GetCurrentDirectory (iCount, strDirectory.GetBuffer (iCount));
     strDirectory.ReleaseBuffer (-1);
@@ -4856,163 +4289,153 @@ BOOL CMUSHclientDoc::DoSave(LPCTSTR lpszPathName, BOOL bReplace)
     // save world details
 
     BOOL bResult = AfxGetApp()->DoPromptFileName(newName,
-		    AFX_IDS_SAVEFILE,
-		    OFN_HIDEREADONLY | OFN_PATHMUSTEXIST, FALSE, pTemplate);
+        AFX_IDS_SAVEFILE, OFN_HIDEREADONLY | OFN_PATHMUSTEXIST,
+        FALSE, pTemplate);
 
     // change back to current directory
     SetCurrentDirectory (strDirectory);
 
     if (!bResult)
-		    return FALSE;       // don't even attempt to save
+      return FALSE;       // don't even attempt to save
+  }     // end of no path name supplied
 
-    }     // end of no path name supplied
-
- // execute "save" script
-  if (m_ScriptEngine)
+  // execute "save" script
+  if (m_ScriptEngine && SeeIfHandlerCanExecute (m_strWorldSave))
     {
-    if (SeeIfHandlerCanExecute (m_strWorldSave))
-      {
 
-      DISPPARAMS params = { NULL, NULL, 0, 0 };
-      long nInvocationCount = 0;
+    DISPPARAMS params = { NULL, NULL, 0, 0 };
+    long nInvocationCount = 0;
 
-      ExecuteScript (m_dispidWorldSave,  
-                   m_strWorldSave,
-                   eWorldAction,
-                   "world save", 
-                   "saving world",
-                   params, 
-                   nInvocationCount); 
-      }
+    ExecuteScript (
+      m_dispidWorldSave, m_strWorldSave,
+      eWorldAction, "world save", "saving world",
+      params,
+      nInvocationCount);
     } // end of executing save script
 
   return CDocument::DoSave (newName, bReplace);
-
-  }
+}
 
 
 void CMUSHclientDoc::OnGameAutosay() 
 {
-m_bEnableAutoSay = !m_bEnableAutoSay;
+  m_bEnableAutoSay = !m_bEnableAutoSay;
 }
 
 void CMUSHclientDoc::OnUpdateGameAutosay(CCmdUI* pCmdUI) 
 {
-DoFixMenus (pCmdUI);  // remove accelerators from menus
-pCmdUI->Enable (!m_strAutoSayString.IsEmpty ());
-pCmdUI->SetCheck (m_bEnableAutoSay);
+  DoFixMenus (pCmdUI);  // remove accelerators from menus
+  pCmdUI->Enable (!m_strAutoSayString.IsEmpty ());
+  pCmdUI->SetCheck (m_bEnableAutoSay);
 }
 
 const char * CMUSHclientDoc::GetSocketError (int nError)
-  {
-
+{
+  const char * strError = NULL;
   switch (nError)
     {
-    case WSAEACCES:             return Translate ("Permission denied"); break;
-    case WSAEADDRINUSE:         return Translate ("Address already in use"); break;
-    case WSAEADDRNOTAVAIL:      return Translate ("Cannot assign requested address"); break;
-    case WSAEAFNOSUPPORT :      return Translate ("Address family not supported by protocol family"); break;
-    case WSAEALREADY :          return Translate ("Operation already in progress. "); break;
-    case WSAECONNABORTED:       return Translate ("Software caused connection abort"); break;
-    case WSAECONNREFUSED:       return Translate ("Connection refused"); break;
-    case WSAECONNRESET:         return Translate ("Connection reset by peer"); break;
-    case WSAEDESTADDRREQ:       return Translate ("Destination address required"); break;
-    case WSAEFAULT:             return Translate ("Bad address"); break;
-    case WSAEHOSTDOWN:          return Translate ("Host is down"); break;
-    case WSAEHOSTUNREACH:       return Translate ("No route to host"); break;
-    case WSAEINPROGRESS:        return Translate ("Operation now in progress"); break;
-    case WSAEINTR:              return Translate ("Interrupted function call"); break;
-    case WSAEINVAL:             return Translate ("Invalid argument"); break;
-    case WSAEISCONN:            return Translate ("Socket is already connected"); break;
-    case WSAEMFILE:             return Translate ("Too many open files"); break;
-    case WSAEMSGSIZE:           return Translate ("Message too long"); break;
-    case WSAENETDOWN:           return Translate ("Network is down"); break;
-    case WSAENETRESET:          return Translate ("Network dropped connection on reset"); break;
-    case WSAENETUNREACH:        return Translate ("Network is unreachable"); break;
-    case WSAENOBUFS:            return Translate ("No buffer space available"); break;
-    case WSAENOPROTOOPT :       return Translate ("Bad protocol option"); break;
-    case WSAENOTCONN:           return Translate ("Socket is not connected"); break;
-    case WSAENOTSOCK:           return Translate ("Socket operation on non-socket"); break;
-    case WSAEOPNOTSUPP:         return Translate ("Operation not supported"); break;
-    case WSAEPFNOSUPPORT:       return Translate ("Protocol family not supported"); break;
-    case WSAEPROCLIM:           return Translate ("Too many processes"); break;
-    case WSAEPROTONOSUPPORT:    return Translate ("Protocol not supported"); break;
-    case WSAEPROTOTYPE:         return Translate ("Protocol wrong type for socket"); break;
-    case WSAESHUTDOWN:          return Translate ("Cannot send after socket shutdown"); break;
-    case WSAESOCKTNOSUPPORT:    return Translate ("Socket type not supported"); break;
-    case WSAETIMEDOUT:          return Translate ("Connection timed out"); break;
-    case WSAEWOULDBLOCK:        return Translate ("Resource temporarily unavailable"); break;
-    case WSAHOST_NOT_FOUND:     return Translate ("Host not found"); break;
-    case WSA_INVALID_HANDLE:    return Translate ("Specified event object handle is invalid"); break;
-    case WSA_INVALID_PARAMETER: return Translate ("One or more parameters are invalid"); break;
-    case WSAEINVALIDPROCTABLE:   return Translate ("Invalid procedure table from service provider"); break;
-    case WSAEINVALIDPROVIDER:    return Translate ("Invalid service provider version number"); break;
-    case WSA_IO_PENDING:        return Translate ("Overlapped operations will complete later"); break;
-    case WSA_IO_INCOMPLETE:     return Translate ("Overlapped I/O event object not in signaled state"); break;
-    case WSA_NOT_ENOUGH_MEMORY: return Translate ("Insufficient memory available"); break;
-    case WSANOTINITIALISED:     return Translate ("Successful WSAStartup not yet performed"); break;
-    case WSANO_DATA:            return Translate ("Valid name, no data record of requested type"); break;
-    case WSANO_RECOVERY:        return Translate ("This is a non-recoverable error"); break;
-    case WSAEPROVIDERFAILEDINIT: return Translate ("Unable to initialize a service provider"); break;
-    case WSASYSCALLFAILURE:     return Translate ("System call failure"); break;
-    case WSASYSNOTREADY:        return Translate ("Network subsystem is unavailable"); break;
-    case WSATRY_AGAIN:          return Translate ("Non-authoritative host not found"); break;
-    case WSAVERNOTSUPPORTED:    return Translate ("WINSOCK.DLL version out of range"); break;
-    case WSAEDISCON:            return Translate ("Graceful shutdown in progress"); break;
-    case WSA_OPERATION_ABORTED: return Translate ("Overlapped operation aborted"); break;
-
+    case WSAEACCES:              strError = "Permission denied";
+    case WSAEADDRINUSE:          strError = "Address already in use";
+    case WSAEADDRNOTAVAIL:       strError = "Cannot assign requested address";
+    case WSAEAFNOSUPPORT:        strError = "Address family not supported by protocol family";
+    case WSAEALREADY:            strError = "Operation already in progress. ";
+    case WSAECONNABORTED:        strError = "Software caused connection abort";
+    case WSAECONNREFUSED:        strError = "Connection refused";
+    case WSAECONNRESET:          strError = "Connection reset by peer";
+    case WSAEDESTADDRREQ:        strError = "Destination address required";
+    case WSAEFAULT:              strError = "Bad address";
+    case WSAEHOSTDOWN:           strError = "Host is down";
+    case WSAEHOSTUNREACH:        strError = "No route to host";
+    case WSAEINPROGRESS:         strError = "Operation now in progress";
+    case WSAEINTR:               strError = "Interrupted function call";
+    case WSAEINVAL:              strError = "Invalid argument";
+    case WSAEISCONN:             strError = "Socket is already connected";
+    case WSAEMFILE:              strError = "Too many open files";
+    case WSAEMSGSIZE:            strError = "Message too long";
+    case WSAENETDOWN:            strError = "Network is down";
+    case WSAENETRESET:           strError = "Network dropped connection on reset";
+    case WSAENETUNREACH:         strError = "Network is unreachable";
+    case WSAENOBUFS:             strError = "No buffer space available";
+    case WSAENOPROTOOPT :        strError = "Bad protocol option";
+    case WSAENOTCONN:            strError = "Socket is not connected";
+    case WSAENOTSOCK:            strError = "Socket operation on non-socket";
+    case WSAEOPNOTSUPP:          strError = "Operation not supported";
+    case WSAEPFNOSUPPORT:        strError = "Protocol family not supported";
+    case WSAEPROCLIM:            strError = "Too many processes";
+    case WSAEPROTONOSUPPORT:     strError = "Protocol not supported";
+    case WSAEPROTOTYPE:          strError = "Protocol wrong type for socket";
+    case WSAESHUTDOWN:           strError = "Cannot send after socket shutdown";
+    case WSAESOCKTNOSUPPORT:     strError = "Socket type not supported";
+    case WSAETIMEDOUT:           strError = "Connection timed out";
+    case WSAEWOULDBLOCK:         strError = "Resource temporarily unavailable";
+    case WSAHOST_NOT_FOUND:      strError = "Host not found";
+    case WSA_INVALID_HANDLE:     strError = "Specified event object handle is invalid";
+    case WSA_INVALID_PARAMETER:  strError = "One or more parameters are invalid";
+    case WSAEINVALIDPROCTABLE:   strError = "Invalid procedure table from service provider";
+    case WSAEINVALIDPROVIDER:    strError = "Invalid service provider version number";
+    case WSA_IO_PENDING:         strError = "Overlapped operations will complete later";
+    case WSA_IO_INCOMPLETE:      strError = "Overlapped I/O event object not in signaled state";
+    case WSA_NOT_ENOUGH_MEMORY:  strError = "Insufficient memory available";
+    case WSANOTINITIALISED:      strError = "Successful WSAStartup not yet performed";
+    case WSANO_DATA:             strError = "Valid name, no data record of requested type";
+    case WSANO_RECOVERY:         strError = "This is a non-recoverable error";
+    case WSAEPROVIDERFAILEDINIT: strError = "Unable to initialize a service provider";
+    case WSASYSCALLFAILURE:      strError = "System call failure";
+    case WSASYSNOTREADY:         strError = "Network subsystem is unavailable";
+    case WSATRY_AGAIN:           strError = "Non-authoritative host not found";
+    case WSAVERNOTSUPPORTED:     strError = "WINSOCK.DLL version out of range";
+    case WSAEDISCON:             strError = "Graceful shutdown in progress";
+    case WSA_OPERATION_ABORTED:  strError = "Overlapped operation aborted";
+    default:                     strError = "Unknown error code";
     } // end of switch
 
-   return Translate ("Unknown error code");
-
-  }   // end of CMUSHclientDoc::GetSocketError 
+  return Translate(strError);
+}   // end of CMUSHclientDoc::GetSocketError 
 
 void CMUSHclientDoc::SetUpVariantString (VARIANT & tVariant, const CString & strContents)
-  {
+{
   VariantClear (&tVariant);
   tVariant.vt = VT_BSTR;
-  tVariant.bstrVal = strContents.AllocSysString (); 
-  }   // end of CMUSHclientDoc::SetUpVariantString
+  tVariant.bstrVal = strContents.AllocSysString ();
+}   // end of CMUSHclientDoc::SetUpVariantString
 
 void CMUSHclientDoc::SetUpVariantShort (VARIANT & tVariant, const short iContents)
-  {
+{
   VariantClear (&tVariant);
   tVariant.vt = VT_I2;
-  tVariant.iVal = iContents; 
-  }   // end of CMUSHclientDoc::SetUpVariantShort
+  tVariant.iVal = iContents;
+}   // end of CMUSHclientDoc::SetUpVariantShort
 
 void CMUSHclientDoc::SetUpVariantBool (VARIANT & tVariant, const BOOL iContents)
-  {
+{
   VariantClear (&tVariant);
   tVariant.vt = VT_BOOL;
   tVariant.boolVal = iContents; 
-  }   // end of CMUSHclientDoc::SetUpVariantBool
+}   // end of CMUSHclientDoc::SetUpVariantBool
 
 void CMUSHclientDoc::SetUpVariantLong (VARIANT & tVariant, const long iContents)
-  {
+{
   VariantClear (&tVariant);
   tVariant.vt = VT_I4;
-  tVariant.lVal = iContents; 
-  }   // end of CMUSHclientDoc::SetUpVariantLong
+  tVariant.lVal = iContents;
+}   // end of CMUSHclientDoc::SetUpVariantLong
 
 void CMUSHclientDoc::SetUpVariantDate (VARIANT & tVariant, const COleDateTime iContents)
-  {
+{
   VariantClear (&tVariant);
   tVariant.vt = VT_DATE;
-  tVariant.date = iContents; 
-  }   // end of CMUSHclientDoc::SetUpVariantDate
+  tVariant.date = iContents;
+}   // end of CMUSHclientDoc::SetUpVariantDate
 
 void CMUSHclientDoc::SetUpVariantDouble (VARIANT & tVariant, const double dContents)
-  {
+{
   VariantClear (&tVariant);
   tVariant.vt = VT_R8;
-  tVariant.dblVal = dContents; 
-  }   // end of CMUSHclientDoc::SetUpVariantDouble
+  tVariant.dblVal = dContents;
+ }   // end of CMUSHclientDoc::SetUpVariantDouble
 
-long CMUSHclientDoc::CheckObjectName (CString & strObjectName,
-                                      const bool bConform)
-  {
-
+long CMUSHclientDoc::CheckObjectName (CString & strObjectName, const bool bConform)
+{
   // remove leading and trailing spaces
   strObjectName.TrimLeft ();
   strObjectName.TrimRight ();
@@ -5026,23 +4449,22 @@ long CMUSHclientDoc::CheckObjectName (CString & strObjectName,
 
   // name is OK
   return eOK;
-
-  }   // end of CMUSHclientDoc::CheckObjectName
+}   // end of CMUSHclientDoc::CheckObjectName
 
 
 void CMUSHclientDoc::OnConnectDisconnect() 
 {
-if (m_iConnectPhase == eConnectNotConnected)
-  OnConnectionConnect ();
-else
-  OnConnectionDisconnect ();
+  if (m_iConnectPhase == eConnectNotConnected)
+    OnConnectionConnect ();
+  else
+    OnConnectionDisconnect ();
 }
 
 void CMUSHclientDoc::OnUpdateConnectDisconnect(CCmdUI* pCmdUI) 
 {
-DoFixMenus (pCmdUI);  // remove accelerators from menus
-pCmdUI->Enable ();
-pCmdUI->SetCheck (m_iConnectPhase != eConnectNotConnected);
+  DoFixMenus (pCmdUI);  // remove accelerators from menus
+  pCmdUI->Enable ();
+  pCmdUI->SetCheck (m_iConnectPhase != eConnectNotConnected);
 }
 
 
@@ -5054,13 +4476,10 @@ void CMUSHclientDoc::OnGameReloadScriptFile()
 
 void CMUSHclientDoc::OnUpdateGameReloadScriptFile(CCmdUI* pCmdUI) 
 {
-DoFixMenus (pCmdUI);  // remove accelerators from menus
+  DoFixMenus (pCmdUI);  // remove accelerators from menus
 
-BOOL bEnable = TRUE;
-
-  // scripting not active, or some serious error, give up
-  if (!m_ScriptEngine && !m_bSyntaxErrorOnly)
-    bEnable = FALSE;
+  // enable if scripting is active, or a non-serious error
+  BOOL bEnable = (m_ScriptEngine || m_bSyntaxErrorOnly);
   
   // no script file - can't reprocess
   // commented out in 3.80 - they still might want to reload scripting
@@ -5068,91 +4487,74 @@ BOOL bEnable = TRUE;
 //    bEnable = FALSE;
 
   pCmdUI->Enable (bEnable);
-  
 }
 
 // Also called from script function
-
-void CMUSHclientDoc::ClearOutput (void)
-  {
-
+void CMUSHclientDoc::ClearOutput ()
+{
   if (m_pLinePositions == NULL)
     return;
 
-POSITION pos;
-
-// delete lines list
-
+  // delete lines list
   DELETE_LIST (m_LineList);
 
-// put one line in line list
-
-  m_total_lines = 0;
-  m_pCurrentLine = new CLine (++m_total_lines, 
-                              m_nWrapColumn,
-                              0, WHITE, BLACK,
-                              m_bUTF_8);
-
+  // put one line in line list
+  m_total_lines = 1;
+  m_pCurrentLine = new CLine (m_total_lines, 
+      m_nWrapColumn,
+      0, WHITE, BLACK,
+      m_bUTF_8);
   m_LineList.AddTail (m_pCurrentLine);
 //  m_strCurrentLine.Empty ();
 
   // clear all elements in our positions array
-
-  for (int i = 0; i <= m_maxlines / JUMP_SIZE; i++)
-    m_pLinePositions [i] = NULL;
-
+  memset(m_pLinePositions, 0, (m_maxlines / JUMP_SIZE) + 1);
   m_pLinePositions [0] = m_LineList.GetHeadPosition ();
 
   // previous find won't work now
-
   m_DisplayFindInfo.m_nCurrentLine = 0;
   m_DisplayFindInfo.m_pFindPosition = NULL;
   m_DisplayFindInfo.m_bAgain = FALSE;  
 
   // we need to force views to update scroll bar positions and things like that
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
 
-  for(pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-
+    if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      {
+      CMUSHView* pmyView = (CMUSHView*)pView;
       pmyView->ScrollToPosition (CPoint (0, 0), false);
-		  pmyView->addedstuff();
-	    }	
-    }
+      pmyView->addedstuff();
+    }	
+  }
 
   // no recent trigger lines
   m_sRecentLines.clear ();
 
   // redraw all views
-
   UpdateAllViews (NULL);
-
-  } // end of CMUSHclientDoc::ClearOutput
+} // end of CMUSHclientDoc::ClearOutput
 
 void CMUSHclientDoc::OnDisplayClearOutput() 
 {
-
   // check they really want to
-  if (UMessageBox 
-      (TFormat ("Are you SURE you want to clear all %i lines in the output window?",
-                   m_LineList.GetCount ()),
-                    MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != IDYES)
-                    return;
-    
-  ClearOutput ();
+  int iResult = UMessageBox (TFormat (
+        "Are you SURE you want to clear all %i lines in the output window?",
+        m_LineList.GetCount ()),
+      MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
 
-
+  if (iResult == IDYES)
+    ClearOutput ();
 }
 
 void CMUSHclientDoc::OnGameResetalltimers() 
 {
   ResetAllTimers (GetTimerMap ());
   // do plugins
-  for (POSITION pos = m_PluginList.GetHeadPosition (); pos; )
+  POSITION pos = m_PluginList.GetHeadPosition ();
+  while (pos != NULL)
     {
     m_CurrentPlugin = m_PluginList.GetNext (pos);
     if (m_CurrentPlugin->m_bEnabled)
@@ -5176,27 +4578,21 @@ CString CMUSHclientDoc::RecallText (const CString strSearchString,   // what to 
                                     const bool bNotes,
                                     const int  iLines,
                                     const CString strRecallLinePreamble)
-    {
-CString strMessage;
-t_regexp * regexp;          // compiled regular expression
-int iCurrentLine;
+{
+  t_regexp * regexp = NULL;
 
   // compile regular expression if needed
   if (bRegexp)
     regexp = regcomp (strSearchString, (bMatchCase ? 0 : PCRE_CASELESS) | (m_bUTF_8 ? PCRE_UTF8 : 0));
 
-CString strFindString = strSearchString;
-CString strStatus = TFormat ("Recalling: %s", (LPCTSTR) strSearchString);
-
+  CString strFindString = strSearchString;
+  
+  CString strStatus = TFormat ("Recalling: %s", (LPCTSTR) strSearchString);
   Frame.SetStatusMessageNow (strStatus);
 
-// find how many more lines we have to search
-
+  // find how many more lines we have to search
   long nToGo = m_LineList.GetCount ();
-  iCurrentLine = 0;
-  
-  CProgressDlg * pProgressDlg = NULL;// progress dialog
-
+  CProgressDlg * pProgressDlg = NULL; // progress dialog
   if (nToGo > 500)
     {
     pProgressDlg = new CProgressDlg;
@@ -5206,39 +4602,26 @@ CString strStatus = TFormat ("Recalling: %s", (LPCTSTR) strSearchString);
     pProgressDlg->SetWindowText (Translate ("Recalling..."));                              
     }   // end of having enough lines to warrant a progress bar
 
-// go back requested number of lines
+  CString strMessage;
+  int iCurrentLine = 0;
 
+  // go back requested number of lines
   POSITION pos = m_LineList.GetHeadPosition ();
-
-  if (iLines > 0)
-    {
-
-// if they want to use whole buffer, just use it
-
-    if (iLines >= m_LineList.GetCount ())
-      pos = m_LineList.GetHeadPosition ();
-    else
-      {
-
-// otherwise count backwards the required number of lines
-
-      pos = m_LineList.GetTailPosition ();
-
-      for (int line = 0; line < iLines && pos; line++)
-        m_LineList.GetPrev (pos);
-
-// if no pos, start at top
-
-      if (!pos)
-        pos = m_LineList.GetHeadPosition ();
-      }   // end of not starting from the top
-
-    } // end of wanting to go back so-many lines
-  else
+  if (iLines <= 0 || iLines >= m_LineList.GetCount ())
+    // if they want to use whole buffer, just use it
     pos = m_LineList.GetHeadPosition ();
+  else
+    {
+    // otherwise count backwards the required number of lines
+    pos = m_LineList.GetTailPosition ();
+    for (int line = 0; line < iLines && pos != NULL; ++line)
+      m_LineList.GetPrev (pos);
+     // if no pos, start at top
+    if (!pos)
+      pos = m_LineList.GetHeadPosition ();
+    }   // end of not starting from the top
 
-// if case-insensitive search wanted, force "text to find" to lower case
-
+  // if case-insensitive search wanted, force "text to find" to lower case
   if (!bMatchCase)
     strFindString.MakeLower ();
 
@@ -5250,89 +4633,71 @@ CString strStatus = TFormat ("Recalling: %s", (LPCTSTR) strSearchString);
 
     do
       {
-
       strLine.Empty ();
       CTime theTime;
 
       // get lines until a hard return
-
-      while (pos)
+      while (pos != NULL)
         {
         CLine * pLine = m_LineList.GetNext (pos);   // get next line
+
         strLine += CString (pLine->text, pLine->len);
         theTime = pLine->m_theTime;
-        iFlags = pLine->flags;
-        iMilestone++;
-        iCurrentLine++;
+        iFlags  = pLine->flags;
+        iMilestone   += 1;
+        iCurrentLine += 1;
+
         if (pLine->hard_return)
           break;
         }
 
-    // update progress control
-
+      // update progress control
       if (pProgressDlg && iMilestone > 31)   // every 31 lines
         {
         pProgressDlg->SetPos (iCurrentLine); 
         iMilestone = 0;
         if(pProgressDlg->CheckCancelButton())
           break;
-        } // end of having a progress control
+        }
 
-  // if text found on this line, then we have done it!
-
+      // if text found on this line, then we have done it!
       // check it was the right sort of line
-      if (!(
-           ((iFlags & USER_INPUT)   && bCommands) ||
-          (((iFlags & NOTE_OR_COMMAND) == 0)  && bOutput) ||
-           ((iFlags & COMMENT)      && bNotes))
-           )
-          continue;
-          
+      if (!((iFlags & USER_INPUT)      != 0 && bCommands) &&
+          !((iFlags & NOTE_OR_COMMAND) == 0 && bOutput)   &&
+          !((iFlags & COMMENT)         != 0 && bNotes))
+        continue;
+
       CString strSearchLine = strLine;
-
-      if (bRegexp )
+      if (bRegexp)
         {
-  // if case-insensitive search wanted, force this line to lower case
-
         if (regexec (regexp, strSearchLine))
           {
           if (!strRecallLinePreamble.IsEmpty ())
-            {
-            CString strPreamble = FormatTime (theTime, strRecallLinePreamble);
-            strMessage += strPreamble;
-            }
-          strMessage += strLine;
-          strMessage += ENDLINE;
+            strMessage += FormatTime (theTime, strRecallLinePreamble);
+          strMessage += strLine + ENDLINE;
           } // end of found it
         } // end of regular expression
-      else
-        { // not regular expression 
+      else // not regular expression 
+        {
         // if case-insensitive search wanted, force this line to lower case
         if (!bMatchCase)
           strSearchLine.MakeLower ();
+
         if (strSearchLine.Find (strFindString) != -1)
           {
           if (!strRecallLinePreamble.IsEmpty ())
-            {
-            CString strPreamble = FormatTime (theTime, strRecallLinePreamble);
-            strMessage += strPreamble;
-            }
-          strMessage += strLine;
-          strMessage += ENDLINE;
+            strMessage += FormatTime (theTime, strRecallLinePreamble);
+          strMessage += strLine + ENDLINE;
           } // end of found it
         } // end of not regular expression
-
-      } while (pos);  // end of looping through each line 
-
+      } while (pos != NULL);  // end of looping through each line 
     } // end of try
-
-  catch(CException* e)
+  catch (CException* e)
     {
     e->ReportError ();
     e->Delete ();
     strMessage.Empty ();
     }
-
 
   Frame.SetStatusNormal (); 
 
@@ -5342,25 +4707,20 @@ CString strStatus = TFormat ("Recalling: %s", (LPCTSTR) strSearchString);
     pProgressDlg = NULL;
     }
 
-
   if (strMessage.IsEmpty ())
     {
-    CString strMsg;
-    CString strFindType = "text";
-    if (bRegexp)
-      strFindType = "regular expression";
-    strMsg = TFormat ("The %s \"%s\" was not found", 
-                  (LPCTSTR) strFindType,
-                  (LPCTSTR) strSearchString);
+    CString strMsg = TFormat ("The %s \"%s\" was not found", 
+        (bRegexp) ? "regular expression" : "text",
+        (LPCTSTR) strSearchString);
     UMessageBox (strMsg, MB_ICONINFORMATION);
     }
 
-  return strMessage;    
-    } // end of CMUSHclientDoc::RecallText 
+  return strMessage;
+} // end of CMUSHclientDoc::RecallText 
 
 void CMUSHclientDoc::DoRecallText (void)
-  {
-CRecallSearchDlg dlg (m_RecallFindInfo.m_strFindStringList);
+{
+  CRecallSearchDlg dlg (m_RecallFindInfo.m_strFindStringList);
 
   if (!m_RecallFindInfo.m_strFindStringList.IsEmpty ())
     dlg.m_strFindText = m_RecallFindInfo.m_strFindStringList.GetHead ();
@@ -5387,7 +4747,6 @@ CRecallSearchDlg dlg (m_RecallFindInfo.m_strFindStringList);
   // if they change this, the document is modified
   if (m_strRecallLinePreamble != dlg.m_strRecallLinePreamble)
     SetModifiedFlag ();
-
   m_strRecallLinePreamble = dlg.m_strRecallLinePreamble;
                                                   
   // add find string to head of list, provided it is not empty, and not the same as before
@@ -5396,50 +4755,44 @@ CRecallSearchDlg dlg (m_RecallFindInfo.m_strFindStringList);
       m_RecallFindInfo.m_strFindStringList.GetHead () != dlg.m_strFindText))
     m_RecallFindInfo.m_strFindStringList.AddHead (dlg.m_strFindText);
 
-CString strMessage;
+  CString strMessage = RecallText (
+      dlg.m_strFindText,
+      dlg.m_bMatchCase,
+      dlg.m_bRegexp,
+      dlg.m_bCommands,
+      dlg.m_bOutput,
+      dlg.m_bNotes,
+      dlg.m_iLines,
+      dlg.m_strRecallLinePreamble
+      );
 
-  strMessage = RecallText (
-              m_RecallFindInfo.m_strFindStringList.GetHead (),   // what to search for
-              dlg.m_bMatchCase ,
-              dlg.m_bRegexp,          // and other params
-              dlg.m_bCommands,
-              dlg.m_bOutput,
-              dlg.m_bNotes,
-              dlg.m_iLines,
-              dlg.m_strRecallLinePreamble);
+  if (strMessage.IsEmpty ())
+    return;
 
-  if (!strMessage.IsEmpty ())
-    CreateTextWindow (strMessage, 
-                      TFormat ("Recall: %s",
-                         (LPCTSTR) m_RecallFindInfo.m_strFindStringList.GetHead ()),
-                      this,
-                      m_iUniqueDocumentNumber,
-                      m_font_name,
-                      m_font_height,
-                      m_font_weight,
-                      m_font_charset,
-                      m_normalcolour [WHITE],
-                      m_normalcolour [BLACK],
-                      m_RecallFindInfo.m_strFindStringList.GetHead (),
-                      dlg.m_strRecallLinePreamble,
-                      dlg.m_bMatchCase,
-                      dlg.m_bRegexp,
-                      dlg.m_bCommands,
-                      dlg.m_bOutput,  
-                      dlg.m_bNotes,
-                      dlg.m_iLines,
-                      eNotepadRecall
-                      );
-  }  // end of CMUSHclientDoc::DoRecallText
+  CreateTextWindow (strMessage, 
+    TFormat ("Recall: %s", (LPCTSTR) dlg.m_strFindText),
+    this,
+    m_iUniqueDocumentNumber,
+    m_font_name, m_font_height, m_font_weight, m_font_charset,
+    m_normalcolour [WHITE], m_normalcolour [BLACK],
+    dlg.m_strFindText,
+    dlg.m_strRecallLinePreamble,
+    dlg.m_bMatchCase,
+    dlg.m_bRegexp,
+    dlg.m_bCommands,
+    dlg.m_bOutput,  
+    dlg.m_bNotes,
+    dlg.m_iLines,
+    eNotepadRecall
+    );
+}  // end of CMUSHclientDoc::DoRecallText
 
 void CMUSHclientDoc::OnDisplayRecalltext() 
 {
-
   DoRecallText ();
-
 }
 
-void DoGlobalPrefs (CMUSHclientDoc * pCurrentDoc);
+extern void DoGlobalPrefs (CMUSHclientDoc * pCurrentDoc);
 
 void CMUSHclientDoc::OnFilePreferences() 
 {
@@ -5455,32 +4808,33 @@ bool CMUSHclientDoc::FindStyle (const CLine * pLine,         // which line
                                 int & iCol,            // which column style goes up to
                                 CStyle * & pStyle,     // return style pointer
                                 POSITION & foundpos) const  // and its position
-  {
-   foundpos = NULL;   // none initially
-   iCol = 0;
+{
+  foundpos = NULL;  // none initially
+  iCol = 0;
 
-   // find first style to change
-   for (POSITION pos = pLine->styleList.GetHeadPosition(); pos; )
-     {
-     foundpos = pos;  // position to insert after
-     pStyle = pLine->styleList.GetNext (pos);
-     iCol += pStyle->iLength;
-     if (iCol >= iWantedCol)      // NJG - version 3.73
-        break;    // found first style
-      }
+  // find first style to change
+  POSITION pos = pLine->styleList.GetHeadPosition();
+  while (pos != NULL)
+    {
+    foundpos = pos;  // position to insert after
+    pStyle = pLine->styleList.GetNext (pos);
 
-  return foundpos != NULL;
-  }   // end of CMUSHclientDoc::FindStyle 
+    iCol += pStyle->iLength;
+    if (iCol >= iWantedCol)      // NJG - version 3.73
+      break;    // found first style
+    }
+
+  return (foundpos != NULL);
+}   // end of CMUSHclientDoc::FindStyle 
 
 // find RGB equivalents for a particular style of text
 
 void CMUSHclientDoc::GetStyleRGB (CStyle * pStyle, COLORREF & colour1, COLORREF & colour2) const
-  {
-unsigned short style;
-int iForeground,
-    iBackground;
+{
+  int iForeground,
+      iBackground;
 
-  style = pStyle->iFlags & STYLE_BITS;
+  unsigned short style = pStyle->iFlags & STYLE_BITS;
 
   if ((style & COLOURTYPE) == COLOUR_CUSTOM)
     {
@@ -5516,8 +4870,7 @@ int iForeground,
     ASSERT (pStyle->iForeColour >= 0 && pStyle->iForeColour < 8);
     ASSERT (pStyle->iBackColour >= 0 && pStyle->iBackColour < 8);
 
-// display bold inverse differently according to user taste
-
+    // display bold inverse differently according to user taste
     if (m_bAlternativeInverse)
       {
       iForeground = pStyle->iForeColour;
@@ -5525,22 +4878,14 @@ int iForeground,
 
       if (style & INVERSE)    // inverse inverts foreground and background
         {
-        if (style & HILITE)
-          colour2 = m_boldcolour [iForeground];
-        else
-          colour2 = m_normalcolour [iForeground];
+        colour2 = (style & HILITE) ? m_boldcolour [iForeground] : m_normalcolour [iForeground];
         colour1 = m_normalcolour [iBackground];
         }
       else
         {
-        if (style & HILITE)
-          colour1 = m_boldcolour [iForeground];
-        else
-          colour1 = m_normalcolour [iForeground];
+        colour1 = (style & HILITE) ? m_boldcolour [iForeground] : m_normalcolour [iForeground];
         colour2 = m_normalcolour [iBackground];
         }   // end of not inverse
-
-
       } // end of alternate way
     else
       {
@@ -5555,22 +4900,16 @@ int iForeground,
         iBackground = pStyle->iBackColour;
         }
 
-      if (style & HILITE)
-        colour1 = m_boldcolour [iForeground];
-      else
-        colour1 = m_normalcolour [iForeground];
+      colour1 = (style & HILITE) ? m_boldcolour [iForeground] : m_normalcolour [iForeground];
       colour2 = m_normalcolour [iBackground];
-
       } // end of old way
-
     }   // not custom
+} // end of CMUSHclientDoc::GetStyleRGB 
 
-  } // end of CMUSHclientDoc::GetStyleRGB 
 
-
-bool CMUSHclientDoc::CheckConnected (void)
-  {
-// let them know if they are foolishly trying to send to a closed connection
+bool CMUSHclientDoc::CheckConnected ()
+{
+  // let them know if they are foolishly trying to send to a closed connection
 
   // no reconnecting while we are trying to disconnect
   if (m_iConnectPhase == eConnectDisconnecting)
@@ -5583,19 +4922,16 @@ bool CMUSHclientDoc::CheckConnected (void)
     if (m_server == "0.0.0.0")
       return true;
 
-    CString str;
-
     if (m_iConnectPhase != eConnectNotConnected)
       {
-      str = TFormat ("The connection to %s is currently being established.", 
-                (LPCTSTR) m_mush_name);
+      CString str = TFormat ("The connection to %s is currently being established.", 
+          (LPCTSTR) m_mush_name);
       UMessageBox (str, MB_ICONINFORMATION);
       }
     else
       {
-      str = TFormat ("The connection to %s is not open. Attempt to reconnect?", 
-                (LPCTSTR) m_mush_name);
-
+      CString str = TFormat ("The connection to %s is not open. Attempt to reconnect?", 
+          (LPCTSTR) m_mush_name);
       if (UMessageBox (str, MB_YESNO | MB_ICONQUESTION) == IDYES)
         {
         ConnectSocket ();
@@ -5603,15 +4939,16 @@ bool CMUSHclientDoc::CheckConnected (void)
         UpdateAllViews (NULL);  // make sure title bar is updated
         }
       }
+
     return true;
     }
 
   return false;
-  } // end of  CMUSHclientDoc::CheckConnected  
+} // end of  CMUSHclientDoc::CheckConnected  
 
 
 void CMUSHclientDoc::Debug_MUD (const char * sCaption, const char * sData)
-  {
+{
 #ifdef SHOW_ALL_COMMS
 
 char * subs [] = 
@@ -5654,8 +4991,7 @@ char * subs [] =
   AppendToTheNotepad ("MUD debug", ENDLINE, false);   // blank line
 
 #endif
-
-  }  // end of CMUSHclientDoc::Debug_MUD
+}  // end of CMUSHclientDoc::Debug_MUD
 
 
 // save the current style, so that when we go from:
@@ -5663,63 +4999,58 @@ char * subs [] =
 // we keep the correct style
 
 void CMUSHclientDoc::RememberStyle (const CStyle * pStyle)
-  {
+{
   if (!pStyle)
     return;
   
   // for tracking down an obscure bug
   if ((pStyle->iFlags & COLOURTYPE) == COLOUR_CUSTOM)
-    {
     ASSERT (pStyle->iForeColour >= 0 && pStyle->iForeColour < MAX_CUSTOM);
-    }
-  else
-  if ((pStyle->iFlags & COLOURTYPE) == COLOUR_ANSI)
+  else if ((pStyle->iFlags & COLOURTYPE) == COLOUR_ANSI)
     {
     ASSERT (pStyle->iForeColour >= 0 && pStyle->iForeColour < 8);
     ASSERT (pStyle->iBackColour >= 0 && pStyle->iBackColour < 8);
     }
 
-
   m_iFlags       = pStyle->iFlags & STYLE_BITS; 
   m_iForeColour  = pStyle->iForeColour;         
   m_iBackColour  = pStyle->iBackColour;           
-  
-  } // end of CMUSHclientDoc::RememberStyle
+} // end of CMUSHclientDoc::RememberStyle
 
 void CMUSHclientDoc::OnDebugWorldInput() 
 {
 //#ifdef _DEBUG
 
-CDebugWorldInputDlg dlg;
-
+  CDebugWorldInputDlg dlg;
   dlg.m_strText = m_strLastDebugWorldInput;	
-
   if (dlg.DoModal () != IDOK)
     return;
 
   // remember for next time
   m_strLastDebugWorldInput = dlg.m_strText;
 
-CString strInput;
+  CString strInput;
 
-const char * p;
-
-  for (p = m_strLastDebugWorldInput; *p; )
+  const char * p = m_strLastDebugWorldInput;
+  while (*p != '\0')
     {
     if (*p == '\\')
       {
-      p++;
+      ++p;
       if (*p == '\\')
-        strInput += *p++;   // just one backslash
+      {
+        strInput += *p;   // just one backslash
+      ++p;
+      }
       else
         {
         char cResult = 0;
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < 2; ++i)
           {
           char c = toupper (*p);
           if (isxdigit (c))
             {
-            p++;  // skip it
+            ++p;  // skip it
             cResult <<= 4;
             if (c >= 'A')
               c -= 7;
@@ -5730,16 +5061,16 @@ const char * p;
         } // end of doing hex stuff
       }
     else
-      strInput += *p++;
-
+      {
+      strInput += *p;
+      ++p;
+      }
     }  // end of assembling data to send
 
   // simulate MUD input
   if (!strInput.IsEmpty ())
     DisplayMsg(strInput, strInput.GetLength (), 0);
-
 //#endif    // _DEBUG
-
 } // end of CMUSHclientDoc::OnDebugWorldInput
 
 
@@ -5752,47 +5083,20 @@ CStyle * CMUSHclientDoc::AddStyle (const unsigned short iFlags,
                                       CString              strHint,
                                       CString              strVariable,
                                       CLine *              pLine)
-  {
+{
   // defaults to current line
   if (!pLine)
+  {
+    if (!m_pCurrentLine)
+      return NULL; // can't do it without a line
     pLine = m_pCurrentLine;
+  }
 
-  // can't do it without a line
-  if (!pLine)
-     return NULL;
-
-  if (!pLine->styleList.IsEmpty ())
-    {
-    // find current style
-    CStyle * pOldStyle = pLine->styleList.GetTail ();
-
-    // We want the new style, but did the old one have a text run?
-    // if not, we don't really need that
-
-    if (pOldStyle->iLength == 0 && (pOldStyle->iFlags & START_TAG) == 0)
-      {
-      DELETESTYLE (pOldStyle);
-      pLine->styleList.RemoveTail ();
-      }   // end of redundant style
-    } // end of having at least one style
-
-// create new style item
-CStyle * pNewStyle = NEWSTYLE;
-
-// use new styles
-   pNewStyle->iFlags      = iFlags;
-   pNewStyle->iForeColour = iForeColour;
-   pNewStyle->iBackColour = iBackColour;
-   pNewStyle->iLength     = iLength;
-   pNewStyle->pAction = GetAction (strAction, strHint, strVariable);
-
-// add to line style list
-   pLine->styleList.AddTail (pNewStyle); 
-
-
-   return pNewStyle;
-
-  } // end of CMUSHclientDoc::AddStyle 
+  return AddStyle(iFlags,
+      iForeColour, iBackColour, iLength,
+      GetAction (strAction, strHint, strVariable),
+      pLine);
+} // end of CMUSHclientDoc::AddStyle 
 
 // adds a new style to the current line
 CStyle * CMUSHclientDoc::AddStyle (const unsigned short iFlags,
@@ -5801,14 +5105,14 @@ CStyle * CMUSHclientDoc::AddStyle (const unsigned short iFlags,
                                       const int            iLength ,
                                       CAction *            pAction,
                                       CLine *              pLine)
-  {
+{
   // defaults to current line
   if (!pLine)
+  {
+    if (!m_pCurrentLine)
+      return NULL; // can't do it without a line
     pLine = m_pCurrentLine;
-
-  // can't do it without a line
-  if (!pLine)
-     return NULL;
+  }
 
   // we are using this action once more
   if (pAction)
@@ -5821,7 +5125,6 @@ CStyle * CMUSHclientDoc::AddStyle (const unsigned short iFlags,
 
     // We want the new style, but did the old one have a text run?
     // if not, we don't really need that
-
     if (pOldStyle->iLength == 0 && (pOldStyle->iFlags & START_TAG) == 0)
       {
       DELETESTYLE (pOldStyle);
@@ -5829,27 +5132,24 @@ CStyle * CMUSHclientDoc::AddStyle (const unsigned short iFlags,
       }   // end of redundant style
     } // end of having at least one style
 
-// create new style item
-CStyle * pNewStyle = NEWSTYLE;
+  // create new style item
+  CStyle * pNewStyle = NEWSTYLE;
+  pNewStyle->iFlags      = iFlags;
+  pNewStyle->iForeColour = iForeColour;
+  pNewStyle->iBackColour = iBackColour;
+  pNewStyle->iLength     = iLength;
+  pNewStyle->pAction     = pAction;
 
-// use new styles
-   pNewStyle->iFlags      = iFlags;
-   pNewStyle->iForeColour = iForeColour;
-   pNewStyle->iBackColour = iBackColour;
-   pNewStyle->iLength     = iLength;
-   pNewStyle->pAction = pAction;
+  // add to line style list
+  pLine->styleList.AddTail (pNewStyle); 
 
-// add to line style list
-   pLine->styleList.AddTail (pNewStyle); 
-
-   return pNewStyle;
-
-  } // end of CMUSHclientDoc::AddStyle 
+  return pNewStyle;
+} // end of CMUSHclientDoc::AddStyle 
 
 
 void CMUSHclientDoc::OnDisplayNocommandecho() 
 {
-	m_bNoEcho = !m_bNoEcho;
+  m_bNoEcho = !m_bNoEcho;
 }
 
 void CMUSHclientDoc::OnUpdateDisplayNocommandecho(CCmdUI* pCmdUI) 
@@ -5861,9 +5161,7 @@ void CMUSHclientDoc::OnUpdateDisplayNocommandecho(CCmdUI* pCmdUI)
 
 void CMUSHclientDoc::OnEditDebugincomingpackets() 
 {
-
-	m_bDebugIncomingPackets = !m_bDebugIncomingPackets;
-	
+  m_bDebugIncomingPackets = !m_bDebugIncomingPackets;
 }
 
 void CMUSHclientDoc::OnUpdateEditDebugincomingpackets(CCmdUI* pCmdUI) 
@@ -5873,222 +5171,179 @@ void CMUSHclientDoc::OnUpdateEditDebugincomingpackets(CCmdUI* pCmdUI)
   pCmdUI->Enable ();
 }
 
-
 void CMUSHclientDoc::Debug_Packets (LPCTSTR sCaption, 
                                     LPCTSTR lpszText, 
                                     int size, 
                                     const __int64 iNumber)
-  {
-  // one for each ascii byte, 
+{
+  static const int MAX_DEBUG_CHARS = 16; // so it will fit into an email message without wrapping
 
-#define MAX_DEBUG_CHARS 16  // so it will fit into an email message without wrapping
+  char asciibuf [MAX_DEBUG_CHARS + 1];      // 1 for each ascii byte
+  char hexbuf  [(MAX_DEBUG_CHARS * 3) + 1]; // 2 for each hex byte, 1 for the space between hex bytes
 
-char asciibuf [MAX_DEBUG_CHARS + 1];       // 1 for each ascii byte
-char hexbuf  [(MAX_DEBUG_CHARS * 3) + 1];  // 2 for each hex byte, 1 for the space between hex bytes
-const unsigned char * p = (const unsigned char *) lpszText;
-char * pa,
-     * ph;
-int i;
+  CString strTime = COleDateTime::GetCurrentTime().Format (TranslateTime ("%A, %B %d, %Y, %#I:%M:%S %p"));
+  CString strTitle = "Packet debug - " + m_mush_name;
 
-COleDateTime tNow = COleDateTime::GetCurrentTime();
-
-  CString strTime = tNow.Format (TranslateTime ("%A, %B %d, %Y, %#I:%M:%S %p"));
-
-  CString strTitle = "Packet debug - ";
-  strTitle += m_mush_name;
-
-  AppendToTheNotepad (strTitle, 
-                      TFormat ("%s%s packet: %I64d (%i bytes) at %s%s%s", 
-                                ENDLINE,
-                                sCaption,
-                                iNumber,
-                                size,
-                                (LPCTSTR) strTime,
-                                ENDLINE,
-                                ENDLINE), 
-                      false,   // append
-                      eNotepadPacketDebug);
+  AppendToTheNotepad (strTitle,
+      TFormat ("%s%s packet: %I64d (%i bytes) at %s%s%s", 
+        ENDLINE, sCaption,
+        iNumber, size,
+        (LPCTSTR) strTime, ENDLINE, ENDLINE),
+      false,   // append
+      eNotepadPacketDebug);
   
-// keep going until we have displayed it all
+  char * pAscii = NULL,
+       * pHex = NULL;
+  int i;
+
+  // keep going until we have displayed it all
+  const unsigned char * p = (const unsigned char *) lpszText;
   while (size > 0)
     {
-
     // do each character
-    for (pa = asciibuf, ph = hexbuf, i = 0; 
+    for (pAscii = asciibuf, pHex = hexbuf, i = 0; 
          size > 0 && i < MAX_DEBUG_CHARS;
-         size--, i++, p++)
-           {
-           // ascii character
-           if (isprint (*p))
-             *pa++ = *p;
-           else
-             *pa++ = '.';
-           sprintf (ph, " %02x", *p);
-           ph += 3;
-           }  // end of each byte
+         --size, ++i, ++p)
+      {
+      *pAscii = isprint (*p) ? *p : '.'; // render a dot if it's nonprintable.
+      ++pAscii;
+      sprintf (pHex, " %02x", *p);
+      pHex += 3;
+      }  // end of each byte
 
     // terminate the strings
-    *pa = 0;
-    *ph = 0;
+    *pAscii = '\0';
+    *pHex = '\0';
 
     AppendToTheNotepad (strTitle, 
-                        CFormat ("%-*s  %s%s",
-                                  MAX_DEBUG_CHARS,
-                                  asciibuf, 
-                                  hexbuf,
-                                  ENDLINE), 
-                      false,   // append
-                      eNotepadPacketDebug);
+        CFormat ("%-*s  %s%s",
+          MAX_DEBUG_CHARS,
+          asciibuf, hexbuf,
+          ENDLINE), 
+        false,   // append
+        eNotepadPacketDebug);
     }
-
-  }  // end of CMUSHclientDoc::Debug_Packets 
+}  // end of CMUSHclientDoc::Debug_Packets 
 
 
 void CMUSHclientDoc::SendWindowSizes (const int iNewWidth)
-  {
-
+{
   // connection closed - can't do it
-
   if (m_iConnectPhase != eConnectConnectedToMud || 
-      !m_pSocket || 
-      !m_FontHeight ||
-      !m_bNAWS_wanted)
+      !m_pSocket || !m_FontHeight || !m_bNAWS_wanted)
     return;
 
   // see RFC 1073
-
   // send size of first view we find
-
-  for(POSITION pos = GetFirstViewPosition(); pos != NULL; )
-	  {
-	  CView* pView = GetNextView(pos);
-	  
-	  if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
-  	  {
-		  CMUSHView* pmyView = (CMUSHView*)pView;
-
+  POSITION pos = GetFirstViewPosition();
+  while (pos != NULL)
+    {
+    CView* pView = GetNextView(pos);
+    if (pView->IsKindOf(RUNTIME_CLASS(CMUSHView)))
+      {
       RECT r;
+      ((CMUSHView*)pView)->GetTextRect (&r);
 
-      pmyView->GetTextRect (&r);
-
-      WORD height = (r.bottom - r.top - m_iPixelOffset) / m_FontHeight;
+      WORD height = (WORD) ((r.bottom - r.top - m_iPixelOffset) / m_FontHeight);
 
       // now tell them our size
       unsigned char p [] = { IAC, SB, TELOPT_NAWS, 
                               HIBYTE (iNewWidth), LOBYTE (iNewWidth),
-                              HIBYTE (height), LOBYTE (height),
+                              HIBYTE (height),    LOBYTE (height),
                               IAC, SE };
       SendPacket (p, sizeof p);
 
       break;    // found one
       }	
     } // end of looping through views
+}  // end of CMUSHclientDoc::SendWindowSizes 
 
 
-  }  // end of CMUSHclientDoc::SendWindowSizes 
-
-
-void  CMUSHclientDoc::SendPacket (const char * lpBuf, const int nBufLen)
-  {
-
+void CMUSHclientDoc::SendPacket (const char * lpBuf, const int nBufLen)
+{
   if (m_pSocket == NULL)
     return;
 
-  m_iOutputPacketCount++;
+  m_iOutputPacketCount += 1;
 
   if (m_bDebugIncomingPackets)
     Debug_Packets ("Sent ", lpBuf, nBufLen, m_iOutputPacketCount);
 
   m_pSocket->m_outstanding_data += CString (lpBuf, nBufLen);
-
   m_pSocket->OnSend (0);   // in case FD_WRITE message got lost, try to send again
   
   m_nBytesOut += nBufLen; 
-
-  } // end of CMUSHclientDoc::SendPacket 
+} // end of CMUSHclientDoc::SendPacket 
 
 void  CMUSHclientDoc::SendPacket (const unsigned char * lpBuf, const int nBufLen)
-  {
+{
   SendPacket ((const char *) lpBuf, nBufLen);
-  } // end of CMUSHclientDoc::SendPacket 
+} // end of CMUSHclientDoc::SendPacket 
 
 void CMUSHclientDoc::OnEditFliptonotepad() 
 {
-CTextDocument * pTextDoc = NULL;
+  CTextDocument * pTextDoc = NULL;
 
-  for (POSITION docPos = App.m_pNormalDocTemplate->GetFirstDocPosition();
-      docPos != NULL; )
+  POSITION docPos = App.m_pNormalDocTemplate->GetFirstDocPosition();
+  while (docPos != NULL)
     {
-    pTextDoc = (CTextDocument *) App.m_pWorldDocTemplate->GetNextDoc(docPos);
-
     // ignore unrelated worlds
     if (pTextDoc->m_pRelatedWorld == this &&
        pTextDoc->m_iUniqueDocumentNumber == m_iUniqueDocumentNumber)
+      {
+      pTextDoc = (CTextDocument *) App.m_pWorldDocTemplate->GetNextDoc(docPos);
       break;
-
-    pTextDoc = NULL;
+      }
     } // end of doing each document
 
   if (pTextDoc)
     {
     // activate the view
-    POSITION pos=pTextDoc->GetFirstViewPosition();
-
+    POSITION pos = pTextDoc->GetFirstViewPosition();
     if (pos)
       {
       CView* pView = pTextDoc->GetNextView(pos);
-
       if (pView->IsKindOf(RUNTIME_CLASS(CTextView)))
         {
         CTextView* pmyView = (CTextView*)pView;
         pmyView->GetParentFrame ()->ActivateFrame ();
         pmyView->GetParentFrame ()->SetActiveView(pmyView);
-        return;
         } // end of having the right type of view
       }   // end of having a view
     } // end of having an existing notepad document
   else
     CreateTextWindow ("",     // contents
-                      TFormat ("Notepad: %s", (LPCTSTR) m_mush_name),     // title
-                      this,   // document
-                      m_iUniqueDocumentNumber,      // document number
-                      m_input_font_name,
-                      m_input_font_height,
-                      m_input_font_weight,
-                      m_input_font_charset,
-                      m_input_text_colour,
-                      m_input_background_colour,
-                      "",       // search string
-                      "",       // line preamble
-                      false,
-                      false,
-                      false,
-                      false,  
-                      false,
-                      false,
-                      eNotepadNormal
-                      );
-
-      
+        TFormat ("Notepad: %s", (LPCTSTR) m_mush_name),     // title
+        this,   // document
+        m_iUniqueDocumentNumber,      // document number
+        m_input_font_name, m_input_font_height,
+        m_input_font_weight, m_input_font_charset,
+        m_input_text_colour, m_input_background_colour,
+        "",       // search string
+        "",       // line preamble
+        false, false, false,
+        false, false, false,
+        eNotepadNormal
+        );
 }
 
 
 void CMUSHclientDoc::OnFileOpen() 
 {
   Frame.DoFileOpen ();
-	
 }
 
 void CMUSHclientDoc::OnFileSave() 
 {
-int iCount;
-CString strDirectory;
-
   // find length of current directory
-  iCount = GetCurrentDirectory (0, NULL);	
+  int iCount = GetCurrentDirectory (0, NULL);	
+
+  CString strDirectory;
+
   // get current directory
   GetCurrentDirectory (iCount, strDirectory.GetBuffer (iCount));
   strDirectory.ReleaseBuffer (-1);
+
   // change to world directory
   SetCurrentDirectory (Make_Absolute_Path (App.m_strDefaultWorldFileDirectory));
   // save world details
@@ -6099,36 +5354,33 @@ CString strDirectory;
 
 void CMUSHclientDoc::OnUpdateFileSave(CCmdUI* pCmdUI) 
 {
-DoFixMenus (pCmdUI);  // remove accelerators from menus
-pCmdUI->Enable ();
-	
-	
+  DoFixMenus (pCmdUI);  // remove accelerators from menus
+  pCmdUI->Enable ();
 }
 
 void CMUSHclientDoc::OnFileSaveAs() 
 {
-int iCount;
-CString strDirectory;
-
   // find length of current directory
-  iCount = GetCurrentDirectory (0, NULL);	
+  int iCount = GetCurrentDirectory (0, NULL);	
+
+  CString strDirectory;
+
   // get current directory
   GetCurrentDirectory (iCount, strDirectory.GetBuffer (iCount));
   strDirectory.ReleaseBuffer (-1);
+
   // change to world directory
   SetCurrentDirectory (Make_Absolute_Path (App.m_strDefaultWorldFileDirectory));
   // save world details
   CDocument::OnFileSaveAs ();
   // change back to current directory
   SetCurrentDirectory (strDirectory);
-	
 }
 
 void CMUSHclientDoc::OnUpdateFileSaveAs(CCmdUI* pCmdUI) 
 {
-DoFixMenus (pCmdUI);  // remove accelerators from menus
-pCmdUI->Enable ();
-	
+  DoFixMenus (pCmdUI);  // remove accelerators from menus
+  pCmdUI->Enable ();
 }
 
 /*
@@ -6226,17 +5478,17 @@ The syntax for this delayed sending is:
 
 
 CString CMUSHclientDoc::DelayedSend(const CString strMessage, const bool bEchoIt) 
-  {
-
+{
   CString strSendNow;
 
-  CStringList strList;
   // break into lines
+  CStringList strList;
   StringToList (strMessage, ENDLINE, strList);
-  for (POSITION pos = strList.GetHeadPosition (); pos; )
+
+  POSITION pos = strList.GetHeadPosition ();
+  while (pos != NULL)
     {
     CString strLine = strList.GetNext (pos);
-
     strLine.TrimLeft ();
     strLine.TrimRight ();
 
@@ -6245,22 +5497,19 @@ CString CMUSHclientDoc::DelayedSend(const CString strMessage, const bool bEchoIt
       continue;
 
     const char * p;
-    long iSeconds = 0;
+
     // get number of seconds
+    long iSeconds = 0;
     for (p = strLine; isdigit (*p) && iSeconds >= 0; p++)
-      {
-      iSeconds *= 10;
-      iSeconds += *p - '0';
-      }
+      iSeconds = (iSeconds * 10) + (*p - '0');
 
     // discard spaces after the number of seconds
     while (*p == ' ')
-      p++;
+      ++p;
 
-    bool bSemicolon = *p == ';';
-    if (bSemicolon)
+    if (*p == ';')
       {
-      p++;
+      ++p;
       strLine = p;  // copy line from past semicolon
       strLine.TrimLeft ();
       }
@@ -6288,182 +5537,152 @@ CString CMUSHclientDoc::DelayedSend(const CString strMessage, const bool bEchoIt
         if (!strLine.IsEmpty ())
           {
           if (strLine [0] == '*')    // error in speedwalk string?
-            {
             UMessageBox (strLine.Mid (1));  // already translated in  DoEvaluateSpeedwalk
-            }
           else
-              SendMsg (strLine, bEchoIt, true, LoggingInput ());   // queue it
+            SendMsg (strLine, bEchoIt, true, LoggingInput ());   // queue it
           } // end of non-empty speedwalk
         } // end of speed walk
       else
         SendMsg (strLine, bEchoIt, false, LoggingInput ());
-
       }
-
     } // end of this line
 
   return strSendNow;  // any world.notes 
-  }   // end of send delayed
+}   // end of send delayed
 
 
 
 
 void CMUSHclientDoc::OnFileImport() 
 {
-CImportXMLdlg dlg;
+  CImportXMLdlg dlg;
 
-  dlg.m_pDoc = this;
-
-  dlg.m_bGeneral = TRUE;
-	dlg.m_bTriggers = TRUE;
-	dlg.m_bAliases = TRUE;
-	dlg.m_bTimers = TRUE;
-	dlg.m_bMacros = TRUE;
-	dlg.m_bVariables = TRUE;
-	dlg.m_bColours = TRUE;
-	dlg.m_bKeypad = TRUE;
-	dlg.m_bPrinting = TRUE;
-
-  dlg.DoModal ();   // dialog does it all :)
+  dlg.m_pDoc       = this;
+  dlg.m_bGeneral   = TRUE;
+  dlg.m_bTriggers  = TRUE;
+  dlg.m_bAliases   = TRUE;
+  dlg.m_bTimers    = TRUE;
+  dlg.m_bMacros    = TRUE;
+  dlg.m_bVariables = TRUE;
+  dlg.m_bColours   = TRUE;
+  dlg.m_bKeypad    = TRUE;
+  dlg.m_bPrinting  = TRUE;
   
+  dlg.DoModal ();   // dialog does it all :)  
 }
 
 int CompareTrigger (const void * elem1, const void * elem2)
-  {
-  CTrigger * trigger1 = (*((CTrigger **) elem1));
-  CTrigger * trigger2 = (*((CTrigger **) elem2));
+{
+  CTrigger * trigger1 = *((CTrigger **) elem1);
+  CTrigger * trigger2 = *((CTrigger **) elem2);
 
   if (trigger1->iSequence < trigger2->iSequence)
     return -1;
   else if (trigger1->iSequence > trigger2->iSequence)
     return 1;
-  else 
-    {
-      // identical sequence, sort into match order
-    if (trigger1->trigger < trigger2->trigger)
-      return -1;
-    else if (trigger1->trigger > trigger2->trigger)
-      return 1;
-    else
-      return 0;
-    }  // end of sequence identical
-
-  }   // end of CompareTrigger
+  // identical sequence, sort into match order
+  else if (trigger1->trigger < trigger2->trigger)
+    return -1;
+  else if (trigger1->trigger > trigger2->trigger)
+    return 1;
+  // both the same
+  else
+    return 0;
+}   // end of CompareTrigger
 
 
-void  CMUSHclientDoc::SortTriggers (void)
-  {
-
-int iCount = GetTriggerMap ().GetCount ();
-int i;
-CString strTriggerName;
-CTrigger * pTrigger;
-POSITION pos;
-
+void CMUSHclientDoc::SortTriggers ()
+{
+  int iCount = GetTriggerMap ().GetCount ();
   GetTriggerArray ().SetSize (iCount);
+
   CTriggerRevMap ().empty ();
 
   // extract pointers into a simple array
-  for (i = 0, pos = GetTriggerMap ().GetStartPosition(); pos; i++)
+  POSITION pos = GetTriggerMap ().GetStartPosition();
+  CString strTriggerName;
+  CTrigger * pTrigger = NULL;
+  for (int i = 0; pos != NULL; ++i)
     {
-     GetTriggerMap ().GetNextAssoc (pos, strTriggerName, pTrigger);
-     GetTriggerArray ().SetAt (i, pTrigger);
-     GetTriggerRevMap () [pTrigger] = strTriggerName;
+    GetTriggerMap ().GetNextAssoc (pos, strTriggerName, pTrigger);
+    GetTriggerArray ().SetAt (i, pTrigger);
+    GetTriggerRevMap () [pTrigger] = strTriggerName;
     }
-
 
   // sort the array
   qsort (GetTriggerArray ().GetData (), 
-         iCount,
-         sizeof (CTrigger *),
-         CompareTrigger);
-
-  } // end of CMUSHclientDoc::SortTriggers
+      iCount,
+      sizeof (CTrigger *),
+      CompareTrigger);
+} // end of CMUSHclientDoc::SortTriggers
 
 static int CompareAlias (const void * elem1, const void * elem2)
-  {
-  CAlias * alias1 = (*((CAlias **) elem1));
-  CAlias * alias2 = (*((CAlias **) elem2));
+{
+  CAlias * alias1 = *((CAlias **) elem1);
+  CAlias * alias2 = *((CAlias **) elem2);
 
   if (alias1->iSequence < alias2->iSequence)
     return -1;
   else if (alias1->iSequence > alias2->iSequence)
     return 1;
-  else 
-    {
-      // identical sequence, sort into match order
-    if (alias1->name < alias2->name)
-      return -1;
-    else if (alias1->name > alias2->name)
-      return 1;
-    else
-      return 0;
-    }  // end of sequence identical
-
-  }   // end of CompareAlias
+  // identical sequence, sort into match order
+  else if (alias1->name < alias2->name)
+    return -1;
+  else if (alias1->name > alias2->name)
+    return 1;
+  // both the same
+  else
+    return 0;
+}   // end of CompareAlias
 
 
-void  CMUSHclientDoc::SortAliases (void)
-  {
-
-int iCount = GetAliasMap ().GetCount ();
-int i;
-CString strAliasName;
-CAlias * pAlias;
-POSITION pos;
-
+void CMUSHclientDoc::SortAliases ()
+{
+  int iCount = GetAliasMap ().GetCount ();
   GetAliasArray ().SetSize (iCount);
+
   CAliasRevMap ().empty ();
 
   // extract pointers into a simple array
-  for (i = 0, pos = GetAliasMap ().GetStartPosition(); pos; i++)
+  POSITION pos = GetAliasMap ().GetStartPosition();
+  CString strAliasName;
+  CAlias * pAlias = NULL;
+  for (int i = 0; pos != NULL; ++i)
     {
-     GetAliasMap ().GetNextAssoc (pos, strAliasName, pAlias);
-     GetAliasArray ().SetAt (i, pAlias); 
-     GetAliasRevMap () [pAlias] = strAliasName;
+    GetAliasMap ().GetNextAssoc (pos, strAliasName, pAlias);
+    GetAliasArray ().SetAt (i, pAlias); 
+    GetAliasRevMap () [pAlias] = strAliasName;
     }
-
 
   // sort the array
   qsort (GetAliasArray ().GetData (), 
-         iCount,
-         sizeof (CAlias *),
-         CompareAlias);
+      iCount,
+      sizeof (CAlias *),
+      CompareAlias);
+} // end of CMUSHclientDoc::SortAliases
 
-  } // end of CMUSHclientDoc::SortAliases
 
-
-void  CMUSHclientDoc::SortTimers (void)
-  {
-
-int iCount = GetTimerMap ().GetCount ();
-int i;
-CString strTimerName;
-CTimer * pTimer;
-POSITION pos;
-
+void CMUSHclientDoc::SortTimers ()
+{
   CTimerRevMap ().empty ();
 
-  // extract pointers into a simple array
-  for (i = 0, pos = GetTimerMap ().GetStartPosition(); pos; i++)
+  POSITION pos = GetTimerMap ().GetStartPosition();
+  CString strTimerName;
+  CTimer * pTimer = NULL;
+  for (int i = 0; pos != NULL; ++i)
     {
-     GetTimerMap ().GetNextAssoc (pos, strTimerName, pTimer);
-     GetTimerRevMap () [pTimer] = strTimerName;
+    GetTimerMap ().GetNextAssoc (pos, strTimerName, pTimer);
+    GetTimerRevMap () [pTimer] = strTimerName;
     }
-
-  } // end of CMUSHclientDoc::SortTimers
-
-
+} // end of CMUSHclientDoc::SortTimers
 
 
 // CTime:Format only allows for a total field size of 128 bytes
 CString CMUSHclientDoc::FormatTime (const CTime theTime, 
                                     LPCTSTR pFormat, 
                                     const bool bFixHTML)   
-  {
-CString strText;
-CString strFormat = pFormat;
-
+{
+  CString strFormat = pFormat;
   if (bFixHTML)
     {
     // %E becomes startup directory
@@ -6491,31 +5710,32 @@ CString strFormat = pFormat;
     strFormat.Replace ("%L", ::Replace (Make_Absolute_Path (App.m_strDefaultLogFileDirectory), "%", "%%"));
     }  // end of not HTML
 
-int iLen = strFormat.GetLength () + 1000;
-
   // allow for their original buffer plus another 1000
-	TCHAR * szBuffer = strText.GetBuffer (iLen);
+  CString strText;
+  int iLen = strFormat.GetLength () + 1000;
+
+  TCHAR * szBuffer = strText.GetBuffer (iLen);
   time_t tTime = theTime.GetTime ();
 
-	struct tm* ptmTemp = localtime(&tTime);
-	if (ptmTemp == NULL ||
-		!_tcsftime(szBuffer, iLen, strFormat, ptmTemp))
-		szBuffer[0] = '\0';
+  tm* ptmTemp = localtime(&tTime);
+  if (ptmTemp == NULL ||
+      !_tcsftime(szBuffer, iLen, strFormat, ptmTemp))
+    szBuffer[0] = '\0';
+
   strText.ReleaseBuffer (-1);
-	return strText;
+  return strText;
 }  // end of CMUSHclientDoc::FormatTime
 
 
 void CMUSHclientDoc::OnFilePlugins() 
 {
-CPluginsDlg dlg;
+  CPluginsDlg dlg;
   dlg.m_pDoc = this;
   dlg.DoModal (); 
 }
 
 void CMUSHclientDoc::LogCommand (const char * text)
-  {
-
+{
   if (!m_logfile || !LoggingInput() || m_bLogRaw)
     return;
 
@@ -6530,24 +5750,20 @@ void CMUSHclientDoc::LogCommand (const char * text)
 
   // get appropriate preamble
   CString strPreamble = m_strLogLinePreambleInput;
-
   // allow %n for newline
   strPreamble.Replace ("%n", "\n");
-
   if (strPreamble.Find ('%') != -1)
     strPreamble = FormatTime (CTime::GetCurrentTime(), strPreamble, m_bLogHTML);
 
   // get appropriate Postamble
   CString strPostamble = m_strLogLinePostambleInput;
-
   // allow %n for newline
   strPostamble.Replace ("%n", "\n");
-
   if (strPostamble.Find ('%') != -1)
     strPostamble = FormatTime (CTime::GetCurrentTime(), strPostamble, m_bLogHTML);
 
   // line preamble
-  WriteToLog (strPreamble); 
+  WriteToLog (strPreamble);
   // line itself
   if (m_bLogHTML)
     {
@@ -6559,23 +5775,21 @@ void CMUSHclientDoc::LogCommand (const char * text)
       {
       COLORREF colour = m_customtext [m_echo_colour];
       WriteToLog (CFormat ("<font color=\"#%02X%02X%02X\">",
-                            GetRValue (colour),
-                            GetGValue (colour),
-                            GetBValue (colour)));
+          GetRValue (colour), GetGValue (colour), GetBValue (colour)
+          ));
       }  // end of logging commands in a different colour
     } // end of logging in HTML
 
   WriteToLog (strMessage);
 
   // cancel command colour
-  if (m_bLogHTML &&  m_bLogInColour &&  m_echo_colour != SAMECOLOUR)
+  if (m_bLogHTML && m_bLogInColour && m_echo_colour != SAMECOLOUR)
     WriteToLog ("</font>");
 
-  // line Postamble
+  // line postamble
   WriteToLog (strPostamble); 
   WriteToLog ("\n", 1);
-
-  } // end of LogCommand
+} // end of LogCommand
 
 
 // Generic "send to" routine - for triggers, aliases, timers to send some
@@ -6594,11 +5808,8 @@ void CMUSHclientDoc::SendTo (
          const CString strDescription,  // description (eg. "trigger blah")
          const CString strVariable,     // what variable to set
          CString & strOutput)           // output to be displayed when finished
-  {
-  POSITION pos;
-
+{
   // empty send text does absolutely nothing :)  - in some cases :P
-
   if (iWhere != eSendToNotepad && 
       iWhere != eAppendToNotepad &&
       iWhere != eReplaceNotepad &&
@@ -6608,135 +5819,131 @@ void CMUSHclientDoc::SendTo (
 #ifdef PANE
       && iWhere != eSendToPane
 #endif // PANE
-      )
-    if (strSendText.IsEmpty ())
-      return;
+      && strSendText.IsEmpty ())
+    return;
 
   switch (iWhere)
     {
     case eSendToCommand:
-
       // put trigger response into command buffer - provided it is empty
-      for (pos = GetFirstViewPosition(); pos != NULL; )
-	      {
-	      CView* pView = GetNextView(pos);
-	      
-	      if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
-  	      {
-		      CSendView* pmyView = (CSendView*)pView;
+      {
+      POSITION pos = GetFirstViewPosition();
+      while (pos != NULL)
+        {
+        CView* pView = GetNextView(pos);
+
+        if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+          {
+          CSendView* pmyView = (CSendView*)pView;
 
           CString strCurrent;
-
           pmyView->GetEditCtrl().GetWindowText (strCurrent);
+
           if (strCurrent.IsEmpty ())
             {
             pmyView->GetEditCtrl().ReplaceSel (strSendText, TRUE);
             break;    // just do first view that we can use
             }   // end of command being empty
-	        }	  // end of being a CMUSHView
+          }   // end of being a CMUSHView
         }   // end of loop through views
       break;
+      }
 
     case eSendToWorld:
-
-        // if this is suppressing output, don't show our response either
+      // if this is suppressing output, don't show our response either
       SendMsg (strSendText, 
-               bOmitFromOutput ? FALSE : m_display_my_input,
-               false,   // don't queue
-               bOmitFromLog ? FALSE :  LoggingInput ());
-        break;
+          bOmitFromOutput ? FALSE : m_display_my_input,
+          false,   // don't queue
+          bOmitFromLog ? FALSE :  LoggingInput ());
+      break;
 
     case eSendToCommandQueue:
-        // if this is suppressing output, don't show our response either
-        SendMsg (strSendText,
-                 bOmitFromOutput ? FALSE : m_display_my_input, 
-                 true,     // queue it
-                 bOmitFromLog ? FALSE :  LoggingInput ());
-        break;
+      // if this is suppressing output, don't show our response either
+      SendMsg (strSendText,
+          bOmitFromOutput ? FALSE : m_display_my_input, 
+          true,     // queue it
+          bOmitFromLog ? FALSE :  LoggingInput ());
+      break;
 
     case eSendToStatus:
-        // omit any subsequent lines
-        {
-        int i = strSendText.Find (ENDLINE);
-        if (i != -1)
-          m_strStatusMessage = strSendText.Left (i);
-        else
-          m_strStatusMessage = strSendText;
-        }
-        // wait until no queued commands and not mapping
-        if (m_QueuedCommandsList.IsEmpty () && !m_bMapping)
-          ShowStatusLine (true);    // show it now
-        break;
+      // omit any subsequent lines
+      {
+      int i = strSendText.Find (ENDLINE);
+      m_strStatusMessage = (i != -1) ? strSendText.Left (i) : strSendText;
+
+      // wait until no queued commands and not mapping
+      if (m_QueuedCommandsList.IsEmpty () && !m_bMapping)
+        ShowStatusLine (true);    // show it now
+
+      break;
+      }
 
     case eSendToNotepad:
-        CreateTextWindow (strSendText + ENDLINE,     // contents
-                          strDescription,     // title
-                          this,   // document
-                          m_iUniqueDocumentNumber,      // document number
-                          m_input_font_name,
-                          m_input_font_height,
-                          m_input_font_weight,
-                          m_input_font_charset,
-                          m_input_text_colour,
-                          m_input_background_colour,
-                          "",       // search string
-                          "",       // line preamble
-                          false,
-                          false,
-                          false,
-                          false,  
-                          false,
-                          false,
-                          eNotepadTrigger
-                          );
-        break;
+      CreateTextWindow (
+          strSendText + ENDLINE,     // contents
+          strDescription,     // title
+          this,   // document
+          m_iUniqueDocumentNumber,      // document number
+          m_input_font_name, m_input_font_height,
+          m_input_font_weight, m_input_font_charset,
+          m_input_text_colour, m_input_background_colour,
+          "",       // search string
+          "",       // line preamble
+          false, false, false,
+          false, false, false,
+          eNotepadTrigger
+          );
+      break;
 
     case eAppendToNotepad:
-        AppendToTheNotepad (strDescription,
-                            strSendText + ENDLINE,  
-                            false,            // append mode
-                            eNotepadTrigger); 
-        break;
+      AppendToTheNotepad (strDescription,
+          strSendText + ENDLINE,  
+          false,            // append mode
+          eNotepadTrigger); 
+      break;
     case eReplaceNotepad:
-        AppendToTheNotepad (strDescription,
-                            strSendText + ENDLINE,
-                            true,              // replace mode
-                            eNotepadTrigger); 
-        break;
-        // put into output window
+      AppendToTheNotepad (strDescription,
+          strSendText + ENDLINE,
+          true,              // replace mode
+          eNotepadTrigger); 
+      break;
+      // put into output window
     case eSendToOutput:
-
-        strOutput += strSendText;
-        if (strSendText.Right (2) != ENDLINE)
-          strOutput += ENDLINE;      // add a new line if necessary
+      strOutput += strSendText;
+      if (strSendText.Right (2) != ENDLINE)
+        strOutput += ENDLINE;      // add a new line if necessary
       break;
 
     case eSendToLogFile:
-        // log if log file is open
-        if (m_logfile && !m_bLogRaw) 
-          {
-          // log trigger response
-          WriteToLog (strSendText);
-          WriteToLog ("\n", 1);
-          } // end of having a log file
-        break;
+      // log if log file is open
+      if (m_logfile && !m_bLogRaw) 
+        {
+        // log trigger response
+        WriteToLog (strSendText);
+        WriteToLog ("\n", 1);
+        } // end of having a log file
+      break;
 
     case eSendToVariable:
-        SetVariable (strVariable, strSendText);
-        break;
+      SetVariable (strVariable, strSendText);
+      break;
 
     case eSendToExecute:
-        {
-        // save log-my-input flag
-        short bSavedLogFlag = m_log_input;
-        // if alias (or whatever) doesn't want to be logged, turn it off
-        if (bOmitFromLog)
-           m_log_input = false;
-        Execute (strSendText);    // execute it
-        // put flag back
-        m_log_input = bSavedLogFlag;
-        }
-        break;
+      {
+      // save log-my-input flag
+      short bSavedLogFlag = m_log_input;
+      // if alias (or whatever) doesn't want to be logged, turn it off
+      if (bOmitFromLog)
+         m_log_input = false;
+
+      // execute it
+      Execute (strSendText);
+
+      // put flag back
+      m_log_input = bSavedLogFlag;
+
+      break;
+      }
 
 /*
     case eSendDelayed:
@@ -6747,58 +5954,53 @@ void CMUSHclientDoc::SendTo (
 */
 
     case eSendToSpeedwalk:
+      {
+      CString strEvaluatedSpeedwalk = DoEvaluateSpeedwalk (strSendText);
+      if (!strEvaluatedSpeedwalk.IsEmpty ())
         {
-        CString strEvaluatedSpeedwalk = DoEvaluateSpeedwalk (strSendText);
-        if (!strEvaluatedSpeedwalk.IsEmpty ())
+        if (strEvaluatedSpeedwalk [0] == '*')    // error in speedwalk string?
           {
-          if (strEvaluatedSpeedwalk [0] == '*')    // error in speedwalk string?
-            {
-            UMessageBox (strEvaluatedSpeedwalk.Mid (1));  // already translated
-            return;
-            }   // end of error message
+          UMessageBox (strEvaluatedSpeedwalk.Mid (1));  // already translated
+          return;
+          }   // end of error message
+
         SendMsg (strEvaluatedSpeedwalk, 
-                bOmitFromOutput ? FALSE : m_display_my_input, 
-                true,   // queue it
-                bOmitFromLog ? FALSE :  LoggingInput ());
-          }
+            bOmitFromOutput ? FALSE : m_display_my_input, 
+            true,   // queue it
+            bOmitFromLog ? FALSE :  LoggingInput ());
         }
-        break;
+      break;
+      }
 
     case eSendToScript:
-
       {
-        m_bInSendToScript = true;  // principally to stop DeleteLines being used
+      m_bInSendToScript = true;  // principally to stop DeleteLines being used
 
-        if (GetScriptEngine ())   
-          GetScriptEngine ()->Parse (strSendText, strDescription);
-        else
-          ColourNote ("white", "red", 
-          Translate ("Send-to-script cannot execute because scripting is not enabled."));
-
+      if (GetScriptEngine ())   
+        GetScriptEngine ()->Parse (strSendText, strDescription);
+      else
+        ColourNote ("white", "red", 
+            Translate ("Send-to-script cannot execute because scripting is not enabled.")
+            );
         // leave  m_bInSendToScript true, don't want it done in plugin callbacks either
+      break;
       }
-        break;
 
     case eSendImmediate:
-
-        // if this is suppressing output, don't show our response either
+      // if this is suppressing output, don't show our response either
       DoSendMsg (strSendText, 
-               bOmitFromOutput ? FALSE : m_display_my_input,
-               bOmitFromLog ? FALSE :  LoggingInput ());
-        break;
-
+          bOmitFromOutput ? FALSE : m_display_my_input,
+          bOmitFromLog ? FALSE :  LoggingInput ());
+      break;
 
     case eSendToScriptAfterOmit:
-
-      {
-        if (GetScriptEngine ())   
-          GetScriptEngine ()->Parse (strSendText, strDescription);
-        else
-          ColourNote ("white", "red", 
-          Translate ("Send-to-script cannot execute because scripting is not enabled."));
-
-      }
-        break;
+      if (GetScriptEngine ())   
+        GetScriptEngine ()->Parse (strSendText, strDescription);
+      else
+        ColourNote ("white", "red", 
+            Translate ("Send-to-script cannot execute because scripting is not enabled.")
+            );
+      break;
 
 #ifdef PANE
 
@@ -6849,16 +6051,12 @@ void CMUSHclientDoc::SendTo (
     default:
       // do nothing
       break;
-
-
     } // end of switch on where to send to
-
-
-  } // end of CMUSHclientDoc::SendTo
+} // end of CMUSHclientDoc::SendTo
 
 
 bool CMUSHclientDoc::LookupHostName (LPCTSTR sName)
-  {
+{
   delete [] m_pGetHostStruct;   // delete buffer just in case
   m_pGetHostStruct = new char [MAXGETHOSTSTRUCT];
 
@@ -6870,44 +6068,34 @@ bool CMUSHclientDoc::LookupHostName (LPCTSTR sName)
 
   if (Frame.GetSafeHwnd ())   // forget it if we don't have a window yet
     m_hNameLookup = WSAAsyncGetHostByName (Frame.GetSafeHwnd (),
-                                           WM_USER_HOST_NAME_RESOLVED,
-                                           sName,
-                                           m_pGetHostStruct,
-                                           MAXGETHOSTSTRUCT);
+        WM_USER_HOST_NAME_RESOLVED, sName,
+        m_pGetHostStruct, MAXGETHOSTSTRUCT);
 
- if (!m_hNameLookup)
-   {
-    CString strMsg;
-
-    strMsg = TFormat ("Unable to initiate host name lookup for \"%s\"", 
-                   sName);
-    UMessageBox (strMsg);
+  if (!m_hNameLookup)
+    {
+    UMessageBox (TFormat ("Unable to initiate host name lookup for \"%s\"", sName));
     delete [] m_pGetHostStruct;
     m_pGetHostStruct = NULL;
     m_iConnectPhase = eConnectNotConnected;
 
     App.m_bUpdateActivity = TRUE;   // new activity!
+    }
 
-   }
-
- return false;    // we are waiting for host name lookup to finish
-
-
-  } // end of CMUSHclientDoc::LookupHostName  
+  return false;    // we are waiting for host name lookup to finish
+} // end of CMUSHclientDoc::LookupHostName  
 
 
 // we come here when we know (both) IP addresses (mud and proxy)
 // and are ready to try to connect  
 
-void CMUSHclientDoc::InitiateConnection (void)
-  {
+void CMUSHclientDoc::InitiateConnection ()
+{
   BOOL connected;
 
   // just so we don't get ridiculous times shown if we don't connect
   m_tConnectTime = CTime::GetCurrentTime();
 
-// initiate asynchronous connect
-  
+  // initiate asynchronous connect
   if (m_iSocksProcessing == eProxyServerNone)
     {
     m_iConnectPhase = eConnectConnectingToMud;
@@ -6925,25 +6113,22 @@ void CMUSHclientDoc::InitiateConnection (void)
     return;
     }
 
-// if error code is "would block" then it will finish later
-
+  // if error code is "would block" then it will finish later
   int iStatus = GetLastError ();
-
   if (iStatus == WSAEWOULDBLOCK)
     return;
 
-// tell them connect failed
-
+  // tell them connect failed
   if (App.m_bNotifyIfCannotConnect)
     {
-    CString strMsg;
-
-    strMsg = TFormat ("Unable to connect to \"%s\", code = %i (%s)\n\n"
-                    "Error occurred during phase: %s", 
-                    (const char *) m_mush_name, 
-                    iStatus,
-                    GetSocketError (iStatus),
-                    (const char *) GetConnectionStatus (m_iConnectPhase));
+    CString strMsg = TFormat (
+          "Unable to connect to \"%s\", code = %i (%s)\n\n"
+          "Error occurred during phase: %s",
+        (const char *) m_mush_name, 
+        iStatus,
+        GetSocketError (iStatus),
+        (const char *) GetConnectionStatus (m_iConnectPhase)
+        );
 
     // i18n TODO - fix this:
     switch (m_iConnectPhase)
@@ -6972,14 +6157,13 @@ void CMUSHclientDoc::InitiateConnection (void)
   m_iConnectPhase = eConnectNotConnected;
 
   App.m_bUpdateActivity = TRUE;   // new activity!
-
-  } // end of CMUSHclientDoc::InitiateConnection
+} // end of CMUSHclientDoc::InitiateConnection
 
 
 // we come here when we have connected to a normal MUD,
 // or been validated on a proxy server
-void CMUSHclientDoc::ConnectionEstablished (void)
-  {
+void CMUSHclientDoc::ConnectionEstablished ()
+{
 
 #ifdef _DEBUG
 //  ListAccelerators (this, 1);     // for documenting menus, accelerators
@@ -6987,13 +6171,13 @@ void CMUSHclientDoc::ConnectionEstablished (void)
 
 #endif 
 
-// we have connected!!!!!!!!!!!!!!!
+  // we have connected!!!!!!!!!!!!!!!
+  App.m_bUpdateActivity = TRUE;   // new activity!
 
   m_iConnectPhase = eConnectConnectedToMud;
   m_tConnectTime = CTime::GetCurrentTime();           
   m_tLastPlayerInput = CTime::GetCurrentTime();           
-	m_bEnableAutoSay = FALSE;		// auto-say off at start of session
-  App.m_bUpdateActivity = TRUE;   // new activity!
+  m_bEnableAutoSay = FALSE;	  // auto-say off at start of session
   m_bCompress = FALSE;        // not compressing yet
   m_nTotalLinesSent = 0;    // no lines sent yet
   m_nTotalLinesReceived = 0;  // no lines received yet
@@ -7005,7 +6189,7 @@ void CMUSHclientDoc::ConnectionEstablished (void)
   m_strLastCommandSent.Empty ();  // no command sent yet
   m_iNoteStyle = NORMAL;    // back to default style
 
-  ZeroMemory (&m_bClient_IAC_DO, sizeof m_bClient_IAC_DO);
+  ZeroMemory (&m_bClient_IAC_DO,   sizeof m_bClient_IAC_DO);
   ZeroMemory (&m_bClient_IAC_DONT, sizeof m_bClient_IAC_DONT);
   ZeroMemory (&m_bClient_IAC_WILL, sizeof m_bClient_IAC_WILL);
   ZeroMemory (&m_bClient_IAC_WONT, sizeof m_bClient_IAC_WONT);
@@ -7015,18 +6199,10 @@ void CMUSHclientDoc::ConnectionEstablished (void)
 
   Note ("");   // ensure connection starts on new line and that pixel offset doesn't chop message
   if (m_bShowConnectDisconnect)
-    {
-
-    CString strConnected;
-    strConnected = m_tConnectTime.Format (TranslateTime ("--- Connected on %A, %B %d, %Y, %#I:%M %p ---"));
-
-    Note (strConnected);  
-
-    }
+    Note (m_tConnectTime.Format (TranslateTime ("--- Connected on %A, %B %d, %Y, %#I:%M %p ---")));
 
   if (m_iUseMXP == eUseMXP)
     MXP_On ();    // if MXP is wanted turn it on now
-
 
   SetTitle(m_mush_name);
 
@@ -7072,28 +6248,23 @@ CString strIpAddress = inet_ntoa (*((struct in_addr *) lpHostEntry->h_addr));
 ::AfxMessageBox ( strIpAddress);
             */
 
-// auto log if necessary
-
+  // auto log if necessary
   if (!m_strAutoLogFileName.IsEmpty ())
     {
-    CTime theTime;
-    theTime = CTime::GetCurrentTime();
-
+    CTime theTime = CTime::GetCurrentTime();
     CString strName = FormatTime (theTime, m_strAutoLogFileName, m_bLogHTML);
 
     if (OpenLog (strName, true) == eCouldNotOpenFile)
       UMessageBox (TFormat ("Could not open log file \"%s\"",
-            (LPCTSTR) strName), MB_ICONINFORMATION);
+            (LPCTSTR) strName),
+          MB_ICONINFORMATION);
     else
       {
-    // write log file preamble if wanted
-
+      // write log file preamble if wanted
       if (!m_strLogFilePreamble.IsEmpty ())
         {
-
         // allow %n for newline
         CString strPreamble = ::Replace (m_strLogFilePreamble, "%n", "\n");
-
         // allow for time-substitution strings
         strPreamble = FormatTime (theTime, strPreamble, m_bLogHTML);
         // this is open in text mode, don't want \r\r\n
@@ -7101,21 +6272,14 @@ CString strIpAddress = inet_ntoa (*((struct in_addr *) lpHostEntry->h_addr));
 
         WriteToLog (strPreamble); 
         WriteToLog ("\n", 1);
-
         }   // end of writing preamble
 
       if (m_bWriteWorldNameToLog)
         {        
-
-      // write preamble so they know what this is all about
-
-        CString strTime;
-
-        strTime = theTime.Format (TranslateTime ("%A, %B %d, %Y, %#I:%M %p"));
-
-        CString strPreamble = m_mush_name;
-        strPreamble += " - ";
-        strPreamble += strTime;
+        // write preamble so they know what this is all about
+        CString strPreamble = m_mush_name
+            + " - "
+            + theTime.Format (TranslateTime ("%A, %B %d, %Y, %#I:%M %p"));
 
         if (m_bLogHTML)
           {
@@ -7130,78 +6294,59 @@ CString strIpAddress = inet_ntoa (*((struct in_addr *) lpHostEntry->h_addr));
           WriteToLog ("\n", 1);
           }
 
-      // turn previous line into a line of hyphens, and print that
-
+        // turn previous line into a line of hyphens, and print that
         CString strHyphens ('-', strPreamble.GetLength ());
 
         WriteToLog (strHyphens); 
-        if (m_bLogHTML)
-           WriteToLog ("<br><br>");
-        else
-          WriteToLog ("\n\n");
+        WriteToLog ((m_bLogHTML) ? "<br><br>" : "\n\n");
         }   // end of wanting world name written
-
       }   // end of opened OK
     } // end of auto log file name
 
-// ask for password if necessary, and send connection string
-
+  // ask for password if necessary, and send connection string
   CString password = m_password;
 
-// they didn't supply a password, so ask for it now
+  // they didn't supply a password, so ask for it now
+  if (password.IsEmpty () && 
+      ((m_connect_now && !m_name.IsEmpty ()) ||
+       (m_connect_text.Find ("%password%") != -1)))
+    {
+    CPasswordDialog dlg;
+    dlg.m_character = m_name;
 
-    if (password.IsEmpty () && 
-          (
-          (m_connect_now && !m_name.IsEmpty ()) ||
-          (m_connect_text.Find ("%password%") != -1)
-          )
-        )
-      {
-      CPasswordDialog dlg;
-
-        dlg.m_character = m_name;
-
-        if (dlg.DoModal () == IDOK)
-          password = dlg.m_password;
-
-      }
+    if (dlg.DoModal () == IDOK)
+      password = dlg.m_password;
+  }
 
   switch (m_connect_now)
     {
-
     // send CONNECT name password
     case eConnectMUSH:
-
       if (!password.IsEmpty ())
         {
         CString str;
         str.Format ("connect %s %s", 
                     (const char *) m_name,
                     (const char *) password);
-
         // don't echo password on screen for all to see (or log file)
         SendMsg (str, false, false, false);
-
         }   // end of having a password
       break;
 
     // send:  name
     //        password
-
     case eConnectDiku:
-        SendMsg (m_name, m_display_my_input, false, false);
-        if (!password.IsEmpty ())
-          SendMsg (password, false, false, false);
-        break;
+      SendMsg (m_name, m_display_my_input, false, false);
+      if (!password.IsEmpty ())
+        SendMsg (password, false, false, false);
+      break;
 
     default:
       // do nothing here
       break;
-
     }   // end of connecting now
 
-// now send the extra connect string
-
+  // now send the extra connect string
   if (!m_connect_text.IsEmpty ())
     {
     CString strText = ::Replace (m_connect_text, "%name%", m_name);
@@ -7210,17 +6355,14 @@ CString strIpAddress = inet_ntoa (*((struct in_addr *) lpHostEntry->h_addr));
     SendMsg (strText, false, false, false);
     }
 
-// get timers going
-
+  // get timers going
   ResetAllTimers (m_TimerMap);
-  
+
   // defer resetting this so timers don't get going too soon
   m_iConnectPhase = eConnectConnectedToMud;
-
   App.m_bUpdateActivity = TRUE;   // new activity!
 
-// negotiate about window size (NAWS)
-
+  // negotiate about window size (NAWS)
   if (m_bNAWS)
     {
     // offer to negotiate about window size
@@ -7228,59 +6370,48 @@ CString strIpAddress = inet_ntoa (*((struct in_addr *) lpHostEntry->h_addr));
     SendPacket (p, sizeof p);
     }
 
-// update windows titles, etc.
-  
+  // update windows titles, etc.
   UpdateAllViews (NULL);
-
   Frame.SetStatusNormal (); 
 
   // execute "connect" script
-  if (m_ScriptEngine)
+  if (m_ScriptEngine && SeeIfHandlerCanExecute (m_strWorldConnect))
     {
-    if (SeeIfHandlerCanExecute (m_strWorldConnect))
-      {
+    DISPPARAMS params = { NULL, NULL, 0, 0 };
+    long nInvocationCount = 0;
 
-      DISPPARAMS params = { NULL, NULL, 0, 0 };
-      long nInvocationCount = 0;
-
-      ExecuteScript (m_dispidWorldConnect,  
-                   m_strWorldConnect,
-                   eWorldAction,
-                   "world connect", 
-                   "connecting to world",
-                   params, 
-                   nInvocationCount); 
-      }
+    ExecuteScript (m_dispidWorldConnect, m_strWorldConnect,
+      eWorldAction, "world connect", "connecting to world",
+      params, 
+      nInvocationCount
+      );
     } // end of executing open script
 
   // tell each plugin we have connected
-  for (POSITION pos = m_PluginList.GetHeadPosition(); pos; )
+  POSITION pos = m_PluginList.GetHeadPosition();
+  while (pos != NULL)
     {
     CPlugin * pPlugin = m_PluginList.GetNext (pos);
-
-    if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+    if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
 
     pPlugin->ExecutePluginScript (ON_PLUGIN_CONNECT, pPlugin->m_dispid_plugin_connect);
     }   // end of doing each plugin
-
-
-  } // end of CMUSHclientDoc::ConnectionEstablished
+} // end of CMUSHclientDoc::ConnectionEstablished
 
 
 int CMUSHclientDoc::ProcessProxyResponse1 (char * buff, const int count)
-  {
+{
   if (CheckExpectedProxyResponse (5, buff [0]))
     return -1;
 
   if (count < 2)
     buff [1] = (unsigned char) 0xFF; // no acceptable methods
-  const char * p;
 
+  const char * p = NULL;
   switch (buff [1])
     {
     case 2: // username/password required - send authentication packet
-
       if (SendProxyUserNameAndPassword ())
         return -1;  // bad username/password lengths
 
@@ -7288,7 +6419,6 @@ int CMUSHclientDoc::ProcessProxyResponse1 (char * buff, const int count)
       return 2;   // expected bytes in this packet 
 
     case 0: // no authentication required
-
       SendProxyConnectSequence ();
       m_iConnectPhase = eConnectAwaitingProxyResponse3;
       return 2;   // expected bytes in this packet 
@@ -7305,20 +6435,22 @@ int CMUSHclientDoc::ProcessProxyResponse1 (char * buff, const int count)
   OnConnectionDisconnect ();    // close the world
   if (App.m_bNotifyIfCannotConnect)
     {
-    CString strMsg = TFormat ("Proxy server cannot authenticate, reason: %s", 
-                      (LPCTSTR) p);
+    CString strMsg = TFormat (
+        "Proxy server cannot authenticate, reason: %s",
+        (LPCTSTR) p
+        );
 
     if (App.m_bErrorNotificationToOutputWindow)
       Note (strMsg);
     else
       UMessageBox (strMsg, MB_ICONEXCLAMATION);
     }
-  return -1;    // error
 
-  }   // end of CMUSHclientDoc::ProcessProxyResponse1
+  return -1;    // error
+}   // end of CMUSHclientDoc::ProcessProxyResponse1
 
 int CMUSHclientDoc::ProcessProxyResponse2 (char * buff, const int count)
-  {
+{
   if (CheckExpectedProxyResponse (1, buff [0]))
     return -1;
 
@@ -7329,37 +6461,30 @@ int CMUSHclientDoc::ProcessProxyResponse2 (char * buff, const int count)
       if (App.m_bErrorNotificationToOutputWindow)
         Note (Translate ("Proxy server refused authentication"));
       else
-        TMessageBox ("Proxy server refused authentication",
-                         MB_ICONEXCLAMATION);
+        TMessageBox ("Proxy server refused authentication", MB_ICONEXCLAMATION);
     return -1;
-
     } // end of error result
-
 
   SendProxyConnectSequence ();  
   m_iConnectPhase = eConnectAwaitingProxyResponse3;
 
   return 2;
-
-  }   // end of CMUSHclientDoc::ProcessProxyResponse2
+}   // end of CMUSHclientDoc::ProcessProxyResponse2
 
 int CMUSHclientDoc::ProcessProxyResponse3 (char * buff, const int count)
-  {
-int iBytesToMove;
-
-  if (CheckExpectedProxyResponse 
-      (m_iSocksProcessing == eProxyServerSocks4 ? 0 : 5, 
-        buff [0]))
+{
+  int iBytesToMove;
+  if (CheckExpectedProxyResponse (m_iSocksProcessing == eProxyServerSocks4 ? 0 : 5, buff [0]))
     return -1;
 
   if (m_iSocksProcessing == eProxyServerSocks4)
     {  // SOCKS 4
-
     if (count < 2 || buff [1] != 90)
       {
       if (count < 2)
         buff [1] = 91; // request failed
-      const char * p;
+
+      const char * p = NULL;
       switch (buff [1])
         {
         case 91: p = "request rejected or failed"; break;
@@ -7371,90 +6496,80 @@ int iBytesToMove;
       OnConnectionDisconnect ();    // close the world
       if (App.m_bNotifyIfCannotConnect)
         {
-        CString strMsg = TFormat ("Proxy server refused connection, reason: %s", 
-                          (LPCTSTR) p);
-
+        CString strMsg = TFormat ("Proxy server refused connection, reason: %s", (LPCTSTR) p);
         if (App.m_bErrorNotificationToOutputWindow)
           Note (strMsg);
         else
           UMessageBox (strMsg, MB_ICONEXCLAMATION);
         }
       return -1;
-
       } // end of error result
-
     iBytesToMove = 8;
     }  // SOCKS 4
   else
     {  // SOCKS 5
-
     if (count < 2 || buff [1] != 0)
       {
       if (count < 2)
         buff [1] = 1; // general failure
-      const char * p;
+
+      const char * p = NULL;
       switch (buff [1])
         {
-        case 1: p = "general SOCKS server failure"; break;
-        case 2: p = "connection not allowed by ruleset"; break;
-        case 3: p = "Network unreachable"; break;
-        case 4: p = "Host unreachable"; break;
-        case 5: p = "Connection refused"; break;
-        case 6: p = "TTL expired"; break;
-        case 7: p = "Command not supported"; break;
-        case 8: p = "Address type not supported"; break;
+        case 1:  p = "general SOCKS server failure"; break;
+        case 2:  p = "connection not allowed by ruleset"; break;
+        case 3:  p = "Network unreachable"; break;
+        case 4:  p = "Host unreachable"; break;
+        case 5:  p = "Connection refused"; break;
+        case 6:  p = "TTL expired"; break;
+        case 7:  p = "Command not supported"; break;
+        case 8:  p = "Address type not supported"; break;
         default: p = "unknown error reason"; break;
         } // end of switch
 
       OnConnectionDisconnect ();    // close the world
       if (App.m_bNotifyIfCannotConnect)
         {
-        CString strMsg = TFormat ("Proxy server refused connection, reason: %s", 
-                          (LPCTSTR) p);
+        CString strMsg = TFormat ("Proxy server refused connection, reason: %s", (LPCTSTR) p);
         if (App.m_bErrorNotificationToOutputWindow)
           Note (strMsg);
         else
           UMessageBox (strMsg, MB_ICONEXCLAMATION);
         }
       return -1;
-
       } // end of error result
     iBytesToMove = 10;
     } // SOCKS 5
   
-  m_iConnectPhase = eConnectConnectedToMud;
-
   // let's get on with it ...
+  m_iConnectPhase = eConnectConnectedToMud;
   ConnectionEstablished ();
 
   return iBytesToMove;
+}   // end of CMUSHclientDoc::ProcessProxyResponse3
 
-  }   // end of CMUSHclientDoc::ProcessProxyResponse3
+bool CMUSHclientDoc::CheckExpectedProxyResponse (const char cExpected, const char cReceived)
+{
+  if (cReceived == cExpected)
+    return false; // OK
 
-bool CMUSHclientDoc::CheckExpectedProxyResponse (const char cExpected, 
-                                                 const char cReceived)
-  {
-  if (cReceived != cExpected)
+  OnConnectionDisconnect ();    // close the world
+  if (App.m_bNotifyIfCannotConnect)
     {
-    OnConnectionDisconnect ();    // close the world
-    if (App.m_bNotifyIfCannotConnect)
-      {
-      CString strMsg = TFormat ("Unexpected proxy server response %i, expected %i",
-                        (int) cReceived,
-                        (int) cExpected);
-      if (App.m_bErrorNotificationToOutputWindow)
-        Note (strMsg);
-      else
-        UMessageBox (strMsg, MB_ICONEXCLAMATION);
-      }
-    return true;   // not OK
+    CString strMsg = TFormat ("Unexpected proxy server response %i, expected %i",
+        (int) cReceived, (int) cExpected);
+
+    if (App.m_bErrorNotificationToOutputWindow)
+      Note (strMsg);
+    else
+      UMessageBox (strMsg, MB_ICONEXCLAMATION);
     }
 
-  return false;   // OK
-  }  // end of CMUSHclientDoc::CheckExpectedProxyResponse
+  return true;   // not OK
+}  // end of CMUSHclientDoc::CheckExpectedProxyResponse
 
 void CMUSHclientDoc::SendProxyConnectSequence (void)
-  {
+{
   TRACE ("\nSending SOCKS connect request\n");
 
   // 5 = SOCKS version
@@ -7467,28 +6582,31 @@ void CMUSHclientDoc::SendProxyConnectSequence (void)
   short port = m_sockAddr.sin_port;       // MUD port
   unsigned char socks_address [4 + sizeof address + sizeof port] = { 5, 1, 0, 1 };
   int socks_address_length = 4;  // ie. the 4 bytes above
+
   // address
   memcpy (&socks_address [socks_address_length], &address, sizeof address);
   socks_address_length += sizeof address;     // ie. 4
+
   // port
   memcpy (&socks_address [socks_address_length], &port, sizeof port);
   socks_address_length += sizeof port;     // ie. 2
+
   // send it
   SendPacket (socks_address, socks_address_length);
+}  // end of CMUSHclientDoc::SendProxyConnectSequence
 
-  }  // end of CMUSHclientDoc::SendProxyConnectSequence
 
-
-bool CMUSHclientDoc::SendProxyUserNameAndPassword (void)
-  {
+bool CMUSHclientDoc::SendProxyUserNameAndPassword ()
+{
   // lengths > 255 can't fit into the length byte
-  if (m_strProxyUserName.GetLength () > 255 || 
+  if (m_strProxyUserName.GetLength () > 255 ||
       m_strProxyPassword.GetLength () > 255)
     {
     OnConnectionDisconnect ();    // close the world
     TMessageBox (
-      "Proxy server username or password lengths cannot be > 255 characters",
-                     MB_ICONEXCLAMATION);
+        "Proxy server username or password lengths cannot be > 255 characters",
+        MB_ICONEXCLAMATION
+        );
     return true;
     }
 
@@ -7503,6 +6621,7 @@ bool CMUSHclientDoc::SendProxyUserNameAndPassword (void)
   int authentication_length = 1;  // ie. the method byte above
   unsigned char username_length = (unsigned char) m_strProxyUserName.GetLength ();
   unsigned char password_length = (unsigned char) m_strProxyPassword.GetLength ();
+
   // next byte is username length
   authentication [authentication_length++] = username_length;
   // followed by the username
@@ -7510,25 +6629,25 @@ bool CMUSHclientDoc::SendProxyUserNameAndPassword (void)
           (LPCTSTR) m_strProxyUserName, 
           username_length);
   // adjust index to bypass name
-  authentication_length += username_length;   
+  authentication_length += username_length;
+
   // next byte is password length
   authentication [authentication_length++] = password_length;
   // followed by password
   memcpy (&authentication [authentication_length], 
           (LPCTSTR) m_strProxyPassword, password_length);
   // adjust index to bypass password
-  authentication_length += password_length;    
+  authentication_length += password_length;
+
   // send authentication
   SendPacket (authentication, authentication_length);
-
   return false; // OK
-  } // end of CMUSHclientDoc::SendProxyUserNameAndPassword
-
+} // end of CMUSHclientDoc::SendProxyUserNameAndPassword
 
 
 // send a chat message to all connections
-int CMUSHclientDoc::SendChatMessageToAll 
-              (const int iMessage,         // message type (see enum)
+int CMUSHclientDoc::SendChatMessageToAll (
+               const int iMessage,         // message type (see enum)
                const CString strMessage,   // the message
                const bool bUnlessIgnoring, // don't send if we are ignoring them
                const bool bServed,         // if true, to incoming only
@@ -7536,10 +6655,10 @@ int CMUSHclientDoc::SendChatMessageToAll
                const long nExceptID,       // not to this ID
                const CString strGroup,     // group to send to
                const long iStamp)         // which message stamp to use
-  {
-int iCount = 0;
-
-  for (POSITION chatpos = m_ChatList.GetHeadPosition (); chatpos; )
+{
+  int iCount = 0;
+  POSITION chatpos = m_ChatList.GetHeadPosition ();
+  while (chatpos != NULL)
     {
     CChatSocket * pSocket = m_ChatList.GetNext (chatpos);
     if (pSocket->m_iChatStatus == eChatConnected)
@@ -7547,30 +6666,26 @@ int iCount = 0;
       // if they only want incoming, and it isn't, skip it
       if (bServed && !pSocket->m_bIncoming)
         continue;
-
       // if they only want outgoing, and it isn't, skip it
-      if (bNotServed && pSocket->m_bIncoming)
+      else if (bNotServed && pSocket->m_bIncoming)
         continue;
-
       // skip him if we are ignoring him
-      if (bUnlessIgnoring && pSocket->m_bIgnore)
+      else if (bUnlessIgnoring && pSocket->m_bIgnore)
         continue;
-
       // don't send to the incoming one
-      if (nExceptID == pSocket->m_iChatID)
+      else if (nExceptID == pSocket->m_iChatID)
         continue;
-
       // if a group is wanted, and it is the wrong group, don't send
-      if (!strGroup.IsEmpty () && pSocket->m_strGroup.CompareNoCase (strGroup) != 0)
+      else if (!strGroup.IsEmpty () && pSocket->m_strGroup.CompareNoCase (strGroup) != 0)
         continue;
 
       if (strGroup.IsEmpty ())
-        pSocket->m_iCountOutgoingAll++;
+        pSocket->m_iCountOutgoingAll += 1;
       else
-        pSocket->m_iCountOutgoingGroup++;
+        pSocket->m_iCountOutgoingGroup += 1;
 
       pSocket->SendChatMessage (iMessage, strMessage, iStamp);  // send it
-      iCount++;
+      iCount += 1;
       }   // end of chat session not being deleted
     } // end of all chat sessions
 
@@ -7579,57 +6694,51 @@ int iCount = 0;
     {
     switch (iMessage)
       {
-
       case CHAT_TEXT_EVERYBODY:
         m_strLastMessageSent = strMessage;
-        m_tLastMessageTime = CTime::GetCurrentTime();
+        m_tLastMessageTime   = CTime::GetCurrentTime();
         break;
 
       case CHAT_TEXT_GROUP:
         m_strLastGroupMessageSent = strMessage;
-        m_tLastGroupMessageTime = CTime::GetCurrentTime();
+        m_tLastGroupMessageTime   = CTime::GetCurrentTime();
         break;
-
       } // end of switch
     } // end of having some messages sent
 
   return iCount;
-  }  // end of CMUSHclientDoc::SendChatMessageToAll
+}  // end of CMUSHclientDoc::SendChatMessageToAll
 
 
 CChatSocket * CMUSHclientDoc::GetChatSocket (const long nID)  const
-  {
-  for (POSITION pos = m_ChatList.GetHeadPosition (); pos; )
+{
+  POSITION pos = m_ChatList.GetHeadPosition ();
+  while (pos != NULL)
     {
     CChatSocket * pSocket = m_ChatList.GetNext (pos);
     if (!pSocket->m_bDeleteMe  && 
         pSocket->m_iChatStatus == eChatConnected &&
         pSocket->m_iChatID == nID)
-        return pSocket;
+      return pSocket;
     } // end of all chat sessions
 
-
   return NULL;    // not found
-
-  } // end of CMUSHclientDoc::GetChatSocket
+} // end of CMUSHclientDoc::GetChatSocket
 
 
 
 void CMUSHclientDoc::OnGameChatsessions() 
 {
-CChatListDlg dlg;
+  CChatListDlg dlg;
 
   // show whether we really are accepting calls
   if (m_bAcceptIncomingChatConnections)
-    dlg.m_strStatus.Format ("Accepting incoming calls on port %d",
-                      m_IncomingChatPort);
+    dlg.m_strStatus.Format ("Accepting incoming calls on port %d", m_IncomingChatPort);
   else
     dlg.m_strStatus = "Not currently accepting incoming calls";
 
   dlg.m_pDoc = this;
-
   dlg.DoModal ();
-  
 }
 
 
@@ -7725,67 +6834,63 @@ UINT dFormat = 0;
 */
 
 
-void CMUSHclientDoc::SendLineToPlugin (void)
-  {
+void CMUSHclientDoc::SendLineToPlugin ()
+{
   //  We can be in a plugin if we had a prompt, which was not terminated, then
   //   user input. The user input calls an alias, the alias does a world.note
   //   inside a plugin, however we are here right now because we are terminating the
   //   *previous* line (the prompt line).
   //  So, we save and restore the current plugin pointer.
 
-    CPlugin * pSavedPlugin = m_CurrentPlugin;
-    m_CurrentPlugin = NULL;
+  CString strPartialLine = CString (m_pCurrentLine->text, m_pCurrentLine->len);
 
-    CString strPartialLine = CString (m_pCurrentLine->text, m_pCurrentLine->len);
+  CPlugin * pSavedPlugin = m_CurrentPlugin;
+  m_CurrentPlugin = NULL;
 
-    // tell each plugin what we have received
-    for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
-      {
-      CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+  // tell each plugin what we have received
+  POSITION pluginpos = m_PluginList.GetHeadPosition();
+  while (pluginpos != NULL)
+    {
+    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+    if (!pPlugin->m_bEnabled)   // ignore disabled plugins
+      continue;
 
-      if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
-        continue;
+    // see what the plugin makes of this.
+    pPlugin->ExecutePluginScript (ON_PLUGIN_PARTIAL_LINE,
+        pPlugin->m_dispid_plugin_partial_line,
+        strPartialLine);
+    }   // end of doing each plugin
 
-      // see what the plugin makes of this,
-      pPlugin->ExecutePluginScript (ON_PLUGIN_PARTIAL_LINE, pPlugin->m_dispid_plugin_partial_line, strPartialLine);
-      }   // end of doing each plugin
-
-    m_CurrentPlugin = pSavedPlugin;
-
-  } // end of CMUSHclientDoc::SendLineToPlugin
+  m_CurrentPlugin = pSavedPlugin;
+} // end of CMUSHclientDoc::SendLineToPlugin
 
 void CMUSHclientDoc::OnGameResetconnectedtime() 
 {
   m_tStatusTime = CTime::GetCurrentTime(); 
-	
 }
 
 HACCEL CMUSHclientDoc::GetDefaultAccelerator()
-  {
+{
   return m_accelerator;
-  }
+}
 
 void CMUSHclientDoc::OnFixMenus(CCmdUI* pCmdUI) 
-  {
+{
   DoFixMenus (pCmdUI);
   pCmdUI->ContinueRouting();
-  }   // end of CMUSHclientDoc::OnFixMenus
+}   // end of CMUSHclientDoc::OnFixMenus
 
 void CMUSHclientDoc::DoFixMenus(CCmdUI* pCmdUI) 
 {
-
   if (!pCmdUI->m_pMenu)
     return;
 
-  WORD id = pCmdUI->m_nID;
-
   CString strText;
-  
+  WORD id = pCmdUI->m_nID;
   pCmdUI->m_pMenu->GetMenuString (id, strText, MF_BYCOMMAND);
 
-  vector<string> v;
-
   // look for tab separating command from accelerator
+  vector<string> v;
   StringToVector (string (strText), v, "\t", true);
 
   if (v.size () <= 1)
@@ -7793,7 +6898,6 @@ void CMUSHclientDoc::DoFixMenus(CCmdUI* pCmdUI)
 
   BYTE fVirt;
   WORD key;
-                   
   try
     {
     // see what code it was
@@ -7805,41 +6909,32 @@ void CMUSHclientDoc::DoFixMenus(CCmdUI* pCmdUI)
     return;
     } // end of catch
 
-
   fVirt |= FNOINVERT;   // no inverting of menus
 
-  long virt_plus_key = ((long) fVirt) << 16 | key;
-
   // see if we have allocated that accelerator
-  map<long, WORD>::const_iterator it = m_AcceleratorToCommandMap.find (virt_plus_key);
+  map<long, WORD>::const_iterator it = m_AcceleratorToCommandMap.find (((long) fVirt) << 16 | key);
 
-  // if not, all is OK
+  // if so, reset the text to be without the accelerator, which now does something different
   if (it == m_AcceleratorToCommandMap.end ())
-    return;
-
-  // re-set the text to be without the accelerator, which now does something different
-  pCmdUI->SetText (v [0].c_str ());
-
+    pCmdUI->SetText (v [0].c_str ());
 } // end of CMUSHclientDoc::DoFixMenus
 
 // for mapping one colour to another at drawing time
 const COLORREF CMUSHclientDoc::TranslateColour (const COLORREF & source) const
-  {
+{
   // quick escape
   if (m_ColourTranslationMap.empty ())
     return source;
 
   // search for it
   map<COLORREF, COLORREF>::const_iterator it = m_ColourTranslationMap.find (source);
-
   // not found, use original colour
   if (it == m_ColourTranslationMap.end ())
     return source;
 
   // return replacement colour
   return it->second;
-
-  }   // end of CMUSHclientDoc::TranslateColour
+}   // end of CMUSHclientDoc::TranslateColour
 
 
 // iType = 0 - output line
@@ -7852,13 +6947,12 @@ const COLORREF CMUSHclientDoc::TranslateColour (const COLORREF & source) const
 void CMUSHclientDoc::Screendraw  (const long iType,
                                   const long iLog,
                                   const char * sText)
-  {
-static bool bInScreendraw = false;
+{
+  static bool bInScreendraw = false;
 
   // don't recurse into infinite loops
   if (bInScreendraw)
     return;
-
   bInScreendraw = true;
 
   // send to all plugins
@@ -7866,33 +6960,29 @@ static bool bInScreendraw = false;
   m_CurrentPlugin = NULL;
 
   // tell a plugin the message
-  for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+  POSITION pluginpos = m_PluginList.GetHeadPosition();
+  while (pluginpos != NULL)
     {
     CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
-
-
-    if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+    if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
 
     // see what the plugin makes of this,
     pPlugin->ExecutePluginScript (ON_PLUGIN_SCREENDRAW,
-                                  pPlugin->m_dispid_plugin_screendraw,
-                                  iType,
-                                  iLog,
-                                  sText
-                                  ); 
-
+        pPlugin->m_dispid_plugin_screendraw,
+        iType,
+        iLog,
+        sText
+        );
     }   // end of doing each plugin
 
   m_CurrentPlugin = pSavedPlugin;
   bInScreendraw = false;
-
-  }  // end of CMUSHclientDoc::Screendraw 
+}  // end of CMUSHclientDoc::Screendraw 
 
 
 bool CMUSHclientDoc::PlaySoundFile (CString strSound)
-  {
-
+{
   // stop infinite loops
   if (!m_bInPlaySoundFilePlugin)
     {
@@ -7903,18 +6993,18 @@ bool CMUSHclientDoc::PlaySoundFile (CString strSound)
     m_CurrentPlugin = NULL;
 
     // tell a plugin the sound to play
-    for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+    POSITION pluginpos = m_PluginList.GetHeadPosition();
+    while (pluginpos != NULL)
       {
       CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
-
-
-      if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+      if (!pPlugin->m_bEnabled)   // ignore disabled plugins
         continue;
 
       // see what the plugin makes of this,
       pPlugin->ExecutePluginScript (ON_PLUGIN_PLAYSOUND,
-                                    strSound,  
-                                    pPlugin->m_dispid_plugin_playsound); 
+        strSound,
+        pPlugin->m_dispid_plugin_playsound
+        );
 
       if (pPlugin->m_dispid_plugin_playsound != DISPID_UNKNOWN)
         {
@@ -7922,7 +7012,6 @@ bool CMUSHclientDoc::PlaySoundFile (CString strSound)
         m_bInPlaySoundFilePlugin = false;
         return true;   // handled by plugin? don't do our own sound
         }
-
       }   // end of doing each plugin
 
     m_CurrentPlugin = pSavedPlugin;
@@ -7931,12 +7020,11 @@ bool CMUSHclientDoc::PlaySoundFile (CString strSound)
 
   // default sound-play mechanism
   return Frame.PlaySoundFile (strSound);
-  }
+}
 
 
-void CMUSHclientDoc::CancelSound (void)
-  {
-
+void CMUSHclientDoc::CancelSound ()
+{
   // stop infinite loops
   if (!m_bInCancelSoundFilePlugin)
     {
@@ -7947,20 +7035,20 @@ void CMUSHclientDoc::CancelSound (void)
     m_CurrentPlugin = NULL;
 
     // tell a plugin the sound to play
-    for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+    POSITION pluginpos = m_PluginList.GetHeadPosition();
+    while (pluginpos != NULL)
       {
       CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
-
-
-      if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+      if (!pPlugin->m_bEnabled)   // ignore disabled plugins
         continue;
 
       CString strSound;   // deliberately the empty string
 
-      // see what the plugin makes of this,
+      // see what the plugin makes of this.
       pPlugin->ExecutePluginScript (ON_PLUGIN_PLAYSOUND,
-                                    strSound,  // empty string cancels sound 
-                                    pPlugin->m_dispid_plugin_playsound); 
+          strSound,  // empty string cancels sound 
+          pPlugin->m_dispid_plugin_playsound
+          ); 
 
       if (pPlugin->m_dispid_plugin_playsound != DISPID_UNKNOWN)
         {
@@ -7968,41 +7056,35 @@ void CMUSHclientDoc::CancelSound (void)
         m_bInCancelSoundFilePlugin = false;
         return;   // handled by plugin? don't do our own cancel
         }
-
       }   // end of doing each plugin
 
     m_CurrentPlugin = pSavedPlugin;
     m_bInCancelSoundFilePlugin = false;
     } // end of not in plugin already
 
-
   // default sound-cancel mechanism
   Frame.CancelSound ();
   StopSound (0);    // also DirectSound
-
-  }
+}
 
 void CMUSHclientDoc::OnDisplayStopsoundplaying() 
 {
-  CancelSound ();	
+  CancelSound ();
 }
 
 
 void CMUSHclientDoc::OnInputKeyname() 
 {
-CKeyNameDlg dlg;
+  CKeyNameDlg dlg;
   dlg.DoModal ();
 }
 
 void CMUSHclientDoc::OnEditConvertclipboardforumcodes() 
 {
-CString strContents; 
-
+  CString strContents; 
   if (!GetClipboardContents (strContents, false, false))
     return;
-
- putontoclipboard  (QuoteForumCodes (strContents));
-	
+  putontoclipboard  (QuoteForumCodes (strContents));	
 }
 
 typedef int (WINAPI *PAFMR)(LPCTSTR, DWORD, void *);
@@ -8012,34 +7094,27 @@ static PAFMR pAddFontResourceEx = NULL;
 static PRFMR pRemoveFontResourceEx = NULL;
 static BOOL initialized = FALSE;
 
-#define FR_PRIVATE     0x10
-#define FR_NOT_ENUM    0x20
+// defined in WinGDI.h (windows sdk)
+// #define FR_PRIVATE     0x10
+// #define FR_NOT_ENUM    0x20
 
 long CMUSHclientDoc::AddSpecialFont (LPCTSTR PathName) 
 {
-
-	// First, see if we can get the API call we need. If we've tried
-	// once, we don't need to try again. 
-	if (!initialized)
-	{
-		HMODULE hDLL = LoadLibrary ("gdi32");
-
+  // First, see if we can get the API call we need. If we've tried
+  // once, we don't need to try again. 
+  if (!initialized)
+  {
+    HMODULE hDLL = LoadLibrary ("gdi32");
     if (hDLL)
       {
-		  pAddFontResourceEx = 
-			  (PAFMR) GetProcAddress(hDLL, "AddFontResourceExA");
-
-		  pRemoveFontResourceEx = 
-			  (PRFMR) GetProcAddress(hDLL, "RemoveFontResourceExA");
+      pAddFontResourceEx    = (PAFMR) GetProcAddress(hDLL, "AddFontResourceExA");
+      pRemoveFontResourceEx = (PRFMR) GetProcAddress(hDLL, "RemoveFontResourceExA");
       }
-
-		initialized = TRUE;
+    initialized = TRUE;
 	}
 
-	if (pAddFontResourceEx == NULL ||
-      pRemoveFontResourceEx == NULL)
-		return eNoSuchCommand;
-
+  if (pAddFontResourceEx == NULL || pRemoveFontResourceEx == NULL)
+    return eNoSuchCommand;
 
   // same one again - just leave well enough alone
   if (m_strSpecialFontName == PathName)
@@ -8048,100 +7123,88 @@ long CMUSHclientDoc::AddSpecialFont (LPCTSTR PathName)
   // get rid of old one, if any
   RemoveSpecialFont ();
 
-
   void * pbFont = NULL;
-  int cFonts;
-
-  cFonts = pAddFontResourceEx (PathName,     // file name
-                               FR_PRIVATE,   // flags 
-                               pbFont);      // Reserved. Must be 0.
-
+  int cFonts = pAddFontResourceEx (
+      PathName,     // file name
+      FR_PRIVATE,   // flags 
+      pbFont        // Reserved. Must be 0.
+      );
 
   if (cFonts == 0) 
     return eFileNotFound;
 
   m_strSpecialFontName = PathName;  // remember, so we can remove it
-	return eOK;
-  }  // end of  CMUSHclientDoc::AddSpecialFont 
+  return eOK;
+}  // end of  CMUSHclientDoc::AddSpecialFont 
 
-void CMUSHclientDoc::RemoveSpecialFont (void) 
-  { 
+void CMUSHclientDoc::RemoveSpecialFont ()
+{
   if (m_strSpecialFontName.IsEmpty ())
     return;
-
-  if (pRemoveFontResourceEx == NULL)
+  else if (pRemoveFontResourceEx == NULL)
     return;
 
   void * pbFont = NULL;
+  pRemoveFontResourceEx (
+      m_strSpecialFontName, // original file name
+      FR_PRIVATE,           // flags 
+      pbFont                // Reserved. Must be 0.
+      );
 
-  pRemoveFontResourceEx (m_strSpecialFontName,  // original file name
-                         FR_PRIVATE,           // flags 
-                         pbFont);              // Reserved. Must be 0.
-    
   m_strSpecialFontName.Empty ();
-  }
+}
 
 
 // edit with specified editor, replacing %file by actual name
 void CMUSHclientDoc::EditFileWithEditor (CString strName)
-  {
-
+{
   CString strArgument = m_strScriptEditorArgument;
-
   if (strArgument.IsEmpty ())
     strArgument = "%file";          // default
 
-  // replace %file
+  // replace %file%
   strArgument.Replace ("%file", strName);
 
-  HINSTANCE hInst = ShellExecute (Frame, _T("open"), m_strScriptEditor, 
-            CFormat ("\"%s\"", (LPCTSTR) strArgument),   // quote argument
-            NULL, SW_SHOWNORMAL);
+  HINSTANCE hInst = ShellExecute (
+      Frame, _T("open"), m_strScriptEditor, 
+      CFormat ("\"%s\"", (LPCTSTR) strArgument),   // quote argument
+      NULL, SW_SHOWNORMAL
+      );
 
   if ((long) hInst <= 32)
-      ::UMessageBox(TFormat ("Unable to edit file %s.",
-                  (LPCTSTR) strName), 
-                     MB_ICONEXCLAMATION);
-  else
-    {
-    // bring editor to the front
-    if (!m_strEditorWindowName.IsEmpty ())
-      SendToFront (m_strEditorWindowName);
-    }
-
-  }
+      ::UMessageBox(
+          TFormat ("Unable to edit file %s.", (LPCTSTR) strName),
+          MB_ICONEXCLAMATION
+          );
+  // bring editor to the front
+  else if (!m_strEditorWindowName.IsEmpty ())
+    SendToFront (m_strEditorWindowName);
+}
 
 // tell plugins the list of plugins may have changed
-void  CMUSHclientDoc::PluginListChanged (void)
-
-  {
-
-static bool bInPluginListChanged = false;
+void CMUSHclientDoc::PluginListChanged ()
+{
+  static bool bInPluginListChanged = false;
 
   // don't recurse into infinite loops
   if (bInPluginListChanged)
     return;
-
   bInPluginListChanged = true;
-
 
   CPlugin * pSavedPlugin = m_CurrentPlugin;
   m_CurrentPlugin = NULL;
 
   // tell a plugin the message
-  for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+  POSITION pluginpos = m_PluginList.GetHeadPosition();
+  while (pluginpos != NULL)
     {
     CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
-
-    if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
+    if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
 
     pPlugin->ExecutePluginScript (ON_PLUGIN_LIST_CHANGED, pPlugin->m_dispid_plugin_list_changed);
-
     }   // end of doing each plugin
 
   m_CurrentPlugin = pSavedPlugin;
   bInPluginListChanged = false;
-
-
-  }    // end CMUSHclientDoc::PluginListChanged 
+}    // end CMUSHclientDoc::PluginListChanged 

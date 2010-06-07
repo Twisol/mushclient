@@ -1269,7 +1269,7 @@ public:
 public:
 	BOOL ConnectSocket(void);
 	void ProcessPendingRead();
-	void DoSendMsg(const CString& strText, 
+	void DoSendMsg(CString strText, 
                  const bool bEchoIt,
                  const bool bLogIt);
 	void SendMsg(CString strText, 

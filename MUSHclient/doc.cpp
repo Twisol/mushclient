@@ -608,6 +608,7 @@ BEGIN_DISPATCH_MAP(CMUSHclientDoc, CDocument)
 	DISP_FUNCTION(CMUSHclientDoc, "FlashIcon", FlashIcon, VT_EMPTY, VTS_NONE)
 	DISP_FUNCTION(CMUSHclientDoc, "WindowHotspotTooltip", WindowHotspotTooltip, VT_I4, VTS_BSTR VTS_BSTR VTS_BSTR)
 	DISP_FUNCTION(CMUSHclientDoc, "WindowDrawImageAlpha", WindowDrawImageAlpha, VT_I4, VTS_BSTR VTS_BSTR VTS_I4 VTS_I4 VTS_I4 VTS_I4 VTS_R8 VTS_I4 VTS_I4)
+	DISP_FUNCTION(CMUSHclientDoc, "WindowGetImageAlpha", WindowGetImageAlpha, VT_I4, VTS_BSTR VTS_BSTR VTS_I4 VTS_I4 VTS_I4 VTS_I4 VTS_I4 VTS_I4)
 	DISP_PROPERTY_PARAM(CMUSHclientDoc, "NormalColour", GetNormalColour, SetNormalColour, VT_I4, VTS_I2)
 	DISP_PROPERTY_PARAM(CMUSHclientDoc, "BoldColour", GetBoldColour, SetBoldColour, VT_I4, VTS_I2)
 	DISP_PROPERTY_PARAM(CMUSHclientDoc, "CustomColourText", GetCustomColourText, SetCustomColourText, VT_I4, VTS_I2)
@@ -3236,7 +3237,7 @@ BOOL GetClipboardContents (CString & strClipboard, const bool bUnicode, const bo
   strClipboard.Empty ();
 
   // Open clipboard
-  if (!::OpenClipboard(NULL) )
+  if (!::OpenClipboard(Frame.GetSafeHwnd ()) )
     {
     if (bWarning)
       TMessageBox( "Cannot open the Clipboard" );
@@ -3258,6 +3259,7 @@ UINT iEnum = 0;
 
 */
 
+  // get the contents of the clipboard into a local string
   HGLOBAL hData = NULL;  
   bool bHaveUnicode = false;
 
@@ -3322,7 +3324,7 @@ UINT iEnum = 0;
 BOOL putontoclipboard (const CString & data, const bool bUnicode)
 {
   // Open clipboard
-  if (!::OpenClipboard(NULL) )
+  if (!::OpenClipboard(Frame.GetSafeHwnd ()) )
     {
     TMessageBox( "Cannot open the Clipboard" );
     return TRUE;
@@ -6751,7 +6753,7 @@ UINT dFormat = 0;
 
 // Open clipboard
 
-  if (!::OpenClipboard(NULL) )
+  if (!::OpenClipboard(Frame.GetSafeHwnd ()) )
        {
        ::AfxMessageBox( "Cannot open the Clipboard" );
        return;

@@ -9,6 +9,7 @@ extern "C"
   #include "lauxlib.h"
   }
 
+#include "hostsite.h"
 #include "paneline.h"
 
 #define DOCUMENT_STATE "mushclient.document"

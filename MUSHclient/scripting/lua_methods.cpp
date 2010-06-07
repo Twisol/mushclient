@@ -9,7 +9,6 @@
 #include "..\sendvw.h"
 #include "..\dialogs\DebugLuaDlg.h"
 
-#define USE_LUA
 #ifdef USE_LUA
 
 const char mushclient_typename[] = "mushclient.world";

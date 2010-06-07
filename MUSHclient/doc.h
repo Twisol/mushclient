@@ -646,12 +646,9 @@ public:
 
   CAliasMap m_AliasMap;
   CAliasArray m_AliasArray;       // array of aliases for sequencing
-  CAliasRevMap m_AliasRevMap;     // for getting name back from pointer
   CTriggerMap m_TriggerMap;       
   CTriggerArray m_TriggerArray;   // array of triggers for sequencing
-  CTriggerRevMap m_TriggerRevMap; // for getting name back from pointer
   CTimerMap m_TimerMap;
-  CTimerRevMap m_TimerRevMap;     // for getting name back from pointer
 
 
 // new in version 7
@@ -1984,14 +1981,6 @@ public:
       return m_TriggerArray;
     };
 
-  CTriggerRevMap & GetTriggerRevMap (void)
-    {
-    if (m_CurrentPlugin)
-      return m_CurrentPlugin->m_TriggerRevMap;
-    else
-      return m_TriggerRevMap;
-    };
-
   CAliasMap & GetAliasMap (void)
     {
     if (m_CurrentPlugin)
@@ -2008,28 +1997,12 @@ public:
       return m_AliasArray;
     };
 
-  CAliasRevMap & GetAliasRevMap (void)
-    {
-    if (m_CurrentPlugin)
-      return m_CurrentPlugin->m_AliasRevMap;
-    else
-      return m_AliasRevMap;
-    };
-
   CTimerMap & GetTimerMap (void)
     {
     if (m_CurrentPlugin)
       return m_CurrentPlugin->m_TimerMap;
     else
       return m_TimerMap;
-    };
-
-  CTimerRevMap & GetTimerRevMap (void)
-    {
-    if (m_CurrentPlugin)
-      return m_CurrentPlugin->m_TimerRevMap;
-    else
-      return m_TimerRevMap;
     };
 
   CVariableMap & GetVariableMap (void)

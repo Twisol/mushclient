@@ -932,7 +932,7 @@ bool CMUSHclientDoc::ExecuteAliasScript (CAlias * alias_item,
     // get unlabelled alias's internal name
     const char * pLabel = alias_item->strLabel;
     if (pLabel [0] == 0)
-       pLabel = GetAliasRevMap () [alias_item].c_str ();
+       pLabel = alias_item->strInternalName;
 
     if (GetScriptEngine () && GetScriptEngine ()->IsLua ())
       {

@@ -2297,7 +2297,7 @@ void CMUSHclientDoc::ExecuteTriggerScript (CTrigger * trigger_item,
   // get unlabelled trigger's internal name
   const char * pLabel = trigger_item->strLabel;
   if (pLabel [0] == '\0')
-     pLabel = GetTriggerRevMap () [trigger_item].c_str ();
+     pLabel = trigger_item->strInternalName;
 
   if (GetScriptEngine () && GetScriptEngine ()->IsLua ())
     {
@@ -4003,10 +4003,7 @@ void CMUSHclientDoc::CheckTimerList (CTimerMap & TimerMap)
       CString strReason =  TFormat ("processing timer \"%s\"", 
                                     (LPCTSTR) timer_item->strLabel);
 
-      // get unlabelled timer's internal name
       const char * pLabel = timer_item->strLabel;
-      if (pLabel [0] == '\0')
-        pLabel = GetTimerRevMap () [timer_item].c_str ();
 
       if (GetScriptEngine () && GetScriptEngine ()->IsLua ())
         {
@@ -5608,7 +5605,6 @@ void CMUSHclientDoc::SortTriggers ()
     {
     GetTriggerMap ().GetNextAssoc (pos, strTriggerName, pTrigger);
     GetTriggerArray ().SetAt (i, pTrigger);
-    GetTriggerRevMap () [pTrigger] = strTriggerName;
     }
 
   // sort the array
@@ -5653,7 +5649,6 @@ void CMUSHclientDoc::SortAliases ()
     {
     GetAliasMap ().GetNextAssoc (pos, strAliasName, pAlias);
     GetAliasArray ().SetAt (i, pAlias); 
-    GetAliasRevMap () [pAlias] = strAliasName;
     }
 
   // sort the array
@@ -5674,7 +5669,6 @@ void CMUSHclientDoc::SortTimers ()
   for (int i = 0; pos != NULL; ++i)
     {
     GetTimerMap ().GetNextAssoc (pos, strTimerName, pTimer);
-    GetTimerRevMap () [pTimer] = strTimerName;
     }
 } // end of CMUSHclientDoc::SortTimers
 

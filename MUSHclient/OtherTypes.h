@@ -719,29 +719,6 @@ class CVariable : public CObject
 typedef CTypedPtrMap <CMapStringToPtr, CString, CVariable*> CVariableMap;
 typedef CTypedPtrArray <CPtrArray, CVariable*> CVariableArray;
 
-/////////////////////////////////////////////////////////////////////////////
-//  CMud - not used?
-
-class CMud : public CObject
-  {
-  DECLARE_DYNAMIC(CMud)
-
-  CMud (void)          // constructor
-  {
-  };
-
-  public:
-
-  CString strName;
-  CString strAddress;
-  long    nPort;
-  CString strType;
-  CString strComment;
-
-  };
-
-typedef CTypedPtrMap <CMapStringToPtr, CString, CMud*> CMudMap;
-
 
 /////////////////////////////////////////////////////////////////////////////
 //  CArgument - these are arguments to an MXP tag

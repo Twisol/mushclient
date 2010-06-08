@@ -46,6 +46,9 @@ extern char file_browsing_dir [_MAX_PATH];
 
 extern set<string> LuaFunctionsSet;
 
+// defined in Mapping.cpp
+const CMapDirection* MapDirectionsMap(string key);
+
 
 // ==============================================================================
 
@@ -2256,7 +2259,7 @@ CString CMUSHclientDoc::DoEvaluateSpeedwalk(LPCTSTR SpeedWalkString)
       case 'U': 
       case 'D': 
         // we know it will be in the list - look up the direction to send
-        str = MapDirectionsMap [tolower (string (1, *p))].m_sDirectionToSend.c_str ();
+        str = MapDirectionsMap(tolower (string (1, *p)))->m_sDirectionToSend.c_str ();
         break;
 
       case 'F':
@@ -2411,7 +2414,7 @@ CString CMUSHclientDoc::DoReverseSpeedwalk(LPCTSTR SpeedWalkString)
       case 'D': 
       case 'F': 
         // we know it will be in the list - look up the reverse direction
-        str = MapDirectionsMap [tolower(string (1, *p))].m_sReverseDirection.c_str ();
+        str = MapDirectionsMap(tolower(string (1, *p)))->m_sReverseDirection.c_str ();
         break;
 
       case '(':     // special string (eg. (ne/sw) )
@@ -2431,9 +2434,9 @@ CString CMUSHclientDoc::DoReverseSpeedwalk(LPCTSTR SpeedWalkString)
         // if no slash try to convert whole thing (eg. ne becomes sw)
         if (iSlash == -1)
           {
-          MapDirectionsIterator i = MapDirectionsMap.find ((LPCTSTR) str);
-          if (i != MapDirectionsMap.end ())
-            str = i->second.m_sReverseDirection.c_str ();
+          const CMapDirection* dir =  MapDirectionsMap((LPCTSTR) str);
+          if (dir != NULL)
+            str = dir->m_sReverseDirection.c_str ();
           }
         else
           str = str.Mid (iSlash + 1) + "/" + str.Left (iSlash); // swap parts
@@ -8608,7 +8611,7 @@ BSTR CMUSHclientDoc::RemoveBacktracks(LPCTSTR Path)
   // backtracks on the top of it
 
   deque<string> q;    // output
-  MapDirectionsIterator it;    // for looking up reverses
+  const CMapDirection* dir = NULL;    // for looking up reverses
   string sDirection;
   for (vector<string>::const_iterator wi = w.begin ();
        wi != w.end ();
@@ -8617,19 +8620,18 @@ BSTR CMUSHclientDoc::RemoveBacktracks(LPCTSTR Path)
     sDirection = *wi;
 
     // convert back to a single character if possible
-    it = MapDirectionsMap.find (tolower (sDirection));
-    if (it != MapDirectionsMap.end ())
-      sDirection = it->second.m_sDirectionToLog;
+    dir = MapDirectionsMap(tolower (sDirection));
+    if (dir != NULL)
+      sDirection = dir->m_sDirectionToLog;
 
     // if output stack is empty we can hardly remove a backtrack
     if (q.empty ())
       q.push_back (sDirection); // so just add this one
     else
       {
-      it = MapDirectionsMap.find (q.back ());
+      dir = MapDirectionsMap(q.back ());
       // if new entry is inverse of top of stack, discard both
-      if (it != MapDirectionsMap.end () && 
-          it->second.m_sReverseDirection == sDirection)
+      if (dir != NULL && dir->m_sReverseDirection == sDirection)
         q.pop_back ();
       else
         q.push_back (sDirection);

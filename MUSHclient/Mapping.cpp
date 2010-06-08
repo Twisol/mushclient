@@ -13,36 +13,43 @@
 static char BASED_CODE THIS_FILE[] = __FILE__;
 #endif
 
-CMapDirectionsMap MapDirectionsMap;
+const CMapDirection* MapDirectionsMap(string key)
+{
+  static CMapDirectionsMap directions;
+  static bool bInitialized = false;
 
-void LoadMapDirections (void)
-  {
-  //-------------------------------------------------------------------
-  //                direction                 log        full     reverse
-                                                        
-  MapDirectionsMap ["north"]  = CMapDirection ("n",     "north",  "s");
-  MapDirectionsMap ["south"]  = CMapDirection ("s",     "south",  "n");
-  MapDirectionsMap ["east"]   = CMapDirection ("e",     "east",   "w");
-  MapDirectionsMap ["west"]   = CMapDirection ("w",     "west",   "e");
-  MapDirectionsMap ["up"]     = CMapDirection ("u",     "up",     "d");
-  MapDirectionsMap ["down"]   = CMapDirection ("d",     "down",   "u");
-  MapDirectionsMap ["ne"]     = CMapDirection ("ne",    "ne",     "sw");
-  MapDirectionsMap ["nw"]     = CMapDirection ("nw",    "nw",     "se");
-  MapDirectionsMap ["se"]     = CMapDirection ("se",    "se",     "nw");
-  MapDirectionsMap ["sw"]     = CMapDirection ("sw",    "sw",     "ne");
+  if (!bInitialized)
+    {
+    //-------------------------------------------------------------------
+    //                direction                 log        full     reverse
+    directions ["north"]  = CMapDirection ("n",     "north",  "s");
+    directions ["south"]  = CMapDirection ("s",     "south",  "n");
+    directions ["east"]   = CMapDirection ("e",     "east",   "w");
+    directions ["west"]   = CMapDirection ("w",     "west",   "e");
+    directions ["up"]     = CMapDirection ("u",     "up",     "d");
+    directions ["down"]   = CMapDirection ("d",     "down",   "u");
+    directions ["ne"]     = CMapDirection ("ne",    "ne",     "sw");
+    directions ["nw"]     = CMapDirection ("nw",    "nw",     "se");
+    directions ["se"]     = CMapDirection ("se",    "se",     "nw");
+    directions ["sw"]     = CMapDirection ("sw",    "sw",     "ne");
 
-  // filler
-  MapDirectionsMap ["f"]      = CMapDirection ("f",     "f",      "f");
+    // filler
+    directions ["f"]      = CMapDirection ("f",     "f",      "f");
 
-  // now do abbreviations (copy above entries)
-  MapDirectionsMap ["n"]      = MapDirectionsMap ["north"];
-  MapDirectionsMap ["s"]      = MapDirectionsMap ["south"];
-  MapDirectionsMap ["e"]      = MapDirectionsMap ["east"];
-  MapDirectionsMap ["w"]      = MapDirectionsMap ["west"];
-  MapDirectionsMap ["u"]      = MapDirectionsMap ["up"];
-  MapDirectionsMap ["d"]      = MapDirectionsMap ["down"];
+    // now do abbreviations (copy above entries)
+    directions ["n"]      = directions ["north"];
+    directions ["s"]      = directions ["south"];
+    directions ["e"]      = directions ["east"];
+    directions ["w"]      = directions ["west"];
+    directions ["u"]      = directions ["up"];
+    directions ["d"]      = directions ["down"];
+    
+    bInitialized = true;
+    }
 
-  } // end of LoadMapDirections
+  MapDirectionsIterator i = directions.find(key);
+  return (i == directions.end()) ? NULL : &i->second;
+} // end of MapDirectionsMap
 
 
 void CMUSHclientDoc::OnGameMapper() 
@@ -126,7 +133,7 @@ void CMUSHclientDoc::OnUpdateGameMapper(CCmdUI* pCmdUI)
 
 void CMUSHclientDoc::AddToMap (CString str)
   {
-  MapDirectionsIterator i;
+  const CMapDirection* dir = NULL;
 
   str.MakeLower ();
   str.TrimLeft ();
@@ -138,10 +145,10 @@ void CMUSHclientDoc::AddToMap (CString str)
     CString strDirection = str.Left (iNewline);
 
     // see if they have sent a "direction"
-    i = MapDirectionsMap.find ((LPCTSTR) strDirection);
+    dir = MapDirectionsMap((LPCTSTR) strDirection);
 
     // if not, give up
-    if (i != MapDirectionsMap.end ())
+    if (dir != NULL)
       {
 
       // Remove reverses ...
@@ -175,19 +182,16 @@ void CMUSHclientDoc::AddToMap (CString str)
           {
           strLast = strLast.Mid (iSlashPos + 1);  // this is the reverse direction
         
-          MapDirectionsIterator i2;
-
-          i2 = MapDirectionsMap.find ((LPCTSTR) strLast);   // convert "west" to "w"
+          const CMapDirection* dir2 = MapDirectionsMap((LPCTSTR) strLast);   // convert "west" to "w"
 
           // if this is the reverse direction, remove the earlier one rather than
           // adding this one
-          if (i2 != MapDirectionsMap.end () && 
-              i2->second.m_sDirectionToLog == i->second.m_sDirectionToLog)
+          if (dir2 != NULL && dir2->m_sDirectionToLog == dir->m_sDirectionToLog)
            m_strMapList.RemoveTail ();
           else
-            m_strMapList.AddTail (i->second.m_sDirectionToLog.c_str ());
+            m_strMapList.AddTail (dir->m_sDirectionToLog.c_str ());
           }
-         else if (m_strMapList.GetTail () == i->second.m_sReverseDirection.c_str ())
+         else if (m_strMapList.GetTail () == dir->m_sReverseDirection.c_str ())
              m_strMapList.RemoveTail ();
          else
            {
@@ -195,11 +199,11 @@ void CMUSHclientDoc::AddToMap (CString str)
            if (!strComment.IsEmpty ())
             m_strMapList.AddTail (strComment);
            // and add the new direction
-           m_strMapList.AddTail (i->second.m_sDirectionToLog.c_str ());
+           m_strMapList.AddTail (dir->m_sDirectionToLog.c_str ());
            }
         }
       else
-        m_strMapList.AddTail (i->second.m_sDirectionToLog.c_str ());
+        m_strMapList.AddTail (dir->m_sDirectionToLog.c_str ());
 
       // update status line
       DrawMappingStatusLine ();

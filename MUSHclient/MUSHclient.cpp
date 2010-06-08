@@ -68,8 +68,6 @@ bool bWine;
 extern tConfigurationNumericOption OptionsTable [];
 extern tConfigurationAlphaOption AlphaOptionsTable [];
 
-void LoadMapDirections (void);
-
 void Generate256colours (void);
 
 extern const struct luaL_reg *ptr_xmllib;
@@ -377,7 +375,6 @@ BOOL CMUSHclientApp::InitInstance()
    else
      bWine = false;
 
-   LoadMapDirections ();
    Generate256colours ();
 
  //  UMessageBox ("\xC9\xB3\xC9\xA8\xC9\x95\xC9\xAE");

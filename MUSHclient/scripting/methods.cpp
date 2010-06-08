@@ -512,7 +512,7 @@ long CMUSHclientDoc::AddTriggerEx(LPCTSTR TriggerName,
   if (GetScriptEngine () && ScriptName[0] != '\0')
     {
     CString strMessage;
-    dispid = GetProcedureDispid (ScriptName, "trigger", strTriggerName, strMessage);
+    dispid = GetProcedureDispid (ScriptName, "trigger", TriggerName, strMessage);
     if (dispid == DISPID_UNKNOWN)
       return eScriptNameNotLocated;
     }
@@ -894,7 +894,7 @@ long CMUSHclientDoc::AddAlias(LPCTSTR AliasName,
   if (GetScriptEngine () && ScriptName != '\0')
     {
     CString strMessage;
-    dispid = GetProcedureDispid (ScriptName, "alias", strAliasName, strMessage);
+    dispid = GetProcedureDispid (ScriptName, "alias", AliasName, strMessage);
     if (dispid == DISPID_UNKNOWN)
       return eScriptNameNotLocated;
     }
@@ -2508,7 +2508,7 @@ long CMUSHclientDoc::AddTimer(LPCTSTR TimerName,
   if (GetScriptEngine () && ScriptName[0] != '\0')
     {
     CString strMessage;
-    dispid = GetProcedureDispid (ScriptName, "timer", strTimerName, strMessage);
+    dispid = GetProcedureDispid (ScriptName, "timer", TimerName, strMessage);
     if (dispid == DISPID_UNKNOWN)
       return eScriptNameNotLocated;
     }

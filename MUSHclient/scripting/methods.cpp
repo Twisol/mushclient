@@ -561,14 +561,14 @@ long CMUSHclientDoc::AddTriggerEx(LPCTSTR TriggerName,
   trigger_item->bLowercaseWildcard = (Flags & eLowercaseWildcard) != 0;
   trigger_item->bOneShot           = (Flags & eTriggerOneShot) != 0;
   trigger_item->strProcedure       = ScriptName;
-  trigger_item->strLabel           = strTriggerName;
+  trigger_item->strLabel           = TriggerName;
   trigger_item->iClipboardArg      = (Wildcard < 0 || Wildcard > 10) ? 0 : Wildcard;
   trigger_item->sound_to_play      = SoundFileName;
   trigger_item->dispid             = dispid;
   trigger_item->regexp             = regexp;
   trigger_item->iSendTo            = SendTo;
   trigger_item->iSequence          = Sequence;
-  trigger_item->strVariable        = strTriggerName;   // kludge
+  trigger_item->strVariable        = TriggerName;   // kludge
 
   // insert trigger into trigger map
   GetTriggerMap ().SetAt (strTriggerName, trigger_item);
@@ -946,7 +946,7 @@ long CMUSHclientDoc::AddAlias(LPCTSTR AliasName,
   alias_item->bTemporary       = (Flags & eTemporary) != 0;
   alias_item->bOneShot         = (Flags & eAliasOneShot) != 0;
   alias_item->strProcedure     = ScriptName;
-  alias_item->strLabel         = strAliasName;
+  alias_item->strLabel         = AliasName;
   alias_item->dispid           = dispid;
   alias_item->regexp           = regexp;
 
@@ -2546,7 +2546,7 @@ long CMUSHclientDoc::AddTimer(LPCTSTR TimerName,
   timer_item->bTemporary        = (Flags & eTemporary) != 0;
   timer_item->bActiveWhenClosed = (Flags & eActiveWhenClosed) != 0;
   timer_item->strProcedure      = ScriptName;
-  timer_item->strLabel          = strTimerName;
+  timer_item->strLabel          = TimerName;
   timer_item->dispid            = dispid;
   timer_item->nUpdateNumber     = App.GetUniqueNumber ();   // for concurrency checks
 

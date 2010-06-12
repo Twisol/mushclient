@@ -5595,8 +5595,6 @@ void CMUSHclientDoc::SortTriggers ()
   int iCount = GetTriggerMap ().GetCount ();
   GetTriggerArray ().SetSize (iCount);
 
-  CTriggerRevMap ().empty ();
-
   // extract pointers into a simple array
   POSITION pos = GetTriggerMap ().GetStartPosition();
   CString strTriggerName;
@@ -5639,8 +5637,6 @@ void CMUSHclientDoc::SortAliases ()
   int iCount = GetAliasMap ().GetCount ();
   GetAliasArray ().SetSize (iCount);
 
-  CAliasRevMap ().empty ();
-
   // extract pointers into a simple array
   POSITION pos = GetAliasMap ().GetStartPosition();
   CString strAliasName;
@@ -5661,8 +5657,6 @@ void CMUSHclientDoc::SortAliases ()
 
 void CMUSHclientDoc::SortTimers ()
 {
-  CTimerRevMap ().empty ();
-
   POSITION pos = GetTimerMap ().GetStartPosition();
   CString strTimerName;
   CTimer * pTimer = NULL;

@@ -13,60 +13,37 @@
 */
 
 void CMUSHclientDoc::InterpretANSIcode (const int iCode)
-  {
-
+{
   switch (iCode)
     {
     case ANSI_TEXT_256_COLOUR:   
-        m_phase = HAVE_FOREGROUND_256_START;   
-        return;       
+      m_phase = HAVE_FOREGROUND_256_START;   
+      return;       
     case ANSI_BACK_256_COLOUR:     
-        m_phase = HAVE_BACKGROUND_256_START;   
-        return;         
-
+      m_phase = HAVE_BACKGROUND_256_START;   
+      return;         
     } // end of switch on iCode
 
-// find current style
-CStyle * pOldStyle = m_pCurrentLine->styleList.GetTail ();
+  // find current style
+  CStyle * pOldStyle = m_pCurrentLine->styleList.GetTail ();
 
-// find current flags and colour
-unsigned short iFlags       = pOldStyle->iFlags & STYLE_BITS;        
-COLORREF       iForeColour  = pOldStyle->iForeColour;   
-COLORREF       iBackColour  = pOldStyle->iBackColour; 
-CAction *      pAction      = pOldStyle->pAction;
-
-  // switch back to ANSI colour if required
-/*   obsolete
-  if ((iCode >= 30 && iCode <= 37) ||
-      (iCode >= 40 && iCode <= 47))
-    {
-    // we can't mix them - if we go back to ANSI colours we have to discard
-    // the RGB codes
-    if ((iFlags & COLOURTYPE) == COLOUR_RGB)
-      {
-      iForeColour = WHITE;
-      iBackColour = BLACK;     
-      }
-    iFlags &= ~COLOURTYPE;  // clear RGB or custom bits
-    iFlags |= COLOUR_ANSI;
-    }
-
-*/
+  // find current flags and colour
+  unsigned short iFlags       = pOldStyle->iFlags & STYLE_BITS;        
+  COLORREF       iForeColour  = pOldStyle->iForeColour;   
+  COLORREF       iBackColour  = pOldStyle->iBackColour; 
+  CAction *      pAction      = pOldStyle->pAction;
 
   // if they are in custom mode, we'll have to switch to RGB mode
-
-  if ((iFlags & COLOURTYPE) == COLOUR_CUSTOM)
-    if ((iCode >= ANSI_TEXT_BLACK && iCode <= ANSI_TEXT_WHITE) ||    // foreground colour
-        (iCode >= ANSI_BACK_BLACK && iCode <= ANSI_BACK_WHITE) ||    // background colour
-        (iCode == ANSI_SET_FOREGROUND_DEFAULT) ||                    // foreground to default
-        (iCode == ANSI_SET_BACKGROUND_DEFAULT)                       // background to default
-        )
-
-      {
-      GetStyleRGB (pOldStyle, iForeColour, iBackColour);
-      iFlags &= ~COLOURTYPE;  // clear custom bits
-      iFlags |= COLOUR_RGB;
-      } // end of switching to RGB mode
+  if ((iFlags & COLOURTYPE) == COLOUR_CUSTOM &&
+      (iCode >= ANSI_TEXT_BLACK && iCode <= ANSI_TEXT_WHITE) ||    // foreground colour
+      (iCode >= ANSI_BACK_BLACK && iCode <= ANSI_BACK_WHITE) ||    // background colour
+      (iCode == ANSI_SET_FOREGROUND_DEFAULT) ||                    // foreground to default
+      (iCode == ANSI_SET_BACKGROUND_DEFAULT))                      // background to default
+    {
+    GetStyleRGB (pOldStyle, iForeColour, iBackColour);
+    iFlags &= ~COLOURTYPE;  // clear custom bits
+    iFlags |= COLOUR_RGB;
+    } // end of switching to RGB mode
 
   // if they are in RGB mode we have to do the RGB conversion now, not at display time
   if ((iFlags & COLOURTYPE) == COLOUR_RGB)
@@ -74,8 +51,7 @@ CAction *      pAction      = pOldStyle->pAction;
     int i;
 
     if ((iCode >= ANSI_TEXT_BLACK && iCode <= ANSI_TEXT_WHITE) ||   // foreground colour
-        (iCode == ANSI_SET_FOREGROUND_DEFAULT)
-        )
+        (iCode == ANSI_SET_FOREGROUND_DEFAULT))
       {
       if (iCode == ANSI_SET_FOREGROUND_DEFAULT)
         i = WHITE;

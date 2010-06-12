@@ -15,7 +15,7 @@ static char BASED_CODE THIS_FILE[] = __FILE__;
 
 const CMapDirection* MapDirectionsMap(string key)
 {
-  static CMapDirectionsMap directions;
+  static map<string, CMapDirection> directions;
   static bool bInitialized = false;
 
   if (!bInitialized)
@@ -47,8 +47,8 @@ const CMapDirection* MapDirectionsMap(string key)
     bInitialized = true;
     }
 
-  MapDirectionsIterator i = directions.find(key);
-  return (i == directions.end()) ? NULL : &i->second;
+  map<string, CMapDirection>::const_iterator itr = directions.find(key);
+  return (itr == directions.end()) ? NULL : &itr->second;
 } // end of MapDirectionsMap
 
 

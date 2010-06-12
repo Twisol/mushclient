@@ -908,9 +908,6 @@ class CMapDirection
     string m_sReverseDirection; // eg. "e" becomes "w"
 };  // end of class CMapDirection
 
-typedef map<string, CMapDirection> CMapDirectionsMap;
-typedef map<string, CMapDirection>::const_iterator MapDirectionsIterator;
-
 
 
 /*

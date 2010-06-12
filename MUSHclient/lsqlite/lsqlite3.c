@@ -35,8 +35,8 @@
 #include <string.h>
 #include <assert.h>
 
-#include "..\lua.h"
-#include "..\lauxlib.h"
+#include "lua\lua.h"
+#include "lua\lauxlib.h"
 
 #include "sqlite3\sqlite3.h"
 

@@ -7,16 +7,16 @@
 // PluginsDlg.h : header file
 //
 
-  enum 
-  { eColumnName,
-    eColumnPurpose,
-    eColumnAuthor,
-    eColumnLanguage,
-    eColumnFile,
-    eColumnEnabled,
-    eColumnVersion,
-    eColumnCount      // this must be last!
-  };
+enum {
+  eColumnName,
+  eColumnPurpose,
+  eColumnAuthor,
+  eColumnLanguage,
+  eColumnFile,
+  eColumnEnabled,
+  eColumnVersion,
+  eColumnCount,  // this must be last!
+};
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -24,64 +24,64 @@
 
 class CPluginsDlg : public CDialog
 {
-// Construction
-public:
-	CPluginsDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    // Construction
+    CPluginsDlg(CWnd* pParent = NULL); // standard constructor
 
-// Dialog Data
-	//{{AFX_DATA(CPluginsDlg)
-	enum { IDD = IDD_PLUGINS };
-	CButton	m_ctlDisable;
-	CButton	m_ctlEnable;
-	CButton	m_ctlCancel;
-	CButton	m_ctlShowDescription;
-	CButton	m_ctlReload;
-	CButton	m_ctlEdit;
-	CButton	m_ctlDelete;
-	CButton	m_ctlAdd;
-	CListCtrl	m_ctlPluginList;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CPluginsDlg)
+    enum { IDD = IDD_PLUGINS };
+    CButton m_ctlDisable;
+    CButton m_ctlEnable;
+    CButton m_ctlCancel;
+    CButton m_ctlShowDescription;
+    CButton m_ctlReload;
+    CButton m_ctlEdit;
+    CButton m_ctlDelete;
+    CButton m_ctlAdd;
+    CListCtrl m_ctlPluginList;
+    //}}AFX_DATA
 
-  CMUSHclientDoc * m_pDoc;
+    CMUSHclientDoc * m_pDoc;
 
-  // for sorting the list
+    // for sorting the list
+    int m_last_col;
+    BOOL m_reverse;
 
-  int m_last_col;
-  BOOL m_reverse;
+    void LoadList ();
+    void EditPlugin (const CString strName);
 
-  void LoadList (void);
-  void EditPlugin (const CString strName);
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CPluginsDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CPluginsDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CPluginsDlg)
+    virtual BOOL OnInitDialog();
+    afx_msg void OnColumnclickPluginsList(NMHDR* pNMHDR, LRESULT* pResult);
+    afx_msg void OnShowDescription();
+    afx_msg void OnAddPlugin();
+    afx_msg void OnDeletePlugin();
+    afx_msg void OnReload();
+    afx_msg void OnDestroy();
+    afx_msg void OnEdit();
+    afx_msg void OnDblclkPluginsList(NMHDR* pNMHDR, LRESULT* pResult);
+    afx_msg void OnSize(UINT nType, int cx, int cy);
+    afx_msg void OnRdblclkPluginsList(NMHDR* pNMHDR, LRESULT* pResult);
+    afx_msg void OnEnable();
+    afx_msg void OnDisable();
+    //}}AFX_MSG
 
-// Implementation
-protected:
+    afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
+    afx_msg void OnUpdateNeedSelection(CCmdUI* pCmdUI);
+    afx_msg void OnUpdateNeedDescription(CCmdUI* pCmdUI);
 
-	// Generated message map functions
-	//{{AFX_MSG(CPluginsDlg)
-	virtual BOOL OnInitDialog();
-	afx_msg void OnColumnclickPluginsList(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnShowDescription();
-	afx_msg void OnAddPlugin();
-	afx_msg void OnDeletePlugin();
-	afx_msg void OnReload();
-	afx_msg void OnDestroy();
-	afx_msg void OnEdit();
-	afx_msg void OnDblclkPluginsList(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnSize(UINT nType, int cx, int cy);
-	afx_msg void OnRdblclkPluginsList(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnEnable();
-	afx_msg void OnDisable();
-	//}}AFX_MSG
-  afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
-  afx_msg void OnUpdateNeedSelection(CCmdUI* pCmdUI);
-  afx_msg void OnUpdateNeedDescription(CCmdUI* pCmdUI);
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

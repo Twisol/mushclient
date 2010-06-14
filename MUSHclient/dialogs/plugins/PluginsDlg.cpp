@@ -287,7 +287,7 @@ void CPluginsDlg::OnAddPlugin()
       );
 
   char szFileBuffer[4096];
-  szFileBuffer[0] = 0;
+  szFileBuffer[0] = '\0';
   filedlg.m_ofn.lpstrFile = szFileBuffer;
   filedlg.m_ofn.nMaxFile = sizeof(szFileBuffer);
 
@@ -352,27 +352,14 @@ void CPluginsDlg::OnAddPlugin()
 
 void CPluginsDlg::OnDeletePlugin()
 {
-  CUIntArray arySelected;
-
-  int iCount = m_ctlPluginList.GetSelectedCount ();
-  arySelected.SetSize (iCount);
-
-  int nItem = -1;
-  int i = 0;
-
-  // first, remember selected items
-  while ((nItem = m_ctlPluginList.GetNextItem(nItem, LVNI_SELECTED)) != -1)
-    arySelected [i++] = nItem;
-
   bool bChanged = false;
 
-  // we do it this way because deleting items buggers up the position in the array
-  for (i = iCount - 1; i >= 0; --i)
-    {
-    nItem = arySelected [i];
-
+  // iterate through list
+  int nItem = -1;
+  while ((nItem = m_ctlPluginList.GetNextItem(nItem, LVNI_SELECTED)) != -1)
+  {
     CPlugin * p = (CPlugin *) m_ctlPluginList.GetItemData (nItem);
-	  
+
     POSITION pos = m_pDoc->m_PluginList.Find (p);
     if (pos)
       {
@@ -381,8 +368,8 @@ void CPluginsDlg::OnDeletePlugin()
       bChanged = true;
       }
     else
-      ::TMessageBox ("Plugin cannot be found, unexpectedly.", MB_ICONEXCLAMATION); 
-    } // end of loop
+      ::TMessageBox ("Plugin cannot be found, unexpectedly.", MB_ICONEXCLAMATION);
+  }
 
   LoadList ();
 
@@ -393,45 +380,6 @@ void CPluginsDlg::OnDeletePlugin()
     }
 }        // CPluginsDlg::OnDeletePlugin()
 
-/*
-void CPluginsDlg::OnMoveUp() 
-{
-int nItem = m_ctlPluginList.GetNextItem(-1, LVNI_SELECTED);
-         
-if (nItem == -1)
- return;
-
-if (nItem == 0)
- return;      // already at top
-
-CPlugin * p = (CPlugin *) m_ctlPluginList.GetItemData (nItem);
-	
-  POSITION pos = m_pDoc->m_PluginList.Find (p);
-	
-  if (!pos)
-    return;
-
-CPlugin * p2 = (CPlugin *) m_ctlPluginList.GetItemData (nItem - 1);
-	
-  POSITION pos2 = m_pDoc->m_PluginList.Find (p2);
-
-  if (!pos2)
-    return;
-
-  m_pDoc->m_PluginList.RemoveAt (pos);  // remove from list (old position)
-  m_pDoc->m_PluginList.InsertBefore (pos2, p);  // add before previous one
-
-  LoadList ();
-
-}
-
-void CPluginsDlg::OnMoveDown() 
-{
-	// TODO: Add your control notification handler code here
-	
-}
-
-  */
 
 void CPluginsDlg::OnReload() 
 {
@@ -525,10 +473,8 @@ void CPluginsDlg::OnEdit()
     {
     CPlugin * p = (CPlugin *) m_ctlPluginList.GetItemData (nItem);
 
-    if (!m_pDoc->m_PluginList.Find (p))
-      continue;
-
-    EditPlugin (p->m_strSource);
+    if (m_pDoc->m_PluginList.Find (p))
+      EditPlugin (p->m_strSource);
     } // end of loop
 }  // end of CPluginsDlg::OnEdit
 
@@ -661,10 +607,9 @@ void CPluginsDlg::OnRdblclkPluginsList(NMHDR* pNMHDR, LRESULT* pResult)
             TFormat ("Unable to edit the plugin state file %s.", (LPCTSTR) strName),
             MB_ICONEXCLAMATION
             );
-      continue;
       }   // end of using inbuilt notepad
-
-    m_pDoc->EditFileWithEditor (strName);
+    else
+      m_pDoc->EditFileWithEditor (strName);
   } // end of loop
 
   *pResult = 0;

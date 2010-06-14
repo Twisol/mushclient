@@ -316,7 +316,10 @@ CString strName;
     {
     strName = MXP_colours [i].pName;
     strName.MakeLower ();     // ensure lower case
-    m_ColoursMap[strName] = new CColours;
+
+    colour_item = new CColours;
+    m_ColoursMap[strName] = colour_item;
+
     colour_item->strName = strName;
     // colours seem to be inverted in my table above
     colour_item->iColour = RGB (

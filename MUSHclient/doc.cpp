@@ -750,12 +750,11 @@ void CMUSHclientDoc::SetUpOutputWindow ()
       strPath = i->c_str ();
 
       // see if we already have this one
-      POSITION pos = m_PluginList.GetHeadPosition();
       CPlugin * p = NULL;
       bool bAlreadyLoaded = false;
-      while (pos != NULL)
+      for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
         {
-        p = m_PluginList.GetNext (pos);
+        p = *itr;
         if (p->m_strSource == strPath)
           {
           bAlreadyLoaded = true;
@@ -768,10 +767,9 @@ void CMUSHclientDoc::SetUpOutputWindow ()
         {
         InternalLoadPlugin (strPath);
         // mark it as loaded globally
-        pos = m_PluginList.GetHeadPosition();
-        while (pos != NULL)
+        for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
           {
-          p = m_PluginList.GetNext (pos);
+          p = *itr;
           if (p->m_strSource == strPath)
             {
              p->m_bGlobal = true;
@@ -1123,11 +1121,10 @@ void CMUSHclientDoc::DoSendMsg(CString strText,
     m_bPluginProcessingSend = true;  // so we don't go into a loop
 
     // tell each plugin what we are about to send - it can return false to cancel send
-    POSITION pos = m_PluginList.GetHeadPosition();
     bool bOK = true;
-    while (pos != NULL)
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
       {
-      CPlugin * pPlugin = m_PluginList.GetNext (pos);
+      CPlugin * pPlugin = *itr;
       if (!pPlugin->m_bEnabled)   // ignore disabled plugins
         continue;
 
@@ -1150,10 +1147,9 @@ void CMUSHclientDoc::DoSendMsg(CString strText,
     m_bPluginProcessingSent = true;  // so we don't go into a loop
 
     // tell each plugin what we are about to send
-    POSITION pos = m_PluginList.GetHeadPosition();
-    while (pos != NULL)
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
       {
-      CPlugin * pPlugin = m_PluginList.GetNext (pos);
+      CPlugin * pPlugin = *itr;
       if (!pPlugin->m_bEnabled)   // ignore disabled plugins
         continue;
 
@@ -1617,10 +1613,9 @@ void CMUSHclientDoc::DisplayMsg(LPCTSTR lpszText, int size, const int flags)
     m_iCurrentActionSource = eInputFromServer;
 
     // tell each plugin what we have received
-    POSITION pluginpos = m_PluginList.GetHeadPosition();
-    while (pluginpos != NULL)
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
       {
-      CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+      CPlugin * pPlugin = *itr;
       if (!pPlugin->m_bEnabled)   // ignore disabled plugins
         continue;
 
@@ -4139,10 +4134,9 @@ void CMUSHclientDoc::CheckTimers ()
     CheckTimerList (GetTimerMap ());
 
     // do plugins
-    POSITION pos = m_PluginList.GetHeadPosition ();
-    while (pos != NULL)
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
       {
-      m_CurrentPlugin = m_PluginList.GetNext (pos);
+      m_CurrentPlugin = *itr;
       if (m_CurrentPlugin->m_bEnabled)
         CheckTimerList (GetTimerMap ());
       } // end of doing each plugin
@@ -4169,11 +4163,10 @@ void CMUSHclientDoc::CheckTickTimers ()
     }
 
   // tell each plugin about the tick
-  POSITION pos = m_PluginList.GetHeadPosition();
   CPlugin * pPlugin = NULL;
-  while (pos != NULL)
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    pPlugin = m_PluginList.GetNext (pos);
+    pPlugin = *itr;
     if (pPlugin->m_bEnabled) // only do enabled plugins
       pPlugin->ExecutePluginScript (ON_PLUGIN_TICK, pPlugin->m_dispid_plugin_tick);
     }   // end of doing each plugin
@@ -4552,10 +4545,9 @@ void CMUSHclientDoc::OnGameResetalltimers()
 {
   ResetAllTimers (GetTimerMap ());
   // do plugins
-  POSITION pos = m_PluginList.GetHeadPosition ();
-  while (pos != NULL)
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    m_CurrentPlugin = m_PluginList.GetNext (pos);
+    m_CurrentPlugin = *itr;
     if (m_CurrentPlugin->m_bEnabled)
       ResetAllTimers (GetTimerMap ());
     } // end of doing each plugin
@@ -6378,10 +6370,9 @@ CString strIpAddress = inet_ntoa (*((struct in_addr *) lpHostEntry->h_addr));
     } // end of executing open script
 
   // tell each plugin we have connected
-  POSITION pos = m_PluginList.GetHeadPosition();
-  while (pos != NULL)
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pos);
+    CPlugin * pPlugin = *itr;
     if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
 
@@ -6838,10 +6829,9 @@ void CMUSHclientDoc::SendLineToPlugin ()
   m_CurrentPlugin = NULL;
 
   // tell each plugin what we have received
-  POSITION pluginpos = m_PluginList.GetHeadPosition();
-  while (pluginpos != NULL)
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+    CPlugin * pPlugin = *itr;
     if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
 
@@ -6950,10 +6940,9 @@ void CMUSHclientDoc::Screendraw  (const long iType,
   m_CurrentPlugin = NULL;
 
   // tell a plugin the message
-  POSITION pluginpos = m_PluginList.GetHeadPosition();
-  while (pluginpos != NULL)
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+    CPlugin * pPlugin = *itr;
     if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
 
@@ -6983,10 +6972,9 @@ bool CMUSHclientDoc::PlaySoundFile (CString strSound)
     m_CurrentPlugin = NULL;
 
     // tell a plugin the sound to play
-    POSITION pluginpos = m_PluginList.GetHeadPosition();
-    while (pluginpos != NULL)
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
       {
-      CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+      CPlugin * pPlugin = *itr;
       if (!pPlugin->m_bEnabled)   // ignore disabled plugins
         continue;
 
@@ -7025,10 +7013,9 @@ void CMUSHclientDoc::CancelSound ()
     m_CurrentPlugin = NULL;
 
     // tell a plugin the sound to play
-    POSITION pluginpos = m_PluginList.GetHeadPosition();
-    while (pluginpos != NULL)
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
       {
-      CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+      CPlugin * pPlugin = *itr;
       if (!pPlugin->m_bEnabled)   // ignore disabled plugins
         continue;
 
@@ -7185,10 +7172,9 @@ void CMUSHclientDoc::PluginListChanged ()
   m_CurrentPlugin = NULL;
 
   // tell a plugin the message
-  POSITION pluginpos = m_PluginList.GetHeadPosition();
-  while (pluginpos != NULL)
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+    CPlugin * pPlugin = *itr;
     if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
 

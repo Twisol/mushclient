@@ -179,9 +179,9 @@ bool bHaveVariable = false;
 
   // tell each plugin about the close tag
   if (m_bPluginProcessesCloseTag)
-    for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
       {
-      CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+      CPlugin * pPlugin = *itr;
 
       if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
         continue;
@@ -287,9 +287,9 @@ bool bHaveVariable = false;
 
     // tell each plugin what we have received
     if (m_bPluginProcessesSetVariable)
-      for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+      for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
         {
-        CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+        CPlugin * pPlugin = *itr;
 
         if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
           continue;
@@ -310,9 +310,9 @@ bool bHaveVariable = false;
 
       // tell each plugin what we have received
       if (m_bPluginProcessesSetEntity)
-        for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+        for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
           {
-          CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+          CPlugin * pPlugin = *itr;
 
           if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
             continue;

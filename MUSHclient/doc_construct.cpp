@@ -508,7 +508,9 @@ int i;
 
 // delete plugins
 
-  DELETE_LIST (m_PluginList);
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
+    delete *itr;
+  m_PluginList.clear();
 
   CloseLog ();    // this writes out the log file postamble as well
 

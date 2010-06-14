@@ -121,9 +121,9 @@ CChatSocket::~CChatSocket()
     CPlugin * pSavedPlugin = m_pDoc->m_CurrentPlugin;
 
     // tell each plugin about the departing user
-    for (POSITION pluginpos = m_pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+    for (PluginsIterator itr = m_pDoc->m_PluginList.begin(); itr != m_pDoc->m_PluginList.end(); ++itr)
       {
-      CPlugin * pPlugin = m_pDoc->m_PluginList.GetNext (pluginpos);
+      CPlugin * pPlugin = *itr;
       
       if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
         continue;
@@ -185,7 +185,6 @@ void CChatSocket::OnReceive(int nErrorCode)
 
 char buff [1000];
 int count = Receive (buff, sizeof (buff) - 1);
-POSITION pluginpos;
 
   if (count == SOCKET_ERROR)
     {
@@ -261,9 +260,9 @@ POSITION pluginpos;
       CPlugin * pSavedPlugin = m_pDoc->m_CurrentPlugin;
 
       // tell each plugin about the new user
-      for (pluginpos = m_pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+      for (PluginsIterator itr = m_pDoc->m_PluginList.begin(); itr != m_pDoc->m_PluginList.end(); ++itr)
         {
-        CPlugin * pPlugin = m_pDoc->m_PluginList.GetNext (pluginpos);
+        CPlugin * pPlugin = *itr;
 
         if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
           continue;
@@ -357,9 +356,9 @@ POSITION pluginpos;
       CPlugin * pSavedPlugin = m_pDoc->m_CurrentPlugin;
 
       // tell each plugin what we are about to display
-      for (pluginpos = m_pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+      for (PluginsIterator itr = m_pDoc->m_PluginList.begin(); itr != m_pDoc->m_PluginList.end(); ++itr)
         {
-        CPlugin * pPlugin = m_pDoc->m_PluginList.GetNext (pluginpos);
+        CPlugin * pPlugin = *itr;
 
         if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
           continue;
@@ -424,9 +423,9 @@ POSITION pluginpos;
       pSavedPlugin = m_pDoc->m_CurrentPlugin;
 
       // tell each plugin about the new user
-      for (POSITION pluginpos = m_pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+      for (PluginsIterator itr = m_pDoc->m_PluginList.begin(); itr != m_pDoc->m_PluginList.end(); ++itr)
         {
-        CPlugin * pPlugin = m_pDoc->m_PluginList.GetNext (pluginpos);
+        CPlugin * pPlugin = *itr;
 
         if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
           continue;
@@ -736,9 +735,9 @@ void CChatSocket::ProcessChatMessage (const int iMessage, const CString strMessa
   CPlugin * pSavedPlugin = m_pDoc->m_CurrentPlugin;
 
   // tell each plugin what we are about to display
-  for (POSITION pluginpos = m_pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+  for (PluginsIterator itr = m_pDoc->m_PluginList.begin(); itr != m_pDoc->m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_pDoc->m_PluginList.GetNext (pluginpos);
+    CPlugin * pPlugin = *itr;
 
     if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
       continue;
@@ -823,9 +822,9 @@ void CChatSocket::SendChatMessage (const int iMessage,
 
   CPlugin * pSavedPlugin = m_pDoc->m_CurrentPlugin;
   // tell each plugin what we are about to display
-  for (POSITION pluginpos = m_pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+  for (PluginsIterator itr = m_pDoc->m_PluginList.begin(); itr != m_pDoc->m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_pDoc->m_PluginList.GetNext (pluginpos);
+    CPlugin * pPlugin = *itr;
 
     if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
       continue;

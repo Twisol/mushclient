@@ -351,9 +351,9 @@ ASSERT_VALID(pDoc);
 
     // tell each plugin what we have received
     // the plugin callback OnPluginCommandEntered gets a chance to attack the entire command
-    for (POSITION pluginpos = pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+    for (PluginsIterator itr = pDoc->m_PluginList.begin(); itr != pDoc->m_PluginList.end(); ++itr)
       {
-      CPlugin * pPlugin = pDoc->m_PluginList.GetNext (pluginpos);
+      CPlugin * pPlugin = *itr;
 
 
       if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
@@ -964,9 +964,9 @@ ASSERT_VALID(pDoc);
           pDoc->m_CurrentPlugin = NULL;
 
           // tell each plugin what we have received
-          for (POSITION pluginpos = pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+          for (PluginsIterator itr = pDoc->m_PluginList.begin(); itr != pDoc->m_PluginList.end(); ++itr)
             {
-            CPlugin * pPlugin = pDoc->m_PluginList.GetNext (pluginpos);
+            CPlugin * pPlugin = *itr;
 
             if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
               continue;
@@ -1013,9 +1013,9 @@ ASSERT_VALID(pDoc);
           pDoc->m_CurrentPlugin = NULL;
 
           // tell each plugin what we have received
-          for (POSITION pluginpos = pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+          for (PluginsIterator itr = pDoc->m_PluginList.begin(); itr != pDoc->m_PluginList.end(); ++itr)
             {
-            CPlugin * pPlugin = pDoc->m_PluginList.GetNext (pluginpos);
+            CPlugin * pPlugin = *itr;
 
             if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
               continue;
@@ -1238,9 +1238,9 @@ ASSERT_VALID(pDoc);
   if (!doing_change)      // don't recurse
     {
     doing_change = true;
-    for (POSITION pluginpos = pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+    for (PluginsIterator itr = pDoc->m_PluginList.begin(); itr != pDoc->m_PluginList.end(); ++itr)
       {
-      CPlugin * pPlugin = pDoc->m_PluginList.GetNext (pluginpos);
+      CPlugin * pPlugin = *itr;
 
 
       if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
@@ -2057,9 +2057,9 @@ while (*p)
       CPlugin * pSavedPlugin = pDoc->m_CurrentPlugin;
 
       // tell each plugin what we are doing
-      for (POSITION pluginpos = pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+      for (PluginsIterator itr = pDoc->m_PluginList.begin(); itr != pDoc->m_PluginList.end(); ++itr)
         {
-        CPlugin * pPlugin = pDoc->m_PluginList.GetNext (pluginpos);
+        CPlugin * pPlugin = *itr;
 
 
         if (!(pPlugin->m_bEnabled))   // ignore disabled plugins

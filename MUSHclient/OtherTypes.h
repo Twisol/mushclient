@@ -869,7 +869,8 @@ class CPlugin :public CObject
     DISPID m_dispid_plugin_On_Chat_UserDisconnect; // "OnPluginChatUserDisconnect"
 };
 
-typedef CTypedPtrList <CPtrList, CPlugin*> CPluginList;
+typedef vector<CPlugin*> CPluginList;
+typedef vector<CPlugin*>::iterator PluginsIterator;
 
 // for storing map directions, and inverses of them
 class CMapDirection

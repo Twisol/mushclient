@@ -82,9 +82,9 @@ void CMUSHclientDoc::MXP_Off (const bool bCompletely)
       } // end of executing close script
 
     // tell each plugin we have connected
-    for (POSITION pos = m_PluginList.GetHeadPosition(); pos; )
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
       {
-      CPlugin * pPlugin = m_PluginList.GetNext (pos);
+      CPlugin * pPlugin = *itr;
 
       if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
         continue;
@@ -128,9 +128,9 @@ void CMUSHclientDoc::MXP_On (const bool bPueblo, const bool bManual)
     } // end of executing open script
 
   // tell each plugin MXP is starting
-  for (POSITION pos = m_PluginList.GetHeadPosition(); pos; )
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pos);
+    CPlugin * pPlugin = *itr;
 
     if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
       continue;

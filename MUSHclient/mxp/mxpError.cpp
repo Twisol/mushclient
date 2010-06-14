@@ -118,9 +118,9 @@ char * p = "?";
 
   // tell each plugin about the error tag
   if (m_bPluginProcessesError)
-    for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
       {
-      CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+      CPlugin * pPlugin = *itr;
 
       if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
         continue;

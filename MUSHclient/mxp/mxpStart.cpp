@@ -548,9 +548,9 @@ bool CMUSHclientDoc::MXP_StartTagScript  (const CString & strName,
     return false;
 
   // tell each plugin what we have received
-  for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+    CPlugin * pPlugin = *itr;
 
     if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
       continue;

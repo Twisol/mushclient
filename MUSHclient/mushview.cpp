@@ -1794,10 +1794,9 @@ CPoint menupoint = point;
     } // end of all aliases
 
   // do plugins
-  for (POSITION plugin_pos = pDoc->m_PluginList.GetHeadPosition (); 
-        plugin_pos && i < MXP_MENU_COUNT; )
+  for (PluginsIterator itr = pDoc->m_PluginList.begin(); itr != pDoc->m_PluginList.end() && i < MXP_MENU_COUNT; ++itr)
     {
-    pDoc->m_CurrentPlugin = pDoc->m_PluginList.GetNext (plugin_pos);
+    pDoc->m_CurrentPlugin = *itr;
 
     if (pDoc->m_CurrentPlugin->m_bEnabled)
       for (POSITION pos = pDoc->GetAliasMap ().GetStartPosition (); 
@@ -2977,9 +2976,9 @@ CSize sizeTotal (pDoc->m_nWrapColumn * pDoc->m_FontWidth, lastline * pDoc->m_Fon
 
     // tell each plugin we have resized. Hello, Worstje!
 
-  for (POSITION pluginpos = pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+  for (PluginsIterator itr = pDoc->m_PluginList.begin(); itr != pDoc->m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = pDoc->m_PluginList.GetNext (pluginpos);
+    CPlugin * pPlugin = *itr;
 
 
     if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
@@ -3205,9 +3204,9 @@ ASSERT_VALID(pDoc);
         pDoc->m_CurrentPlugin = NULL;
 
         // tell each plugin what we have received
-        for (POSITION pluginpos = pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+        for (PluginsIterator itr = pDoc->m_PluginList.begin(); itr != pDoc->m_PluginList.end(); ++itr)
           {
-          CPlugin * pPlugin = pDoc->m_PluginList.GetNext (pluginpos);
+          CPlugin * pPlugin = *itr;
 
           if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
             continue;
@@ -3257,9 +3256,9 @@ ASSERT_VALID(pDoc);
         pDoc->m_CurrentPlugin = NULL;
 
         // tell each plugin what we have received
-        for (POSITION pluginpos = pDoc->m_PluginList.GetHeadPosition(); pluginpos; )
+        for (PluginsIterator itr = pDoc->m_PluginList.begin(); itr != pDoc->m_PluginList.end(); ++itr)
           {
-          CPlugin * pPlugin = pDoc->m_PluginList.GetNext (pluginpos);
+          CPlugin * pPlugin = *itr;
 
           if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
             continue;
@@ -6381,9 +6380,9 @@ bool CMUSHView::Mouse_Move_MiniWindow (CMUSHclientDoc* pDoc, CPoint point)
   pDoc->m_CurrentPlugin = NULL;
 
   // tell each plugin about the mouse movement
-  for (POSITION pos = pDoc->m_PluginList.GetHeadPosition(); pos; )
+  for (PluginsIterator itr = pDoc->m_PluginList.begin(); itr != pDoc->m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = pDoc->m_PluginList.GetNext (pos);
+    CPlugin * pPlugin = *itr;
 
     if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
       continue;

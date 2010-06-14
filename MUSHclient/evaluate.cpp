@@ -77,9 +77,9 @@ CAliasList AliasList;
                              mapOneShotItems))
        return true;
     // do plugins
-    for (pos = m_PluginList.GetHeadPosition (); pos; )
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
       {
-      m_CurrentPlugin = m_PluginList.GetNext (pos);
+      m_CurrentPlugin = *itr;
       if (m_CurrentPlugin->m_bEnabled)
         if (ProcessOneAliasSequence (input,
                                  bCountThem,
@@ -146,9 +146,9 @@ CAliasList AliasList;
      }  // end of scanning main aliases
 
     // do plugins
-    for (POSITION plugin_pos = m_PluginList.GetHeadPosition (); !bFoundIt && plugin_pos; )
+    for (PluginsIterator itr = m_PluginList.begin(); !bFoundIt && itr != m_PluginList.end(); ++itr)
       {
-      m_CurrentPlugin = m_PluginList.GetNext (plugin_pos);
+      m_CurrentPlugin = *itr;
 
       if (m_CurrentPlugin->m_bEnabled)
         for (POSITION pos = GetAliasMap ().GetStartPosition (); !bFoundIt && pos; )

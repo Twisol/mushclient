@@ -93,9 +93,9 @@ void CMUSHclientDoc::Handle_IAC_GA ()
   CPlugin * pSavedPlugin = m_CurrentPlugin;
 
   // tell each plugin what we have received
-  for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+    CPlugin * pPlugin = *itr;
 
 
     if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
@@ -169,9 +169,9 @@ bool CMUSHclientDoc::Handle_Telnet_Request (const int iNumber, const string sTyp
   CPlugin * pSavedPlugin = m_CurrentPlugin;
 
   // tell each plugin what we have received
-  for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+    CPlugin * pPlugin = *itr;
 
 
     if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
@@ -572,9 +572,9 @@ void CMUSHclientDoc::Phase_SUBNEGOTIATION_IAC (const unsigned char c)
       CPlugin * pSavedPlugin = m_CurrentPlugin;
 
       // tell each plugin what we have received
-      for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+      for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
         {
-        CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+        CPlugin * pPlugin = *itr;
 
 
         if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
@@ -736,9 +736,9 @@ void CMUSHclientDoc::Handle_TELOPT_MUD_SPECIFIC ()
   CPlugin * pSavedPlugin = m_CurrentPlugin;
 
   // tell each plugin what we have received
-  for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+    CPlugin * pPlugin = *itr;
 
 
     if (!(pPlugin->m_bEnabled))   // ignore disabled plugins

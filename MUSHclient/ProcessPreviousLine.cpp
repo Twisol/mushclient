@@ -456,9 +456,9 @@ assemble the full text of the original line.
   m_iCurrentActionSource = eInputFromServer;
 
   // tell each plugin what we have received
-  for (POSITION pluginpos = m_PluginList.GetHeadPosition(); pluginpos; )
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pluginpos);
+    CPlugin * pPlugin = *itr;
 
     if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
       continue;
@@ -600,9 +600,9 @@ assemble the full text of the original line.
                               triggerList, strExtraOutput, mapDeferredScripts, mapOneShotItems);
 
     // do plugins
-    for (pos = m_PluginList.GetHeadPosition (); pos; )
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
       {
-      m_CurrentPlugin = m_PluginList.GetNext (pos);
+      m_CurrentPlugin = *itr;
       if (m_CurrentPlugin->m_bEnabled)
         ProcessOneTriggerSequence (strCurrentLine, 
                               StyledLine, 
@@ -711,7 +711,7 @@ assemble the full text of the original line.
     if (!m_LineList.IsEmpty ())
       {
       m_pCurrentLine = m_LineList.GetTail ();
-      if ((m_pCurrentLine->flags & COMMENT == 0) ||
+      if ((m_pCurrentLine->flags & COMMENT) == 0 ||
           m_pCurrentLine->hard_return)
           m_pCurrentLine = NULL;
       }
@@ -819,9 +819,9 @@ assemble the full text of the original line.
         }
 
     // do plugins
-    for (POSITION plugin_pos = m_PluginList.GetHeadPosition (); !bFoundIt && plugin_pos; )
+    for (PluginsIterator itr = m_PluginList.begin(); !bFoundIt && itr != m_PluginList.end(); ++itr)
       {
-      m_CurrentPlugin = m_PluginList.GetNext (plugin_pos);
+      m_CurrentPlugin = *itr;
 
       if (m_CurrentPlugin->m_bEnabled)
         for (iItem = 0; !bFoundIt && iItem < GetTriggerArray ().GetSize (); iItem++)

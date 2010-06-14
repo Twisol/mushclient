@@ -525,7 +525,7 @@ LONGLONG iCounterFrequency = large_int_frequency.QuadPart;
         }  // end of having a script
 
       // add to world plugins
-      m_PluginList.AddTail (m_CurrentPlugin);
+      m_PluginList.push_back (m_CurrentPlugin);
 
       // now call the OnInstall routine (once it is in the list)
 
@@ -2323,9 +2323,9 @@ void CMUSHclientDoc::Load_Plugin_XML (CXMLelement & parent)
       m_CurrentPlugin->m_strID.MakeLower ();
 
       // check ID is unique
-      for (POSITION pos = m_PluginList.GetHeadPosition(); pos; )
+      for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
         {
-        CPlugin * p = m_PluginList.GetNext (pos);
+        CPlugin * p = *itr;
         if (m_CurrentPlugin->m_strID == p->m_strID)
            ThrowErrorException ("Plugin \"id\" field must be unique for this world");
         }      // end of looping through each plugins

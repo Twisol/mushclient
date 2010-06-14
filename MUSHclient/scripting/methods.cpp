@@ -1520,10 +1520,10 @@ void CMUSHclientDoc::Trace (LPCTSTR lpszFormat, ...)
 
   // tell a plugin the trace message
   CPlugin * pPlugin = NULL;
-  POSITION pluginpos = m_PluginList.GetHeadPosition();
-  while (pluginpos != NULL)
+  PluginsIterator itr;
+  for (itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    pPlugin = m_PluginList.GetNext (pluginpos);
+    pPlugin = *itr;
 
     if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
@@ -1540,7 +1540,7 @@ void CMUSHclientDoc::Trace (LPCTSTR lpszFormat, ...)
   m_CurrentPlugin = pSavedPlugin;
   m_bTrace = true;
 
-  if (pluginpos == NULL) // not sent to plugin? handle it here
+  if (itr == m_PluginList.end()) // not sent to plugin? handle it here
     {
     strMsg = "TRACE: " + strMsg + ENDLINE;
     DisplayMsg (strMsg, strMsg.GetLength (), COMMENT);
@@ -4684,14 +4684,14 @@ VARIANT CMUSHclientDoc::GetPluginList()
   COleSafeArray sa;   // for variable list
 
   // put the plugins into the array
-  if (!m_PluginList.IsEmpty ())    // cannot create empty dimension
+  if (!m_PluginList.empty ())    // cannot create empty dimension
     {
-    sa.CreateOneDim (VT_VARIANT, m_PluginList.GetCount ());
+    sa.CreateOneDim (VT_VARIANT, m_PluginList.size ());
 
-    POSITION pos = m_PluginList.GetHeadPosition();
-    for (long iCount = 0; pos != NULL; ++iCount)
+    PluginsIterator itr = m_PluginList.begin();
+    for (long iCount = 0; itr != m_PluginList.end(); ++iCount, ++itr)
       {
-      CPlugin * p = m_PluginList.GetNext (pos);
+      CPlugin * p = *itr;
 
       // the array must be a bloody array of variants, or VBscript kicks up
       sa.PutElement (&iCount, &((COleVariant)p->m_strID));
@@ -4744,12 +4744,11 @@ VARIANT CMUSHclientDoc::GetPluginInfo(LPCTSTR PluginID, short InfoType)
     case 20: SetUpVariantString (vaResult, pPlugin->m_strDirectory); break;
     case 21:
       {
-      int iCount = 0;
-      POSITION pos = m_PluginList.GetHeadPosition();
+      PluginsIterator itr = m_PluginList.begin();
       // first work out what order each plugin is in *now*
-      for (int iCount = 1; pos != NULL; ++iCount)
+      for (int iCount = 1; itr != m_PluginList.end(); ++iCount, ++itr)
         {
-        CPlugin * p = m_PluginList.GetNext (pos);
+        CPlugin * p = *itr;
         p->m_iLoadOrder = iCount;
         }      // end of looping through each plugin
 
@@ -4810,10 +4809,9 @@ long CMUSHclientDoc::ReloadPlugin(LPCTSTR PluginID)
   if (pPlugin == NULL && PluginID[0] != '\0')
     {
     // see if plugin exists in list of plugins for this document
-    POSITION pos = m_PluginList.GetHeadPosition();
-    while (pos != NULL && pPlugin == NULL)
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end() && pPlugin == NULL; ++itr)
       {
-      pPlugin = m_PluginList.GetNext (pos);
+      pPlugin = *itr;
       if (pPlugin->m_strName.CompareNoCase (PluginID) != 0)
         pPlugin = NULL;
       }      // end of looping through each plugins
@@ -4827,14 +4825,14 @@ long CMUSHclientDoc::ReloadPlugin(LPCTSTR PluginID)
   if (pPlugin == m_CurrentPlugin)
     return eBadParameter;
 
-  POSITION pos = m_PluginList.Find (pPlugin);
-  if (!pos)
+  PluginsIterator itr = std::find(m_PluginList.begin(), m_PluginList.end(), pPlugin);
+  if (itr == m_PluginList.end())
     return eNoSuchPlugin;
 
   // get the source filename
   CString strName = pPlugin->m_strSource;
 
-  m_PluginList.RemoveAt (pos);  // remove from list
+  m_PluginList.erase (itr);  // remove from list
   delete pPlugin;   // delete the plugin
 
   // load it again
@@ -4858,10 +4856,9 @@ CPlugin * CMUSHclientDoc::GetPlugin (LPCTSTR PluginID)
     return m_CurrentPlugin;
 
   // see if plugin exists in list of plugins for this document
-  POSITION pos = m_PluginList.GetHeadPosition();
-  while (pos != NULL)
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_PluginList.GetNext (pos);
+    CPlugin * pPlugin = *itr;
     if (pPlugin->m_strID.CompareNoCase (PluginID) == 0)
       return pPlugin;
     }      // end of looping through each plugins
@@ -6332,11 +6329,10 @@ long CMUSHclientDoc::Execute(LPCTSTR Command)
       m_bPluginProcessingCommand = true;  // so we don't go into a loop
       bool bOK = true;
       // tell each plugin what we are about to Command
-      POSITION pos = m_PluginList.GetHeadPosition();
       CPlugin * pPlugin = NULL;
-      while (pos != NULL)
+      for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
         {
-        pPlugin = m_PluginList.GetNext (pos);
+        pPlugin = *itr;
         if (!pPlugin->m_bEnabled)   // ignore disabled plugins
           continue;
 
@@ -7011,13 +7007,12 @@ void CMUSHclientDoc::ChatNote(short NoteType, LPCTSTR Message)
           m_iMaxChatLinesPerMessage);
     }   // end of line count check wanted
 
-  POSITION pluginpos = m_PluginList.GetHeadPosition();
   CPlugin * pSavedPlugin = m_CurrentPlugin;
   CPlugin * pPlugin = NULL;
   // tell each plugin what we are about to display
-  while (pluginpos != NULL)
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-     pPlugin = m_PluginList.GetNext (pluginpos);
+     pPlugin = *itr;
 
     if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;
@@ -9992,12 +9987,11 @@ long CMUSHclientDoc::BroadcastPlugin(long Message, LPCTSTR Text)
     }
 
   // tell a plugin the message
-  POSITION pluginpos = m_PluginList.GetHeadPosition();
   CPlugin * pPlugin = NULL;
   long iCount = 0;
-  while (pluginpos != NULL)
+  for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr)
     {
-    pPlugin = m_PluginList.GetNext (pluginpos);
+    pPlugin = *itr;
 
     if (!pPlugin->m_bEnabled)   // ignore disabled plugins
       continue;

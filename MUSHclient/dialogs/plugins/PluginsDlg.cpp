@@ -172,10 +172,10 @@ void CPluginsDlg::LoadList ()
 {
   m_ctlPluginList.DeleteAllItems ();
 
-  POSITION pos = m_pDoc->m_PluginList.GetHeadPosition();
-  for (int nItem = 0; pos != NULL; ++nItem)
+  PluginsIterator itr = m_pDoc->m_PluginList.begin();
+  for (int nItem = 0; itr != m_pDoc->m_PluginList.end(); ++itr, ++nItem)
     {
-    CPlugin * p = m_pDoc->m_PluginList.GetNext (pos);
+    CPlugin * p = *itr;
 
     m_ctlPluginList.InsertItem (nItem, p->m_strName);    // eColumnName
 
@@ -360,10 +360,10 @@ void CPluginsDlg::OnDeletePlugin()
   {
     CPlugin * p = (CPlugin *) m_ctlPluginList.GetItemData (nItem);
 
-    POSITION pos = m_pDoc->m_PluginList.Find (p);
-    if (pos)
+    PluginsIterator itr = std::find(m_pDoc->m_PluginList.begin(), m_pDoc->m_PluginList.end(), p);
+    if (itr != m_pDoc->m_PluginList.end())
       {
-      m_pDoc->m_PluginList.RemoveAt (pos);  // remove from list
+      m_pDoc->m_PluginList.erase (itr);  // remove from list
       delete p;   // delete the plugin
       bChanged = true;
       }
@@ -391,15 +391,15 @@ void CPluginsDlg::OnReload()
     {
     CPlugin * p = (CPlugin *) m_ctlPluginList.GetItemData (nItem);
 
-    POSITION pos = m_pDoc->m_PluginList.Find (p);
-    if (!pos)
+    PluginsIterator itr = std::find(m_pDoc->m_PluginList.begin(), m_pDoc->m_PluginList.end(), p);
+    if (itr == m_pDoc->m_PluginList.end())
       {
       ::TMessageBox ("Plugin cannot be found, unexpectedly.", MB_ICONEXCLAMATION);
       continue;
       }
 
     CString strName = p->m_strSource;
-    m_pDoc->m_PluginList.RemoveAt (pos);  // remove from list
+    m_pDoc->m_PluginList.erase (itr);  // remove from list
     delete p;   // delete the plugin
 
     bChanged = true;
@@ -473,7 +473,8 @@ void CPluginsDlg::OnEdit()
     {
     CPlugin * p = (CPlugin *) m_ctlPluginList.GetItemData (nItem);
 
-    if (m_pDoc->m_PluginList.Find (p))
+    PluginsIterator itr = std::find(m_pDoc->m_PluginList.begin(), m_pDoc->m_PluginList.end(), p);
+    if (itr != m_pDoc->m_PluginList.end())
       EditPlugin (p->m_strSource);
     } // end of loop
 }  // end of CPluginsDlg::OnEdit
@@ -578,7 +579,8 @@ void CPluginsDlg::OnRdblclkPluginsList(NMHDR* pNMHDR, LRESULT* pResult)
     {
     CPlugin * p = (CPlugin *) m_ctlPluginList.GetItemData (nItem);
 
-    if (!m_pDoc->m_PluginList.Find (p))
+    PluginsIterator itr = std::find(m_pDoc->m_PluginList.begin(), m_pDoc->m_PluginList.end(), p);
+    if (itr == m_pDoc->m_PluginList.end())
       continue;
 
     // no state file, don't bother
@@ -626,7 +628,8 @@ void CPluginsDlg::OnEnable()
     {
     CPlugin * p = (CPlugin *) m_ctlPluginList.GetItemData (nItem);
 
-    if (!m_pDoc->m_PluginList.Find (p))
+    PluginsIterator itr = std::find(m_pDoc->m_PluginList.begin(), m_pDoc->m_PluginList.end(), p);
+    if (itr == m_pDoc->m_PluginList.end())
       continue;
 
     m_pDoc->EnablePlugin (p->m_strID, TRUE);
@@ -649,7 +652,8 @@ void CPluginsDlg::OnDisable()
     {
     CPlugin * p = (CPlugin *) m_ctlPluginList.GetItemData (nItem);
 
-    if (!m_pDoc->m_PluginList.Find (p))
+    PluginsIterator itr = std::find(m_pDoc->m_PluginList.begin(), m_pDoc->m_PluginList.end(), p);
+    if (itr == m_pDoc->m_PluginList.end())
       continue;
 
     m_pDoc->EnablePlugin (p->m_strID, FALSE);

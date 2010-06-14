@@ -109,9 +109,9 @@ bool bWasClosed = m_pDoc->m_iConnectPhase == eConnectNotConnected;
     } // end of executing disconnect script
 
   // tell each plugin we have disconnected
-  for (POSITION pos = m_pDoc->m_PluginList.GetHeadPosition(); pos; )
+  for (PluginsIterator itr = m_pDoc->m_PluginList.begin(); itr != m_pDoc->m_PluginList.end(); ++itr)
     {
-    CPlugin * pPlugin = m_pDoc->m_PluginList.GetNext (pos);
+    CPlugin * pPlugin = *itr;
 
     if (!(pPlugin->m_bEnabled))   // ignore disabled plugins
       continue;

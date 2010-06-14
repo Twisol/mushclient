@@ -719,9 +719,9 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
     POSITION ppos,  // plugin pos
              pos;   // other pos
 
-    for (ppos = m_PluginList.GetHeadPosition (); ppos; iCount++)
+    for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr, ++iCount)
       {
-      p = m_PluginList.GetNext (ppos);
+      p = *itr;
       Note (TFormat ("Name:       %s", (LPCTSTR) p->m_strName));
       Note (TFormat ("ID:         %s", (LPCTSTR) p->m_strID));
       Note (TFormat ("Purpose:    %s", (LPCTSTR) p->m_strPurpose));

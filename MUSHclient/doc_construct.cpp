@@ -536,7 +536,9 @@ int i;
 
 // delete Element map
 
-  DELETE_MAP (m_CustomElementMap, CElement); 
+  for (ElementsIterator itr = m_CustomElementMap.begin(); itr != m_CustomElementMap.end(); ++itr)
+    delete itr->second;
+  m_CustomElementMap.clear();
 
 // delete active tags list
 

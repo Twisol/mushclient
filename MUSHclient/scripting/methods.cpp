@@ -4125,7 +4125,7 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case  222: SetUpVariantLong (vaResult, m_QueuedCommandsList.GetCount ()); break;
     case  223: SetUpVariantLong (vaResult, m_strMapList.GetCount ()); break;
     case  224: SetUpVariantLong (vaResult, m_LineList.GetCount ()); break;
-    case  225: SetUpVariantLong (vaResult, m_CustomElementMap.GetCount ()); break;
+    case  225: SetUpVariantLong (vaResult, m_CustomElementMap.size ()); break;
     case  226: SetUpVariantLong (vaResult, m_CustomEntityMap.GetCount ()); break;
     case  227: SetUpVariantLong (vaResult, m_iConnectPhase); break;
     case  228: SetUpVariantLong (vaResult, ntohl (m_sockAddr.sin_addr.s_addr)); break;

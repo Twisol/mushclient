@@ -553,7 +553,7 @@ void CMUSHclientDoc:: LoadPrefsP15 (CPrefsP15 &page15)
 
   page15.m_strMXPinbuiltElements  = CFormat ("%i", App.m_ElementMap.GetCount ());     
   page15.m_strMXPinbuiltEntities  = CFormat ("%i", App.m_EntityMap.GetCount ());     
-  page15.m_strMXPmudElements      = CFormat ("%i", m_CustomElementMap.GetCount ());         
+  page15.m_strMXPmudElements      = CFormat ("%i", m_CustomElementMap.size ());         
   page15.m_strMXPmudEntities      = CFormat ("%i", m_CustomEntityMap.GetCount ());         
   page15.m_strMXPunclosedTags     = CFormat ("%i", m_ActiveTagList.size ());        
   page15.m_strMXPactionsCached    = CFormat ("%i", m_ActionList.GetCount ());        

@@ -707,7 +707,8 @@ class CElement : public CObject
     bool bCommand;                    // true if no closing tag     (EMPTY)
 };
 
-typedef CTypedPtrMap <CMapStringToPtr, CString, CElement*> CElementMap;
+typedef map<CString, CElement*> CElementMap;
+typedef map<CString, CElement*>::iterator ElementsIterator;
 
 
 /////////////////////////////////////////////////////////////////////////////

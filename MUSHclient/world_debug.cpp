@@ -282,12 +282,10 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
 //-----------------------------------------------------------------------
   else if (strcmp (Command, "server_elements") == 0)
     {
-
-    for (POSITION pos = m_CustomElementMap.GetStartPosition(); pos; iCount++)
+    for (ElementsIterator itr = m_CustomElementMap.begin(); itr != m_CustomElementMap.end(); ++itr, ++iCount)
       {
-      CElement * pElement;
-      CString strElementName;
-      m_CustomElementMap.GetNextAssoc (pos, strElementName, pElement);
+      CString strElementName = itr->first;
+      CElement * pElement = itr->second;
 
       CString strName = CFormat ("%s", (LPCTSTR) strElementName);
 

@@ -138,8 +138,11 @@ bool bDelete = GetKeyword (ArgumentList, "delete");
     }
 
 // if element already defined, delete old one
-  if (m_CustomElementMap.Lookup (strName, pElement))
+  ElementsIterator itr = m_CustomElementMap.find(strName);
+  if (itr != m_CustomElementMap.end())
     {
+    pElement = itr->second;
+
     if (!bDelete)
       MXP_error (DBG_WARNING, wrnMXP_ReplacingElement, 
                  TFormat ("Replacing previously-defined MXP element: <%s>", 
@@ -152,8 +155,9 @@ bool bDelete = GetKeyword (ArgumentList, "delete");
   if (bDelete)
     return; // all done!
 
-// add new element to map
-m_CustomElementMap.SetAt (strName, pElement = new CElement);
+  // add new element to map
+  pElement = new CElement;
+  m_CustomElementMap[strName] = pElement;
 
   pElement->strName = strName;
 
@@ -366,13 +370,15 @@ CElement * pElement;
   strName.MakeLower (); // case-insensitive?
 
 // check element already defined
-  if (!m_CustomElementMap.Lookup (strName, pElement))
+  ElementsIterator itr = m_CustomElementMap.find(strName);
+  if (itr == m_CustomElementMap.end())
     {
     MXP_error (DBG_ERROR, errMXP_UnknownElementInAttlist,
               TFormat ("Cannot add attributes to undefined MXP element: <%s>", 
                 (LPCTSTR) strName)); 
     return;
     } // end of no element matching
+  pElement = itr->second;
 
 CArgumentList ArgumentList;
 

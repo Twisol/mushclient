@@ -343,10 +343,9 @@ CAtomicElement * pAtomicElement;
                         oldstylepos);
   else
     {
-    CElement * pElement;
-
     // custom element?
-    if (!m_CustomElementMap.Lookup (strTag, pElement))
+    ElementsIterator itr = m_CustomElementMap.find(strTag);
+    if (itr == m_CustomElementMap.end())
       {
         MXP_error (DBG_ERROR, errMXP_ClosingUnknownTag,
                   TFormat ("Unknown MXP element: <%s>" ,
@@ -354,6 +353,7 @@ CAtomicElement * pAtomicElement;
       return;
       }
 
+    CElement * pElement = itr->second;;
     CElementItem * pElementItem;
 
     for (POSITION pos = pElement->ElementItemList.GetHeadPosition (); pos; )

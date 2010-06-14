@@ -162,7 +162,9 @@ void CMUSHclientDoc::MXP_On (const bool bPueblo, const bool bManual)
 
   // delete custom elements map
 
-    DELETE_MAP (m_CustomElementMap, CElement); 
+    for (ElementsIterator itr = m_CustomElementMap.begin(); itr != m_CustomElementMap.end(); ++itr)
+      delete itr->second;
+    m_CustomElementMap.clear();
 
   // delete active tags list
 

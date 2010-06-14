@@ -121,13 +121,16 @@ CString strVariable;
     } // end of atomic element found
   else
     {
-    if (!m_CustomElementMap.Lookup (strName, pElement))
+    ElementsIterator itr = m_CustomElementMap.find(strName);
+    if (itr == m_CustomElementMap.end())
       {
       MXP_error (DBG_ERROR, errMXP_UnknownElement,
                  TFormat ("Unknown MXP element: <%s>" ,
                           (LPCTSTR) strName));
       return;
       }
+    pElement = itr->second;
+
     pAtomicElement = NULL;
     bOpen    = pElement->bOpen;
     bCommand = pElement->bCommand;

@@ -540,7 +540,9 @@ int i;
 
 // delete active tags list
 
-  DELETE_LIST (m_ActiveTagList);
+  for (ActiveTagsIterator itr = m_ActiveTagList.begin(); itr != m_ActiveTagList.end(); ++itr)
+    delete *itr;
+  m_PluginList.clear();
 
 // delete actions list
 

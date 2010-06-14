@@ -726,7 +726,7 @@ typedef CTypedPtrMap <CMapStringToPtr, CString, CColours*> CColoursMap;
 /////////////////////////////////////////////////////////////////////////////
 //  CActiveTag - these are outstanding (unclosed) tags
 
-class CActiveTag :public CObject
+class CActiveTag : public CObject
 {
   public:
     CString strName; // name of tag we opened
@@ -738,7 +738,8 @@ class CActiveTag :public CObject
     {}
 };
 
-typedef CTypedPtrList <CPtrList, CActiveTag*> CActiveTagList;
+typedef vector<CActiveTag*> CActiveTagList;
+typedef vector<CActiveTag*>::iterator ActiveTagsIterator;
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -746,7 +747,7 @@ typedef CTypedPtrList <CPtrList, CActiveTag*> CActiveTagList;
 
 class CScriptEngine;
 
-class CPlugin :public CObject
+class CPlugin : public CObject
 {
   public:
     // methods

@@ -400,9 +400,9 @@ void CMUSHclientDoc::MXP_CloseOpenTags (void)
 
 // see if we know of this element
 
-  while (!m_ActiveTagList.IsEmpty ())
+  while (!m_ActiveTagList.empty ())
     {
-    CActiveTag * pTag = m_ActiveTagList.GetTail ();
+    CActiveTag * pTag = m_ActiveTagList.back ();
 
     // don't close securely-opened tags here
     if (pTag->bSecure)
@@ -415,7 +415,7 @@ void CMUSHclientDoc::MXP_CloseOpenTags (void)
               (LPCTSTR) strTag)); 
     MXP_CloseTag (strTag);
 
-    m_ActiveTagList.RemoveTail ();  // get rid of it
+    m_ActiveTagList.pop_back ();  // get rid of it
     delete pTag;
     }
 
@@ -423,9 +423,9 @@ void CMUSHclientDoc::MXP_CloseOpenTags (void)
 
 void CMUSHclientDoc::MXP_CloseAllTags (void)
   {
-  while (!m_ActiveTagList.IsEmpty ())
+  while (!m_ActiveTagList.empty ())
     {
-    CActiveTag * pTag = m_ActiveTagList.GetTail ();
+    CActiveTag * pTag = m_ActiveTagList.back ();
 
     // if protected from reset, stop closing
     if (pTag->bNoReset)
@@ -435,7 +435,7 @@ void CMUSHclientDoc::MXP_CloseAllTags (void)
               TFormat ("<reset> closure of MXP tag: <%s>", 
               (LPCTSTR) pTag->strName)); 
     MXP_CloseTag (pTag->strName);
-    m_ActiveTagList.RemoveTail ();
+    m_ActiveTagList.pop_back ();
     delete pTag;
     }
   } // end of CMUSHclientDoc::MXP_CloseAllTags

@@ -166,7 +166,9 @@ void CMUSHclientDoc::MXP_On (const bool bPueblo, const bool bManual)
 
   // delete active tags list
 
-    DELETE_LIST (m_ActiveTagList);
+    for (ActiveTagsIterator itr = m_ActiveTagList.begin(); itr != m_ActiveTagList.end(); ++itr)
+      delete *itr;
+    m_PluginList.clear();
 
   // delete custom entities list
 

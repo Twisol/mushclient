@@ -206,17 +206,18 @@ CString strVariable;
     pTag->strName = strName;
     pTag->bSecure = bSecure;
     pTag->bNoReset = bNoReset;
-    m_ActiveTagList.AddTail (pTag);  // add to outstanding tag list
+    m_ActiveTagList.push_back (pTag);  // add to outstanding tag list
 
     // warn if they are overdoing the outstanding tags
-    if (m_ActiveTagList.GetCount () % OUTSTANDING_TAG_WARNING == 0 &&
-        m_ActiveTagList.GetCount () != m_iLastOutstandingTagCount)
+    size_t size = m_ActiveTagList.size ();
+    if ((size % OUTSTANDING_TAG_WARNING) == 0 &&
+        size != m_iLastOutstandingTagCount)
       {
       MXP_error (DBG_WARNING, wrnMXP_ManyOutstandingTags,
                   TFormat (
                           "Now have %i outstanding MXP tags" ,
-                          m_ActiveTagList.GetCount ()));
-      m_iLastOutstandingTagCount = m_ActiveTagList.GetCount ();
+                          size));
+      m_iLastOutstandingTagCount = size;
       }
 
 

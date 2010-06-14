@@ -53,9 +53,11 @@ CString strName;
 
   CActiveTag * pTag = NULL;
 
-  for (POSITION pos = m_ActiveTagList.GetTailPosition (); pos; )
+  ActiveTagsIterator itr = m_ActiveTagList.end();
+  while (itr != m_ActiveTagList.begin()) // reverse iteration
     {
-    pTag = m_ActiveTagList.GetPrev (pos);
+    --itr;
+    pTag = *itr;
 
     if (pTag->strName == strName)
       break;
@@ -73,7 +75,6 @@ CString strName;
         }
       pTag = NULL;
       }
-
     } // end of doing each one
 
   if (!pTag)
@@ -99,8 +100,8 @@ CString strName;
 
   while (true)
     {
-
-    pTag = m_ActiveTagList.RemoveTail ();
+    pTag = m_ActiveTagList.back ();
+    m_ActiveTagList.pop_back ();
     CString strTag = pTag->strName;
     delete pTag;
     

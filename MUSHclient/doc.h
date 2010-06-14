@@ -548,15 +548,6 @@ class CMUSHclientDoc : public CDocument
 {
   friend class CActivityView;
   friend class CMapDlg;
-  friend class CWorldSocket;
-  friend class CPluginsDlg;
-  friend class CSendView;
-  friend class CMUSHView;
-  friend class CChatSocket;
-  friend class CChatListenSocket;
-  friend class CChatListDlg;
-  friend class CMUSHclientApp;
-  friend class CScriptEngine;
   
   protected: // create from serialization only
 	CMUSHclientDoc();

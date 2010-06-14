@@ -1134,10 +1134,6 @@
 				>
 			</File>
 			<File
-				RelativePath="dialogs\global_prefs\GlobalPrefsSheet.h"
-				>
-			</File>
-			<File
 				RelativePath=".\hostsite.h"
 				>
 			</File>
@@ -1448,6 +1444,114 @@
 					RelativePath=".\dialogs\WinsockInfoDlg.h"
 					>
 				</File>
+				<Filter
+					Name="Chat"
+					>
+					<File
+						RelativePath=".\dialogs\chat\ChatCallDlg.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\chat\ChatDetailsDlg.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\chat\ChatListDlg.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\chat\ChatToAllDlg.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\chat\EmoteToAllDlg.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="World Prefs"
+					>
+					<File
+						RelativePath=".\dialogs\world_prefs\aliasdlg.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\ButtonColour.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\CommandOptionsDlg.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\editmac.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\EditVariable.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\GenPropertyPage.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\MissingEntryPoints.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\prefspropertypages.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\PrefsPropertySheet.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\TabDefaultsDlg.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\TimerDlg.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\TreePropertySheet.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\world_prefs\triggdlg.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="Global Prefs"
+					>
+					<File
+						RelativePath=".\dialogs\global_prefs\GlobalPrefs.h"
+						>
+					</File>
+					<File
+						RelativePath="dialogs\global_prefs\GlobalPrefsSheet.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="Plugins"
+					>
+					<File
+						RelativePath=".\dialogs\plugins\PluginsDlg.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\plugins\PluginWizard.h"
+						>
+					</File>
+					<File
+						RelativePath=".\dialogs\plugins\PluginWizardSheet.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 		</Filter>
 		<Filter

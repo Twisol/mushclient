@@ -679,7 +679,7 @@ class CElementItem : public CObject
 };
 
 typedef vector<CElementItem*> CElementItemList;
-typedef vector<CElementItem*>::iterator ElementItemsIterator;
+typedef CElementItemList::iterator ElementItemsIterator;
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -712,7 +712,7 @@ class CElement : public CObject
 };
 
 typedef map<CString, CElement*> CElementMap;
-typedef map<CString, CElement*>::iterator ElementsIterator;
+typedef CElementMap::iterator ElementsIterator;
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -726,7 +726,7 @@ class CColours : public CObject
 };
 
 typedef map<CString, CColours*> CColoursMap;
-typedef map<CString, CColours*>::iterator ColoursIterator;
+typedef CColoursMap::iterator ColoursIterator;
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -745,7 +745,7 @@ class CActiveTag : public CObject
 };
 
 typedef vector<CActiveTag*> CActiveTagList;
-typedef vector<CActiveTag*>::iterator ActiveTagsIterator;
+typedef CActiveTagList::iterator ActiveTagsIterator;
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -877,7 +877,7 @@ class CPlugin : public CObject
 };
 
 typedef vector<CPlugin*> CPluginList;
-typedef vector<CPlugin*>::iterator PluginsIterator;
+typedef CPluginList::iterator PluginsIterator;
 
 // for storing map directions, and inverses of them
 class CMapDirection

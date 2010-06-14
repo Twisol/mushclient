@@ -322,9 +322,9 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
         } // end of having attributes
   
 
-      for (POSITION elementpos = pElement->ElementItemList.GetHeadPosition (); elementpos; )
+      for (ElementItemsIterator itr = pElement->ElementItemList.begin(); itr != pElement->ElementItemList.end(); ++itr)
         {
-        CElementItem * pItem = pElement->ElementItemList.GetNext (elementpos);
+        CElementItem * pItem = *itr;
     
         CString strName = CFormat ("  <%s", (LPCTSTR) pItem->pAtomicElement->strName);
 

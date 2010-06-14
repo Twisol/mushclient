@@ -356,9 +356,9 @@ CAtomicElement * pAtomicElement;
     CElement * pElement = itr->second;;
     CElementItem * pElementItem;
 
-    for (POSITION pos = pElement->ElementItemList.GetHeadPosition (); pos; )
+    for (ElementItemsIterator itr = pElement->ElementItemList.begin(); itr != pElement->ElementItemList.end(); ++itr)
       {
-      pElementItem = pElement->ElementItemList.GetNext (pos);
+      pElementItem = *itr;
       MXP_CloseAtomicTag (pElementItem->pAtomicElement->iAction, 
                           strText,
                           oldlinepos,

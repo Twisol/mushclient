@@ -678,7 +678,8 @@ class CElementItem : public CObject
     CArgumentList  ArgumentList;      // list of arguments to this element item
 };
 
-typedef CTypedPtrList <CPtrList, CElementItem*> CElementItemList;
+typedef vector<CElementItem*> CElementItemList;
+typedef vector<CElementItem*>::iterator ElementItemsIterator;
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -693,8 +694,11 @@ class CElement : public CObject
     {}
 
     ~CElement () 
-    { 
-      DELETE_LIST (ElementItemList);
+    {
+      for (ElementItemsIterator itr = ElementItemList.begin(); itr != ElementItemList.end(); ++itr)
+        delete *itr;
+      ElementItemList.clear();
+
       DELETE_LIST (AttributeList);
     }
 

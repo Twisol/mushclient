@@ -348,9 +348,9 @@ CStyle * pNewStyle = AddStyle (iFlags & STYLE_BITS,
 
 CElementItem * pElementItem;
 
-  for (POSITION pos = pElement->ElementItemList.GetHeadPosition (); pos; )
+  for (ElementItemsIterator itr = pElement->ElementItemList.begin(); itr != pElement->ElementItemList.end(); ++itr)
     {
-    pElementItem = pElement->ElementItemList.GetNext (pos);
+    pElementItem = *itr;
 
     CArgumentList BuiltArgumentList;
     BuiltArgumentList.RemoveAll ();

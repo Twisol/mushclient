@@ -147,8 +147,13 @@ bool bDelete = GetKeyword (ArgumentList, "delete");
       MXP_error (DBG_WARNING, wrnMXP_ReplacingElement, 
                  TFormat ("Replacing previously-defined MXP element: <%s>", 
                 (LPCTSTR) strName)); 
-    DELETE_LIST (pElement->ElementItemList);
+
+    for (ElementItemsIterator itr = pElement->ElementItemList.begin(); itr != pElement->ElementItemList.end(); ++itr)
+      delete *itr;
+    pElement->ElementItemList.clear();
+
     DELETE_LIST (pElement->AttributeList);
+
     delete pElement;
     } // end of existing element
 
@@ -288,7 +293,7 @@ CString strArgument;
       return;
       }
 
-    pElement->ElementItemList.AddTail (pElementItem );
+    pElement->ElementItemList.push_back (pElementItem );
     pElementItem->pAtomicElement = element_item;    // which atomic element
 
     p++; // skip >

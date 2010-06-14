@@ -332,9 +332,10 @@ COLORREF       iBackColour = pStyle->iBackColour;
 
             if (ArgumentList.IsEmpty ())
               {
-              for (POSITION pos = App.m_ElementMap.GetStartPosition(); pos; ) 
-                {                                                
-                App.m_ElementMap.GetNextAssoc (pos, strName, pElement);
+              for (AtomicElementsIterator itr = App.m_ElementMap.begin(); itr != App.m_ElementMap.end(); ++itr)
+                {
+                strName = itr->first;
+                pElement = itr->second;
 
                 if ((pElement->iFlags & TAG_NOT_IMP) == 0)
                   {
@@ -387,14 +388,16 @@ COLORREF       iBackColour = pStyle->iBackColour;
 
                 // look up main element name
 
-                if (!App.m_ElementMap.Lookup (strTag, pElement) ||
-                   (pElement->iFlags & TAG_NOT_IMP) != 0)
+                AtomicElementsIterator itr = App.m_ElementMap.find(strTag);
+                if (itr == App.m_ElementMap.end() ||
+                   (itr->second->iFlags & TAG_NOT_IMP) != 0)
                   {     // not supported
                   strSupports += "-";
                   strSupports += strTag;
                   strSupports += " ";
                   continue;   // all done for this argument
                   }
+                pElement = itr->second;
 
                 // only one word - they aren't looking for a suboption
                 if (questionlist.IsEmpty ())

@@ -250,11 +250,10 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
   else if (strcmp (Command, "elements") == 0)
     {
 
-    for (POSITION pos = App.m_ElementMap.GetStartPosition(); pos; iCount++)
+    for (AtomicElementsIterator itr = App.m_ElementMap.begin(); itr != App.m_ElementMap.end(); ++itr, ++iCount)
       {
-      CAtomicElement * pElement;
-      CString strElementName;
-      App.m_ElementMap.GetNextAssoc (pos, strElementName, pElement);
+      CString strElementName = itr->first;
+      CAtomicElement * pElement = itr->second;
 
       CString strName = CFormat ("%-25s %3i", (LPCTSTR) strElementName,
                                 pElement->iAction);

@@ -126,10 +126,7 @@ bool bDelete = GetKeyword (ArgumentList, "delete");
   strName.MakeLower (); // case-insensitive?
 
   // see if we know of this atom
-
-  CAtomicElement * element_item;
-
-  if (App.m_ElementMap.Lookup (strName, element_item))
+  if (App.m_ElementMap.find(strName) != App.m_ElementMap.end())
     {
     MXP_error (DBG_ERROR, errMXP_CannotRedefineElement,
                TFormat ("Cannot redefine built-in MXP element: <%s>" ,
@@ -272,15 +269,15 @@ CString strArgument;
 
     // see if we know of this atom
 
-    CAtomicElement * element_item;
-  
-    if (!App.m_ElementMap.Lookup (strAtomName, element_item))
+    AtomicElementsIterator atomic_itr = App.m_ElementMap.find(strTag);
+    if (atomic_itr == App.m_ElementMap.end())
       {
       MXP_error (DBG_ERROR, errMXP_NoInbuiltDefinitionTag,
                 TFormat ("Unknown MXP element: <%s>" ,
                           (LPCTSTR) strAtomName));
       return;
       }
+    CAtomicElement * element_item = atomic_itr->second;
 
     // yes?  add to list
 

@@ -1180,7 +1180,9 @@ int CMUSHclientApp::ExitInstance()
 
 // delete Element map
 
-  DELETE_MAP (m_ElementMap, CAtomicElement); 
+  for (AtomicElementsIterator itr = m_ElementMap.begin(); itr != m_ElementMap.end(); ++itr)
+    delete itr->second;
+  m_ElementMap.clear();
 
 
 // delete Colours map

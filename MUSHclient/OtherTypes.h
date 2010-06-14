@@ -658,7 +658,8 @@ class CAtomicElement : public CObject
     int     iAction;  // its action, eg. MXP_ACTION_BOLD
 };
 
-typedef CTypedPtrMap <CMapStringToPtr, CString, CAtomicElement*> CAtomicElementMap;
+typedef map<CString, CAtomicElement*> CAtomicElementMap;
+typedef CAtomicElementMap::iterator AtomicElementsIterator;
 
 
 /////////////////////////////////////////////////////////////////////////////

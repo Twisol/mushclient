@@ -332,15 +332,16 @@ bool bHaveVariable = false;
     } // end of setting the variable's contents
 
 // see if we know of this element
-
-CAtomicElement * pAtomicElement;
   
   // atomic element?
-  if (App.m_ElementMap.Lookup (strTag, pAtomicElement))
-    MXP_CloseAtomicTag (pAtomicElement->iAction, 
+  AtomicElementsIterator atomic_itr = App.m_ElementMap.find(strTag);
+  if (atomic_itr != App.m_ElementMap.end())
+    {
+    MXP_CloseAtomicTag (atomic_itr->second->iAction, 
                         strText,
                         oldlinepos,
                         oldstylepos);
+    }
   else
     {
     // custom element?

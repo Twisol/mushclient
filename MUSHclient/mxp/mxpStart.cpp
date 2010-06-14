@@ -86,8 +86,11 @@ CString strVariable;
     } // end of having an action etc.
 
 
-  if (App.m_ElementMap.Lookup (strName, pAtomicElement))
+  AtomicElementsIterator itr = App.m_ElementMap.find(strName);
+  if (itr != App.m_ElementMap.end())
     {
+    pAtomicElement = itr->second;
+
     bOpen    = (pAtomicElement->iFlags & TAG_OPEN) != 0;
     bCommand = (pAtomicElement->iFlags & TAG_COMMAND) != 0;
     bNoReset = (pAtomicElement->iFlags & TAG_NO_RESET) != 0;

@@ -429,7 +429,9 @@ CAtomicElement * element_item;
 
   for (int i = 0; i < NUMITEMS (MXP_elements); i++)
     {
-    m_ElementMap.SetAt (MXP_elements [i].pName, element_item = new CAtomicElement);
+    element_item = new CAtomicElement;
+    m_ElementMap[MXP_elements [i].pName] = element_item;
+
     element_item->strName = MXP_elements [i].pName;
     element_item->strArgs = MXP_elements [i].pArgs;
     element_item->iFlags = MXP_elements [i].iFlags;

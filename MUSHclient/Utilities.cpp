@@ -443,7 +443,6 @@ CString strColour;
 int i;
 bool bEnable = true;
 bool bReverse;
-CColours * colour_item;
 
   // see if we have a colour on the clipboard
 
@@ -457,9 +456,10 @@ CColours * colour_item;
 
   // look up colour name
 
-  if (App.m_ColoursMap.Lookup (strColour, colour_item))
+  ColoursIterator itr = App.m_ColoursMap.find(strColour);
+  if (itr != App.m_ColoursMap.end())
     {
-    colour = colour_item->iColour;
+    colour = itr->second->iColour;
     return true;
     }
   
@@ -692,13 +692,11 @@ int iBlue   = GetBValue (colour);
 CString strName;
 
 // see if we can find colour name in list
-  for (POSITION pos = App.m_ColoursMap.GetStartPosition(); pos; )
+  for (ColoursIterator itr = App.m_ColoursMap.begin(); itr != App.m_ColoursMap.end(); ++itr)
     {
 
-    CColours * pColour;
-    CString strColourName;
-
-    App.m_ColoursMap.GetNextAssoc (pos, strColourName, pColour);
+    CString strColourName = itr->first;
+    CColours * pColour = itr->second;
 
     // note - colour might match more than one name
     if (pColour->iColour == colour)

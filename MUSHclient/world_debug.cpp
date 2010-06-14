@@ -149,13 +149,8 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
 
     multimap<COLORREF, string, colour_less> mColours;
 
-    for (POSITION pos = App.m_ColoursMap.GetStartPosition(); pos; iCount++)
-      {
-      CColours * pColour;
-      CString strColourName;
-      App.m_ColoursMap.GetNextAssoc (pos, strColourName, pColour);
-      mColours.insert (make_pair (pColour->iColour, strColourName));
-      }
+    for (ColoursIterator itr = App.m_ColoursMap.begin(); itr != App.m_ColoursMap.end(); ++itr, ++iCount)
+      mColours.insert (make_pair (itr->second->iColour, itr->first));
 
     for (multimap<COLORREF, string, colour_less>::const_iterator it = mColours.begin ();
          it != mColours.end ();
@@ -178,13 +173,11 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
       CString strName;
 
       // see if we can find colour name in list
-      for (POSITION pos = App.m_ColoursMap.GetStartPosition(); pos; )
+      for (ColoursIterator itr = App.m_ColoursMap.begin(); itr != App.m_ColoursMap.end(); ++itr)
         {
 
-        CColours * pColour;
-        CString strColourName;
-
-        App.m_ColoursMap.GetNextAssoc (pos, strColourName, pColour);
+        CString strColourName = itr->first;
+        CColours * pColour = itr->second;
 
         // note - colour might match more than one name
         if (pColour->iColour == xterm_256_colours [i])
@@ -716,8 +709,7 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
   else if (strcmp (Command, "plugins") == 0)
     {
     CPlugin * p;
-    POSITION ppos,  // plugin pos
-             pos;   // other pos
+    POSITION pos;   // other pos
 
     for (PluginsIterator itr = m_PluginList.begin(); itr != m_PluginList.end(); ++itr, ++iCount)
       {

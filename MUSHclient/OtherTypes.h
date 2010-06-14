@@ -720,7 +720,8 @@ class CColours : public CObject
     COLORREF iColour; // what its RGB code is
 };
 
-typedef CTypedPtrMap <CMapStringToPtr, CString, CColours*> CColoursMap;
+typedef map<CString, CColours*> CColoursMap;
+typedef map<CString, CColours*>::iterator ColoursIterator;
 
 
 /////////////////////////////////////////////////////////////////////////////

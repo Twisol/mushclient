@@ -1185,7 +1185,9 @@ int CMUSHclientApp::ExitInstance()
 
 // delete Colours map
 
-  DELETE_MAP (m_ColoursMap, CColours); 
+  for (ColoursIterator itr = m_ColoursMap.begin(); itr != m_ColoursMap.end(); ++itr)
+    delete itr->second;
+  m_ColoursMap.clear();
 
 
   // close spell checker Lua state

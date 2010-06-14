@@ -7074,14 +7074,10 @@ int RegisterLuaRoutines (lua_State *L)
   // colour names
   lua_newtable(L);
 
-  POSITION pos = App.m_ColoursMap.GetStartPosition();
-  CColours * pColour = NULL;
-  CString strColourName;
-  while (pos != NULL)
+  for (ColoursIterator itr = App.m_ColoursMap.begin(); itr != App.m_ColoursMap.end(); ++itr)
     {
-    App.m_ColoursMap.GetNextAssoc (pos, strColourName, pColour);
-    lua_pushstring(L, strColourName);
-    lua_pushnumber(L, pColour->iColour);
+    lua_pushstring(L, itr->first);
+    lua_pushnumber(L, itr->second->iColour);
     lua_rawset(L, -3);
     }
 

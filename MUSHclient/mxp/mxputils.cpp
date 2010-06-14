@@ -335,14 +335,13 @@ CString strNameFixed = strName;
     } // end of #xxxxxx type colour
   else
     { // must be name
-    CColours * colour_item;
-
     // look up colour name
 
-    if (!App.m_ColoursMap.Lookup (strNameFixed, colour_item))
+    ColoursIterator itr = App.m_ColoursMap.find (strNameFixed);
+    if (itr == App.m_ColoursMap.end())
       return true; // not found
 
-    iColour = colour_item->iColour;
+    iColour = itr->second->iColour;
     }   // end of colour name
 
   return false;   // good colour

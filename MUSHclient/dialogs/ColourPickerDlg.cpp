@@ -245,13 +245,11 @@ BOOL CColourPickerDlg::OnInitDialog()
  
   int iItem = 0;
 
-  for (POSITION pos = App.m_ColoursMap.GetStartPosition(); pos; iItem++)
+  for (ColoursIterator itr = App.m_ColoursMap.begin(); itr != App.m_ColoursMap.end(); ++itr, ++iItem)
     {
 
-    CColours * pColour;
-    CString strColourName;
-
-    App.m_ColoursMap.GetNextAssoc (pos, strColourName, pColour);
+    CString strColourName = itr->first;
+    CColours * pColour = itr->second;
 
     // remember RGB code
     if (m_ctlColourList.InsertItem (iItem, strColourName) != -1)
@@ -341,13 +339,11 @@ float fLuminance = clr.GetLuminance ();
   CString strName;
 
 // see if we can find colour name in list
-  for (POSITION pos = App.m_ColoursMap.GetStartPosition(); pos; )
+  for (ColoursIterator itr = App.m_ColoursMap.begin(); itr != App.m_ColoursMap.end(); ++itr)
     {
 
-    CColours * pColour;
-    CString strColourName;
-
-    App.m_ColoursMap.GetNextAssoc (pos, strColourName, pColour);
+    CString strColourName = itr->first;
+    CColours * pColour = itr->second;
 
     // note - colour might match more than one name
     if (pColour->iColour == m_ctlSwatch.m_colour)

@@ -12,41 +12,35 @@
 
 class CColourComboBox : public CComboBox
 {
-// Construction
-public:
+  public:
+    // Construction
 	CColourComboBox();
+    virtual ~CColourComboBox();
 
-// Attributes
-public:
+    // Attributes
+    // custom (user-defined) colours for triggers etc.
+    COLORREF m_customtext [MAX_CUSTOM];
+    COLORREF m_customback [MAX_CUSTOM];
 
-  // custom (user-defined) colours for triggers etc.
-  COLORREF m_customtext [MAX_CUSTOM];
-  COLORREF m_customback [MAX_CUSTOM];
+    COLORREF m_iOtherForeground;
+    COLORREF m_iOtherBackground;
 
-  COLORREF m_iOtherForeground;
-  COLORREF m_iOtherBackground;
+    // Operations
 
-// Operations
-public:
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CColourComboBox)
+  public:
+    virtual void DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct);
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CColourComboBox)
-	public:
-	virtual void DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct);
-	//}}AFX_VIRTUAL
+    // Generated message map functions
+  protected:
+    //{{AFX_MSG(CColourComboBox)
+    // NOTE - the ClassWizard will add and remove member functions here.
+    //}}AFX_MSG
 
-// Implementation
-public:
-	virtual ~CColourComboBox();
-
-	// Generated message map functions
-protected:
-	//{{AFX_MSG(CColourComboBox)
-		// NOTE - the ClassWizard will add and remove member functions here.
-	//}}AFX_MSG
-
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 /////////////////////////////////////////////////////////////////////////////

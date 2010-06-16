@@ -3940,7 +3940,7 @@ void CMUSHclientDoc::CheckTimerList (CTimerMap & TimerMap)
 
   // now process list, checking timer still exists in case a script deleted one
   // see: http://www.gammon.com.au/forum/?id=10358
-  POSITION pos = firedTimersList.GetStartPosition();
+  pos = firedTimersList.GetHeadPosition();
   while (pos != NULL)
     {
     // get next fired timer from list

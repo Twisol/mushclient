@@ -7,43 +7,44 @@
 // CreditsDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CCreditsDlg dialog
 
 class CCreditsDlg : public CDialog
 {
-// Construction
-public:
-	CCreditsDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    // Construction
+    CCreditsDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CCreditsDlg)
-	enum { IDD = IDD_CREDITS };
-	CEdit	m_ctlCreditsText;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CCreditsDlg)
+    enum { IDD = IDD_CREDITS };
+    CEdit m_ctlCreditsText;
+    //}}AFX_DATA
 
-  bool m_first_time;
-  int  m_iResourceID;
-  CString m_strTitle;
+    bool    m_first_time;
+    int     m_iResourceID;
+    CString m_strTitle;
+    CFont   m_font;
 
-  CFont m_font;
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CCreditsDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CCreditsDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CCreditsDlg)
+    virtual BOOL OnInitDialog();
+    afx_msg void OnSetfocusCreditsList();
+    //}}AFX_MSG
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CCreditsDlg)
-	virtual BOOL OnInitDialog();
-	afx_msg void OnSetfocusCreditsList();
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

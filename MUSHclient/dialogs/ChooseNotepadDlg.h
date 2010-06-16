@@ -7,6 +7,8 @@
 // ChooseNotepadDlg.h : header file
 //
 
+#include "..\mushclient.h" // for IDD_CHOOSE_NOTEPAD
+
 /////////////////////////////////////////////////////////////////////////////
 // CChooseNotepadDlg dialog
 

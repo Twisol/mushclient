@@ -2,7 +2,6 @@
 //
 
 #include "stdafx.h"
-#include "..\mushclient.h"
 #include "AsciiArtDlg.h"
 
 #ifdef _DEBUG

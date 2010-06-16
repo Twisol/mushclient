@@ -2,10 +2,9 @@
 //
 
 #include "stdafx.h"
-#include "..\mushclient.h"
+#include "ChooseNotepadDlg.h"
 #include "..\TextDocument.h"
 #include "..\doc.h"
-#include "ChooseNotepadDlg.h"
 
 #ifdef _DEBUG
 //#define new DEBUG_NEW

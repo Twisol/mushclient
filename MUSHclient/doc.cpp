@@ -609,6 +609,7 @@ BEGIN_DISPATCH_MAP(CMUSHclientDoc, CDocument)
 	DISP_FUNCTION(CMUSHclientDoc, "WindowHotspotTooltip", WindowHotspotTooltip, VT_I4, VTS_BSTR VTS_BSTR VTS_BSTR)
 	DISP_FUNCTION(CMUSHclientDoc, "WindowDrawImageAlpha", WindowDrawImageAlpha, VT_I4, VTS_BSTR VTS_BSTR VTS_I4 VTS_I4 VTS_I4 VTS_I4 VTS_R8 VTS_I4 VTS_I4)
 	DISP_FUNCTION(CMUSHclientDoc, "WindowGetImageAlpha", WindowGetImageAlpha, VT_I4, VTS_BSTR VTS_BSTR VTS_I4 VTS_I4 VTS_I4 VTS_I4 VTS_I4 VTS_I4)
+	DISP_FUNCTION(CMUSHclientDoc, "WindowScrollwheelHandler", WindowScrollwheelHandler, VT_I4, VTS_BSTR VTS_BSTR VTS_BSTR)
 	DISP_PROPERTY_PARAM(CMUSHclientDoc, "NormalColour", GetNormalColour, SetNormalColour, VT_I4, VTS_I2)
 	DISP_PROPERTY_PARAM(CMUSHclientDoc, "BoldColour", GetBoldColour, SetBoldColour, VT_I4, VTS_I2)
 	DISP_PROPERTY_PARAM(CMUSHclientDoc, "CustomColourText", GetCustomColourText, SetCustomColourText, VT_I4, VTS_I2)
@@ -3915,7 +3916,9 @@ void CMUSHclientDoc::CheckTimerList (CTimerMap & TimerMap)
       }
     }
 
-  // iterate through all timers for this document
+  CStringList firedTimersList;
+
+  // iterate through all timers for this document - first build list of them
   POSITION pos = TimerMap.GetStartPosition();
   while (pos != NULL)
     {
@@ -3930,6 +3933,21 @@ void CMUSHclientDoc::CheckTimerList (CTimerMap & TimerMap)
       continue;
     // if not ready to fire yet, ignore it
     else if (timer_item->tFireTime > tNow)
+      continue;
+
+    firedTimersList.AddTail (strTimerName); // add to list of fired timers
+    }
+
+  // now process list, checking timer still exists in case a script deleted one
+  // see: http://www.gammon.com.au/forum/?id=10358
+  POSITION pos = firedTimersList.GetStartPosition();
+  while (pos != NULL)
+    {
+    // get next fired timer from list
+    strTimerName = firedTimersList.GetNext (pos);
+
+    // check still exists, get pointer if so
+    if (!TimerMap.Lookup (strTimerName, timer_item))
       continue;
 
     timer_item->nMatched += 1;   // count timer matches

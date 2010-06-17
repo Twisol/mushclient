@@ -7,51 +7,52 @@
 // FunctionListDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CFunctionListDlg dialog
 
 class CFunctionListDlg : public CDialog
 {
-// Construction
-public:
-	CFunctionListDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    // Construction
+    CFunctionListDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CFunctionListDlg)
-	enum { IDD = IDD_FUNCTION_LIST };
-	CEdit	m_ctlFilter;
-	CListCtrl	m_ctlFunctions;
-	CString	m_strFilter;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CFunctionListDlg)
+    enum { IDD = IDD_FUNCTION_LIST };
+    CEdit     m_ctlFilter;
+    CListCtrl m_ctlFunctions;
+    CString   m_strFilter;
+    //}}AFX_DATA
 
-  CString m_strResult;
+    CString m_strResult;
+    bool m_bLua;
 
-  bool m_bLua;
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CFunctionListDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CFunctionListDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    BOOL ReloadList ();
 
-  BOOL ReloadList ();
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CFunctionListDlg)
+    virtual BOOL OnInitDialog();
+    virtual void OnOK();
+    afx_msg void OnDblclkFunctionsList(NMHDR* pNMHDR, LRESULT* pResult);
+    afx_msg void OnLuaFunctions();
+    afx_msg void OnCopyName();
+    afx_msg void OnChangeFilter();
+    //}}AFX_MSG
+    afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
+    afx_msg void OnUpdateNeedSelection(CCmdUI* pCmdUI);
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CFunctionListDlg)
-	virtual BOOL OnInitDialog();
-	virtual void OnOK();
-	afx_msg void OnDblclkFunctionsList(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnLuaFunctions();
-	afx_msg void OnCopyName();
-	afx_msg void OnChangeFilter();
-	//}}AFX_MSG
-  afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
-  afx_msg void OnUpdateNeedSelection(CCmdUI* pCmdUI);
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

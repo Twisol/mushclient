@@ -7,45 +7,47 @@
 // GeneratedNameDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CGeneratedNameDlg dialog
 
 class CGeneratedNameDlg : public CDialog
 {
-// Construction
-public:
-	CGeneratedNameDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    // Construction
+    CGeneratedNameDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CGeneratedNameDlg)
-	enum { IDD = IDD_GENERATED_NAME };
-	CStatic	m_ctlFileName;
-	CEdit	m_ctlName;
-	CString	m_strName;
-	CString	m_strFileName;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CGeneratedNameDlg)
+    enum { IDD = IDD_GENERATED_NAME };
+    CStatic m_ctlFileName;
+    CEdit   m_ctlName;
+    CString m_strName;
+    CString m_strFileName;
+    //}}AFX_DATA
 
+    CMUSHclientDoc * m_pDoc;
 
-  CMUSHclientDoc * m_pDoc;
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CGeneratedNameDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX); // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CGeneratedNameDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
 
-// Implementation
-protected:
+    // Generated message map functions
+    //{{AFX_MSG(CGeneratedNameDlg)
+    afx_msg void OnTryAgain();
+    afx_msg void OnCopy();
+    afx_msg void OnSendToWorld();
+    afx_msg void OnBrowseName();
+    //}}AFX_MSG
 
-	// Generated message map functions
-	//{{AFX_MSG(CGeneratedNameDlg)
-	afx_msg void OnTryAgain();
-	afx_msg void OnCopy();
-	afx_msg void OnSendToWorld();
-	afx_msg void OnBrowseName();
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

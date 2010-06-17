@@ -7,45 +7,46 @@
 // ImmediateDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CImmediateDlg dialog
 
 class CImmediateDlg : public CDialog
 {
-// Construction
-public:
-	CImmediateDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    // Construction
+    CImmediateDlg(CWnd* pParent = NULL);
 
-  CMUSHclientDoc * m_pDoc;    // owning document
+    CMUSHclientDoc * m_pDoc; // owning document
 
-// Dialog Data
-	//{{AFX_DATA(CImmediateDlg)
-	enum { IDD = IDD_IMMEDIATE };
-	CEdit	m_ctlExpression;
-	CString	m_strExpression;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CImmediateDlg)
+    enum { IDD = IDD_IMMEDIATE };
+    CEdit   m_ctlExpression;
+    CString m_strExpression;
+    //}}AFX_DATA
 
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CImmediateDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CImmediateDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    virtual void OnCancel( );
 
-// Implementation
-protected:
+    // Generated message map functions
+    //{{AFX_MSG(CImmediateDlg)
+    afx_msg void OnRun();
+    afx_msg void OnEdit();
+    virtual BOOL OnInitDialog();
+    //}}AFX_MSG
+    afx_msg void OnRemoveSelection();
 
-  virtual void OnCancel( );
-
-	// Generated message map functions
-	//{{AFX_MSG(CImmediateDlg)
-	afx_msg void OnRun();
-	afx_msg void OnEdit();
-	virtual BOOL OnInitDialog();
-	//}}AFX_MSG
-	afx_msg void OnRemoveSelection();
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

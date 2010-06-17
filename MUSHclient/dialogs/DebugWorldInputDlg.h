@@ -7,50 +7,49 @@
 // DebugWorldInputDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CDebugWorldInputDlg dialog
 
 class CDebugWorldInputDlg : public CDialog
 {
-// Construction
-public:
-	CDebugWorldInputDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    // Construction
+	CDebugWorldInputDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CDebugWorldInputDlg)
-	enum { IDD = IDD_DEBUG_INPUT };
-	CComboBox	m_ctlSpecials;
-	CEdit	m_ctlText;
-	CString	m_strText;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CDebugWorldInputDlg)
+    enum { IDD = IDD_DEBUG_INPUT };
+    CComboBox m_ctlSpecials;
+    CEdit     m_ctlText;
+    CString   m_strText;
+    //}}AFX_DATA
+    CFont m_font;
 
+    void AddAnsiSpecial (const char * sName, const int iCode);
+    void AddMXPSpecial (const char * sName, const int iCode);
+    void AddOtherSpecial (const char * sName, const int iCode);
 
-  void AddAnsiSpecial (const char * sName, const int iCode);
-  void AddMXPSpecial (const char * sName, const int iCode);
-  void AddOtherSpecial (const char * sName, const int iCode);
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CDebugWorldInputDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-  CFont m_font;
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CDebugWorldInputDlg)
+    virtual BOOL OnInitDialog();
+    afx_msg void OnSpecial();
+    afx_msg void OnInsertUnicode();
+    //}}AFX_MSG
+    afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
+    afx_msg void OnUpdateNeedSelection(CCmdUI* pCmdUI);
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CDebugWorldInputDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
-
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CDebugWorldInputDlg)
-	virtual BOOL OnInitDialog();
-	afx_msg void OnSpecial();
-	afx_msg void OnInsertUnicode();
-	//}}AFX_MSG
-  afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
-  afx_msg void OnUpdateNeedSelection(CCmdUI* pCmdUI);
-
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

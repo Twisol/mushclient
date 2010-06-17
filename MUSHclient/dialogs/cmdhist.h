@@ -1,5 +1,10 @@
+#pragma once
+
 // cmdhist.h : header file
 //
+
+#include "..\MUSHclient.h"
+#include "..\doc.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CCmdHistory dialog

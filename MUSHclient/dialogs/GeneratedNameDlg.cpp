@@ -2,9 +2,8 @@
 //
 
 #include "stdafx.h"
-#include "..\mushclient.h"
-#include "..\doc.h"
 #include "GeneratedNameDlg.h"
+#include "..\doc.h"
 
 #ifdef _DEBUG
 //#define new DEBUG_NEW
@@ -17,37 +16,29 @@ static char THIS_FILE[] = __FILE__;
 
 
 CGeneratedNameDlg::CGeneratedNameDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CGeneratedNameDlg::IDD, pParent)
-{
-	//{{AFX_DATA_INIT(CGeneratedNameDlg)
-	m_strName = _T("");
-	m_strFileName = _T("");
-	//}}AFX_DATA_INIT
-
-  m_pDoc = NULL;
-
-}
+  : CDialog(CGeneratedNameDlg::IDD, pParent),
+    m_strName(_T("")), m_strFileName(_T("")), m_pDoc(NULL)
+{}
 
 
 void CGeneratedNameDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialog::DoDataExchange(pDX);
-	//{{AFX_DATA_MAP(CGeneratedNameDlg)
-	DDX_Control(pDX, IDC_FILENAME, m_ctlFileName);
-	DDX_Control(pDX, IDC_GENERATED_NAME, m_ctlName);
-	DDX_Text(pDX, IDC_GENERATED_NAME, m_strName);
-	DDX_Text(pDX, IDC_FILENAME, m_strFileName);
-	//}}AFX_DATA_MAP
+  CDialog::DoDataExchange(pDX);
+  //{{AFX_DATA_MAP(CGeneratedNameDlg)
+  DDX_Control(pDX, IDC_FILENAME, m_ctlFileName);
+  DDX_Control(pDX, IDC_GENERATED_NAME, m_ctlName);
+  DDX_Text(pDX, IDC_GENERATED_NAME, m_strName);
+  DDX_Text(pDX, IDC_FILENAME, m_strFileName);
+  //}}AFX_DATA_MAP
 }
 
-
 BEGIN_MESSAGE_MAP(CGeneratedNameDlg, CDialog)
-	//{{AFX_MSG_MAP(CGeneratedNameDlg)
-	ON_BN_CLICKED(IDC_TRY_AGAIN, OnTryAgain)
-	ON_BN_CLICKED(IDC_COPY, OnCopy)
-	ON_BN_CLICKED(IDC_SEND_TO_WORLD, OnSendToWorld)
-	ON_BN_CLICKED(IDC_BROWSE_NAME, OnBrowseName)
-	//}}AFX_MSG_MAP
+  //{{AFX_MSG_MAP(CGeneratedNameDlg)
+  ON_BN_CLICKED(IDC_TRY_AGAIN, OnTryAgain)
+  ON_BN_CLICKED(IDC_COPY, OnCopy)
+  ON_BN_CLICKED(IDC_SEND_TO_WORLD, OnSendToWorld)
+  ON_BN_CLICKED(IDC_BROWSE_NAME, OnBrowseName)
+  //}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -55,11 +46,9 @@ END_MESSAGE_MAP()
 
 void CGeneratedNameDlg::OnTryAgain() 
 {
-CString strName = GenerateName ();
-
-  	m_ctlName.SetWindowText (strName);
-    m_ctlName.SetSel (0, -1);
-	
+  CString strName = GenerateName ();
+  m_ctlName.SetWindowText (strName);
+  m_ctlName.SetSel (0, -1);
 }
 
 void CGeneratedNameDlg::OnCopy() 
@@ -70,23 +59,27 @@ void CGeneratedNameDlg::OnCopy()
 void CGeneratedNameDlg::OnSendToWorld() 
 {
   if (m_pDoc)
-    m_pDoc->SendMsg (GetText (m_ctlName), m_pDoc->m_display_my_input,
-                      false, m_pDoc->LoggingInput ());
-	
+    m_pDoc->SendMsg (
+        GetText (m_ctlName),
+        m_pDoc->m_display_my_input,
+        false,
+        m_pDoc->LoggingInput ()
+        );
 }
 
 void CGeneratedNameDlg::OnBrowseName() 
 {
-	try
-	  {
+  try
+    {
     ReadNames ("*");
     // update file name
-    m_ctlFileName.SetWindowText (App.db_get_string  
-      ("prefs", "DefaultNameGenerationFile", "names.txt"));
+    m_ctlFileName.SetWindowText (
+      App.db_get_string ("prefs", "DefaultNameGenerationFile", "names.txt")
+      );
     }
-	catch (CException* e)
-	  {
-		e->ReportError();
-		e->Delete();
-	  }	
+  catch (CException* e)
+    {
+    e->ReportError();
+    e->Delete();
+    }
 }

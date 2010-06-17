@@ -2,10 +2,8 @@
 //
 
 #include "stdafx.h"
-#include "..\MUSHclient.h"
-#include "..\doc.h"
-#include "..\sendvw.h"
 #include "cmdhist.h"
+#include "..\sendvw.h"
 
 #ifdef _DEBUG
 //#define new DEBUG_NEW

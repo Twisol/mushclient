@@ -7,65 +7,63 @@
 // EditDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CEditDlg dialog
 
 class CEditDlg : public CDialog
 {
-// Construction
-public:
-	CEditDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    // Construction
+    CEditDlg(CWnd* pParent = NULL);
+    ~CEditDlg () { delete m_font; }
 
-  ~CEditDlg () { delete m_font; };
+    // Dialog Data
+    //{{AFX_DATA(CEditDlg)
+    enum { IDD = IDD_EDIT };
+    CButton m_ctlRegexpButton;
+    CButton m_ctlOK;
+    CButton m_ctlCancel;
+    CEdit   m_ctlText;
+    CString m_strText;
+    //}}AFX_DATA
 
-// Dialog Data
-	//{{AFX_DATA(CEditDlg)
-	enum { IDD = IDD_EDIT };
-	CButton	m_ctlRegexpButton;
-	CButton	m_ctlOK;
-	CButton	m_ctlCancel;
-	CEdit	m_ctlText;
-	CString	m_strText;
-	//}}AFX_DATA
+    CFont * m_font;
+    CString m_strTitle;
 
-  CFont * m_font;
+    map<int, string> m_regexp_specials_map;
+    map<int, int> m_char_offset;
 
-  CString m_strTitle;
+    int m_next_item;
+    bool m_bRegexp;
 
-  map<int, string> m_regexp_specials_map;
-  map<int, int> m_char_offset;
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CEditDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-  int m_next_item;
+    // Implementation
+  protected:
+    void InsertRegexpItem (CMenu* pPopup, 
+                           const string & sLabel, 
+                           const string & sInsert,
+                           const int iBack = 0);
 
-  bool m_bRegexp;
+    // Generated message map functions
+    //{{AFX_MSG(CEditDlg)
+    afx_msg void OnSize(UINT nType, int cx, int cy);
+    afx_msg void OnDestroy();
+    virtual BOOL OnInitDialog();
+    afx_msg void OnRegexpButton();
+    afx_msg void OnPopupHelp();
+    //}}AFX_MSG
+    afx_msg void OnRegexpMenu(UINT nID); 
+    afx_msg void OnRemoveSelection();
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CEditDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
-
-// Implementation
-protected:
-
-  void InsertRegexpItem (CMenu* pPopup, 
-                         const string & sLabel, 
-                         const string & sInsert,
-                         const int iBack = 0);
-
-	// Generated message map functions
-	//{{AFX_MSG(CEditDlg)
-	afx_msg void OnSize(UINT nType, int cx, int cy);
-	afx_msg void OnDestroy();
-	virtual BOOL OnInitDialog();
-	afx_msg void OnRegexpButton();
-	afx_msg void OnPopupHelp();
-	//}}AFX_MSG
-  afx_msg void OnRegexpMenu(UINT nID); 
-	afx_msg void OnRemoveSelection();
-
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

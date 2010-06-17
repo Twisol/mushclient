@@ -15,8 +15,8 @@ static char THIS_FILE[] = __FILE__;
 
 
 CAsciiArtDlg::CAsciiArtDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CAsciiArtDlg::IDD, pParent),
-      m_strText(_T("")), m_strFont(_T("")), m_iLayout(-1)
+  : CDialog(CAsciiArtDlg::IDD, pParent),
+    m_strText(_T("")), m_strFont(_T("")), m_iLayout(-1)
 {}
 
 
@@ -75,7 +75,8 @@ void CAsciiArtDlg::OnBrowse()
       "flf",               // default extension
       GetText (m_ctlFont), // initial file name
       OFN_HIDEREADONLY|OFN_FILEMUSTEXIST,
-      "Figlet font files (*.flf)|*.flf|All files (*.*)|*.*||");
+      "Figlet font files (*.flf)|*.flf|All files (*.*)|*.*||"
+      );
   dlg.m_ofn.lpstrTitle = "Select font file";
 
   ChangeToFileBrowsingDirectory ();

@@ -2,7 +2,6 @@
 //
 
 #include "stdafx.h"
-#include "..\mushclient.h"
 #include "DebugWorldInputDlg.h"
 #include "InsertUnicodeDlg.h"
 #include "..\doc.h"
@@ -18,34 +17,29 @@ static char THIS_FILE[] = __FILE__;
 
 
 CDebugWorldInputDlg::CDebugWorldInputDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CDebugWorldInputDlg::IDD, pParent)
-{
-	//{{AFX_DATA_INIT(CDebugWorldInputDlg)
-	m_strText = _T("");
-	//}}AFX_DATA_INIT
-}
+  : CDialog(CDebugWorldInputDlg::IDD, pParent),
+    m_strText(_T(""))
+{}
 
 
 void CDebugWorldInputDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialog::DoDataExchange(pDX);
-	//{{AFX_DATA_MAP(CDebugWorldInputDlg)
-	DDX_Control(pDX, IDC_INSERT_SPECIAL, m_ctlSpecials);
-	DDX_Control(pDX, IDC_TEXT, m_ctlText);
-	DDX_Text(pDX, IDC_TEXT, m_strText);
-	//}}AFX_DATA_MAP
-
+  CDialog::DoDataExchange(pDX);
+  //{{AFX_DATA_MAP(CDebugWorldInputDlg)
+  DDX_Control(pDX, IDC_INSERT_SPECIAL, m_ctlSpecials);
+  DDX_Control(pDX, IDC_TEXT, m_ctlText);
+  DDX_Text(pDX, IDC_TEXT, m_strText);
+  //}}AFX_DATA_MAP
 }
 
 
 BEGIN_MESSAGE_MAP(CDebugWorldInputDlg, CDialog)
-	//{{AFX_MSG_MAP(CDebugWorldInputDlg)
-	ON_BN_CLICKED(IDC_SPECIAL, OnSpecial)
-	ON_BN_CLICKED(IDC_INSERT_UNICODE, OnInsertUnicode)
-	//}}AFX_MSG_MAP
+  //{{AFX_MSG_MAP(CDebugWorldInputDlg)
+  ON_BN_CLICKED(IDC_SPECIAL, OnSpecial)
+  ON_BN_CLICKED(IDC_INSERT_UNICODE, OnInsertUnicode)
+  //}}AFX_MSG_MAP
   ON_MESSAGE(WM_KICKIDLE, OnKickIdle)
   ON_UPDATE_COMMAND_UI(IDC_SPECIAL, OnUpdateNeedSelection)
-
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -53,36 +47,33 @@ END_MESSAGE_MAP()
 
 BOOL CDebugWorldInputDlg::OnInitDialog() 
 {
-	CDialog::OnInitDialog();
-	
-CDC dc;
+  CDialog::OnInitDialog();
 
+  CDC dc;
   dc.CreateCompatibleDC (NULL);
 
- int lfHeight = -MulDiv(App.m_iFixedPitchFontSize, dc.GetDeviceCaps(LOGPIXELSY), 72);
+  int lfHeight = -MulDiv(App.m_iFixedPitchFontSize, dc.GetDeviceCaps(LOGPIXELSY), 72);
 
- m_font.CreateFont(lfHeight, // int nHeight, 
-				0, // int nWidth, 
-				0, // int nEscapement, 
-				0, // int nOrientation, 
-				FW_DONTCARE, // int nWeight, 
-				0, // BYTE bItalic, 
-				0, // BYTE bUnderline, 
-        0, // BYTE cStrikeOut, 
-        MUSHCLIENT_FONT_CHARSET, // BYTE nCharSet, 
-        0, // BYTE nOutPrecision, 
-        0, // BYTE nClipPrecision, 
-        0, // BYTE nQuality, 
-        MUSHCLIENT_FONT_FAMILY, // BYTE nPitchAndFamily,  
-        App.m_strFixedPitchFont);// LPCTSTR lpszFacename );
+  m_font.CreateFont(
+      lfHeight, // int nHeight, 
+      0, // int nWidth, 
+      0, // int nEscapement, 
+      0, // int nOrientation, 
+      FW_DONTCARE, // int nWeight, 
+      0, // BYTE bItalic, 
+      0, // BYTE bUnderline, 
+      0, // BYTE cStrikeOut, 
+      MUSHCLIENT_FONT_CHARSET, // BYTE nCharSet, 
+      0, // BYTE nOutPrecision, 
+      0, // BYTE nClipPrecision, 
+      0, // BYTE nQuality, 
+      MUSHCLIENT_FONT_FAMILY, // BYTE nPitchAndFamily,  
+      App.m_strFixedPitchFont);// LPCTSTR lpszFacename );
 
   // Get the metrics of the font.
-
   dc.SelectObject(&m_font);
 
-  m_ctlText.SendMessage (WM_SETFONT,
-                               (WPARAM) m_font.m_hObject,
-                               MAKELPARAM (TRUE, 0));
+  m_ctlText.SendMessage (WM_SETFONT, (WPARAM) m_font.m_hObject, MAKELPARAM (TRUE, 0));
 
   m_ctlSpecials.AddString ("Backslash - \\\\");
   AddOtherSpecial ("New Line", '\n');
@@ -137,86 +128,72 @@ CDC dc;
 
   m_ctlSpecials.SetCurSel (0);
 
-	return TRUE;  // return TRUE unless you set the focus to a control
-	              // EXCEPTION: OCX Property Pages should return FALSE
+  return TRUE; // return TRUE unless you set the focus to a control
+               // EXCEPTION: OCX Property Pages should return FALSE
 }
 
 void CDebugWorldInputDlg::AddAnsiSpecial (const char * sName, const int iCode)
-  {
-  m_ctlSpecials.AddString (CFormat ("ANSI %s - \\1B[%im", sName, iCode));
-  }   // end of CDebugWorldInputDlg::AddAnsiSpecial
+{
+  int nItem = m_ctlSpecials.AddString (CFormat ("ANSI %s - \\1B[%im", sName, iCode));
+  if (nItem >= 0)
+    m_ctlSpecials.SetItemData (nItem, iCode);
+}
 
 void CDebugWorldInputDlg::AddMXPSpecial (const char * sName, const int iCode)
-  {
-  m_ctlSpecials.AddString (CFormat ("MXP %s - \\1B[%iz", sName, iCode));
-  } // end of CDebugWorldInputDlg::AddMXPSpecial
+{
+  int nItem = m_ctlSpecials.AddString (CFormat ("MXP %s - \\1B[%iz", sName, iCode));
+  if (nItem >= 0)
+    m_ctlSpecials.SetItemData (nItem, iCode);
+}
 
 void CDebugWorldInputDlg::AddOtherSpecial (const char * sName, const int iCode)
-  {
-  m_ctlSpecials.AddString (CFormat ("%s - \\%02X", sName, iCode));
-  } // end of CDebugWorldInputDlg::AddOtherSpecial
+{
+  int nItem = m_ctlSpecials.AddString (CFormat ("%s - \\%02X", sName, iCode));
+  if (nItem >= 0)
+    m_ctlSpecials.SetItemData (nItem, iCode);
+}
 
 
 void CDebugWorldInputDlg::OnSpecial() 
 {
-	
-int nItem = m_ctlSpecials.GetCurSel ();
-
+  int nItem = m_ctlSpecials.GetCurSel ();
   if (nItem == LB_ERR)
     return;
 
-  CString strText;
-
-  m_ctlSpecials.GetLBText(nItem, strText) ;
-
-  int iHyphen = strText.Find ("-");
-
-  if (iHyphen == -1)
-    return;
-
-  strText = strText.Mid (iHyphen + 1);
-  strText.TrimLeft ();
-  strText.TrimRight ();
-
-  m_ctlText.ReplaceSel (strText);
-
+  string strCode = "";
+  strCode += (char) m_ctlSpecials.GetItemData (nItem);
+  m_ctlText.ReplaceSel (strCode.c_str ());
 } // end of CDebugWorldInputDlg::OnSpecial
 
 LRESULT CDebugWorldInputDlg::OnKickIdle(WPARAM, LPARAM)
-  {
+{
   UpdateDialogControls (AfxGetApp()->m_pMainWnd, false);
   return 0;
-  } // end of CChooseNotepadDlg::OnKickIdle
+} // end of CChooseNotepadDlg::OnKickIdle
 
 void CDebugWorldInputDlg::OnUpdateNeedSelection(CCmdUI* pCmdUI)
 {
-int nItem = m_ctlSpecials.GetCurSel ();
-
-	pCmdUI->Enable(nItem != LB_ERR);
+  int nItem = m_ctlSpecials.GetCurSel ();
+  pCmdUI->Enable(nItem != LB_ERR);
 }
 
 extern "C" int _pcre_ord2utf8(int cvalue, unsigned char *buffer);
 
 void CDebugWorldInputDlg::OnInsertUnicode() 
 {
-CInsertUnicodeDlg dlg;
-
+  CInsertUnicodeDlg dlg;
   dlg.m_bHex = true;
 
   if (dlg.DoModal () != IDOK)
     return;  // cancelled
 
-unsigned char utf8 [10];
+  unsigned char utf8 [10];
+  int iLen = _pcre_ord2utf8 ((char) dlg.m_iCode, utf8);
 
-int iLen = _pcre_ord2utf8 (dlg.m_iCode, utf8);
+  CString strText;
 
-
-CString strText;
-
-
-for (int i = 0; i < iLen; i++)
-  strText += CFormat ("\\%02X", utf8 [i]);
+  for (int i = 0; i < iLen; ++i)
+    strText += CFormat ("\\%02X", utf8 [i]);
 
   m_ctlText.ReplaceSel (strText);
-
 }

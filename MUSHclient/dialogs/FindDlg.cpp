@@ -14,9 +14,15 @@ static char THIS_FILE[] = __FILE__;
 // CFindDlg dialog
 
 CFindDlg::CFindDlg(CStringList & strFindStringList, CWnd* pParent /*=NULL*/)
-  : CDialog(CFindDlg::IDD, pParent), m_strFindStringList (strFindStringList),
-    m_bMatchCase(FALSE), m_bRegexp(FALSE), m_bForwards(-1), m_strFindText(_T(""))
-{}
+  : CDialog(CFindDlg::IDD, pParent), m_strFindStringList (strFindStringList)
+{
+  //{{AFX_DATA_INIT(CFindDlg)
+  m_bMatchCase = FALSE;
+  m_bForwards = -1;
+  m_bRegexp = FALSE;
+  m_strFindText = _T("");
+  //}}AFX_DATA_INIT
+}
 
 void CFindDlg::DoDataExchange(CDataExchange* pDX)
 {

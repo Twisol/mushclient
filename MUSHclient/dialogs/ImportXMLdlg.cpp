@@ -16,11 +16,20 @@ static char THIS_FILE[] = __FILE__;
 // CImportXMLdlg dialog
 
 CImportXMLdlg::CImportXMLdlg(CWnd* pParent /*=NULL*/)
-  : CDialog(CImportXMLdlg::IDD, pParent),  m_pDoc(NULL),
-    m_bGeneral(FALSE), m_bTriggers(FALSE), m_bAliases(FALSE),
-    m_bTimers(FALSE),  m_bMacros(FALSE),   m_bVariables(FALSE),
-    m_bColours(FALSE), m_bKeypad(FALSE),   m_bPrinting(FALSE)
-{}
+  : CDialog(CImportXMLdlg::IDD, pParent),  m_pDoc(NULL)
+{
+  //{{AFX_DATA_INIT(CImportXMLdlg)
+  m_bGeneral = FALSE;
+  m_bTriggers = FALSE;
+  m_bAliases = FALSE;
+  m_bTimers = FALSE;
+  m_bMacros = FALSE;
+  m_bVariables = FALSE;
+  m_bColours = FALSE;
+  m_bKeypad = FALSE;
+  m_bPrinting = FALSE;
+  //}}AFX_DATA_INIT
+}
 
 
 void CImportXMLdlg::DoDataExchange(CDataExchange* pDX)

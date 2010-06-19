@@ -34,7 +34,10 @@ CColourPickerDlg::CColourPickerDlg(CWnd* pParent /*=NULL*/)
   : CDialog(CColourPickerDlg::IDD, pParent),
     m_iColour(0), m_bPickColour(false),
     m_clipboardColour(RGB(0,0,0))
-{}
+{
+  //{{AFX_DATA_INIT(CColourPickerDlg)
+  //}}AFX_DATA_INIT
+}
 
 
 void CColourPickerDlg::DoDataExchange(CDataExchange* pDX)

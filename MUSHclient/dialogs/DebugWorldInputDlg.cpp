@@ -17,9 +17,12 @@ static char THIS_FILE[] = __FILE__;
 
 
 CDebugWorldInputDlg::CDebugWorldInputDlg(CWnd* pParent /*=NULL*/)
-  : CDialog(CDebugWorldInputDlg::IDD, pParent),
-    m_strText(_T(""))
-{}
+  : CDialog(CDebugWorldInputDlg::IDD, pParent)
+{
+  //{{AFX_DATA_INIT(CDebugWorldInputDlg)
+  m_strText = _T("");
+  //}}AFX_DATA_INIT
+}
 
 
 void CDebugWorldInputDlg::DoDataExchange(CDataExchange* pDX)

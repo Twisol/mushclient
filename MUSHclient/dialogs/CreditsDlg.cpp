@@ -17,8 +17,10 @@ static char THIS_FILE[] = __FILE__;
 CCreditsDlg::CCreditsDlg(CWnd* pParent /*=NULL*/)
   : CDialog(CCreditsDlg::IDD, pParent),
     m_first_time(true)
-{}
-
+{
+  //{{AFX_DATA_INIT(CCreditsDlg)
+  //}}AFX_DATA_INIT
+}
 
 void CCreditsDlg::DoDataExchange(CDataExchange* pDX)
 {

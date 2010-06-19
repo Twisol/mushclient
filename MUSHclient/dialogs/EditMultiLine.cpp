@@ -20,8 +20,12 @@ const int CLEAR_SELECTION = 10200;
 
 CEditMultiLine::CEditMultiLine(CWnd* pParent /*=NULL*/)
   : CDialog(CEditMultiLine::IDD, pParent),
-    m_strText(_T("")), m_font(NULL), m_bScript(false), m_bLua(false)
-{}
+    m_font(NULL), m_bScript(false), m_bLua(false)
+{
+  //{{AFX_DATA_INIT(CEditMultiLine)
+  m_strText = _T("");
+  //}}AFX_DATA_INIT
+}
 
 
 void CEditMultiLine::DoDataExchange(CDataExchange* pDX)

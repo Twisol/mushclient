@@ -19,8 +19,17 @@ const int CLEAR_SELECTION   = 10200;
 
 CEditDlg::CEditDlg(CWnd* pParent /*=NULL*/)
   : CDialog(CEditDlg::IDD, pParent),
-    m_strText(_T("")), m_font(NULL), m_bRegexp(false)
-{}
+    m_font(NULL), m_bRegexp(false)
+{
+  //{{AFX_DATA_INIT(CEditDlg)
+  m_strText = _T("");
+  //}}AFX_DATA_INIT
+}
+
+CEditDlg::~CEditDlg()
+{
+  delete m_font;
+}
 
 void CEditDlg::DoDataExchange(CDataExchange* pDX)
 {

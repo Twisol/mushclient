@@ -7,37 +7,37 @@
 // MapCommentDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CMapCommentDlg dialog
 
 class CMapCommentDlg : public CDialog
 {
-// Construction
-public:
-	CMapCommentDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CMapCommentDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CMapCommentDlg)
-	enum { IDD = IDD_MAP_COMMENT };
-	CString	m_strComment;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CMapCommentDlg)
+    enum { IDD = IDD_MAP_COMMENT };
+    CString m_strComment;
+    //}}AFX_DATA
 
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CMapCommentDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CMapCommentDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CMapCommentDlg)
+    // NOTE: the ClassWizard will add member functions here
+    //}}AFX_MSG
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CMapCommentDlg)
-		// NOTE: the ClassWizard will add member functions here
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

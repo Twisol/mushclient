@@ -15,10 +15,15 @@ static char THIS_FILE[] = __FILE__;
 // CHighlightPhraseDlg dialog
 
 CHighlightPhraseDlg::CHighlightPhraseDlg(CWnd* pParent /*=NULL*/)
-  : CDialog(CHighlightPhraseDlg::IDD, pParent),
-    m_iColour(-1), m_strText(_T("")),
-    m_bWord(FALSE), m_bMatchCase(FALSE)
-{}
+  : CDialog(CHighlightPhraseDlg::IDD, pParent)
+{
+  //{{AFX_DATA_INIT(CHighlightPhraseDlg)
+  m_iColour = -1;
+  m_strText = _T("");
+  m_bWord = FALSE;
+  m_bMatchCase = FALSE;
+  //}}AFX_DATA_INIT
+}
 
 
 void CHighlightPhraseDlg::DoDataExchange(CDataExchange* pDX)

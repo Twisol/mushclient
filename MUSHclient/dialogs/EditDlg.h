@@ -17,7 +17,7 @@ class CEditDlg : public CDialog
   public:
     // Construction
     CEditDlg(CWnd* pParent = NULL);
-    ~CEditDlg () { delete m_font; }
+    ~CEditDlg();
 
     // Dialog Data
     //{{AFX_DATA(CEditDlg)

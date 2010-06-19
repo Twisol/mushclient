@@ -17,13 +17,24 @@ static char THIS_FILE[] = __FILE__;
 
 CDebugLuaDlg::CDebugLuaDlg(CWnd* pParent /*=NULL*/)
   : CDialog(CDebugLuaDlg::IDD, pParent),
-    m_strCommand(_T("")), m_strCurrentLine(_T("")),
-    m_strFunctionName(_T("")), m_strFunction(_T("")),
-    m_strLines(_T("")), m_strNups(_T("")),
-    m_strSource(_T("")), m_strWhat(_T("")),
     L(NULL), m_bAbort(false), m_font(NULL)
-{}
+{
+  //{{AFX_DATA_INIT(CDebugLuaDlg)
+  m_strCommand = _T("");
+  m_strCurrentLine = _T("");
+  m_strFunctionName = _T("");
+  m_strFunction = _T("");
+  m_strLines = _T("");
+  m_strNups = _T("");
+  m_strSource = _T("");
+  m_strWhat = _T("");
+  //}}AFX_DATA_INIT
+}
 
+CDebugLuaDlg::~CDebugLuaDlg()
+{
+  delete m_font;
+}
 
 void CDebugLuaDlg::DoDataExchange(CDataExchange* pDX)
 {

@@ -19,7 +19,10 @@ static char BASED_CODE THIS_FILE[] = __FILE__;
 
 CCmdHistory::CCmdHistory(CWnd* pParent /*=NULL*/)
   : CDialog(CCmdHistory::IDD, pParent)
-{}
+{
+  //{{AFX_DATA_INIT(CCmdHistory)
+  //}}AFX_DATA_INIT
+}
 
 
 void CCmdHistory::DoDataExchange(CDataExchange* pDX)

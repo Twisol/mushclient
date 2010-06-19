@@ -17,8 +17,12 @@ extern set<string> LuaFunctionsSet;
 
 CFunctionListDlg::CFunctionListDlg(CWnd* pParent /*=NULL*/)
   : CDialog(CFunctionListDlg::IDD, pParent),
-    m_strFilter(_T("")), m_bLua(false)
-{}
+    m_bLua(false)
+{
+  //{{AFX_DATA_INIT(CFunctionListDlg)
+  m_strFilter = _T("");
+  //}}AFX_DATA_INIT
+}
 
 
 void CFunctionListDlg::DoDataExchange(CDataExchange* pDX)

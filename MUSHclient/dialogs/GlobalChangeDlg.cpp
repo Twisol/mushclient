@@ -15,9 +15,13 @@ static char THIS_FILE[] = __FILE__;
 
 
 CGlobalChangeDlg::CGlobalChangeDlg(CWnd* pParent /*=NULL*/)
-  : CDialog(CGlobalChangeDlg::IDD, pParent),
-    m_strChangeTo(_T("")), m_strChangeFrom(_T(""))
-{}
+  : CDialog(CGlobalChangeDlg::IDD, pParent)
+{
+  //{{AFX_DATA_INIT(CGlobalChangeDlg)
+  m_strChangeTo = _T("");
+  m_strChangeFrom = _T("");
+  //}}AFX_DATA_INIT
+}
 
 
 void CGlobalChangeDlg::DoDataExchange(CDataExchange* pDX)

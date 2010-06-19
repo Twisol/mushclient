@@ -7,46 +7,45 @@
 // LuaChooseBox.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CLuaChooseBox dialog
 
 class CLuaChooseBox : public CDialog
 {
-// Construction
-public:
-	CLuaChooseBox(CWnd* pParent = NULL);   // standard constructor
+  public:
+    // Construction
+	CLuaChooseBox(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CLuaChooseBox)
-	enum { IDD = IDD_LUA_CHOOSE };
-	CComboBox	m_ctlCombo;
-	CString	m_strMessage;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CLuaChooseBox)
+    enum { IDD = IDD_LUA_CHOOSE };
+    CComboBox m_ctlCombo;
+    CString   m_strMessage;
+    //}}AFX_DATA
 
-  CString m_strTitle;
-
-  vector<CKeyValuePair> m_data;
-
-  int m_iDefault;   // default key item (vector number)
-
-  int m_iResult;    // result item (vector number)
+    CString m_strTitle;
+    vector<CKeyValuePair> m_data;
+    int m_iDefault; // default key item (vector number)
+    int m_iResult;  // result item (vector number)
   
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CLuaChooseBox)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CLuaChooseBox)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Implementation
-protected:
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CLuaChooseBox)
+    virtual BOOL OnInitDialog();
+    virtual void OnOK();
+    //}}AFX_MSG
 
-	// Generated message map functions
-	//{{AFX_MSG(CLuaChooseBox)
-	virtual BOOL OnInitDialog();
-	virtual void OnOK();
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

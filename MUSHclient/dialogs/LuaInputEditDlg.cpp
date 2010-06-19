@@ -2,7 +2,6 @@
 //
 
 #include "stdafx.h"
-#include "..\mushclient.h"
 #include "LuaInputEditDlg.h"
 
 #ifdef _DEBUG
@@ -17,46 +16,45 @@ static char THIS_FILE[] = __FILE__;
 #define CLEAR_SELECTION 10200
 
 CLuaInputEditDlg::CLuaInputEditDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CLuaInputEditDlg::IDD, pParent)
+  : CDialog(CLuaInputEditDlg::IDD, pParent),
+    m_font(NULL)
 {
-	//{{AFX_DATA_INIT(CLuaInputEditDlg)
-	m_strMessage = _T("");
-	m_strReply = _T("");
-	//}}AFX_DATA_INIT
+  //{{AFX_DATA_INIT(CLuaInputEditDlg)
+  m_strMessage = _T("");
+  m_strReply = _T("");
+  //}}AFX_DATA_INIT
+}
 
-  m_font = NULL;
-
+CLuaInputEditDlg::~CLuaInputEditDlg()
+{
+  delete m_font;
 }
 
 
 void CLuaInputEditDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialog::DoDataExchange(pDX);
-	//{{AFX_DATA_MAP(CLuaInputEditDlg)
-	DDX_Control(pDX, IDCANCEL, m_ctlCancel);
-	DDX_Control(pDX, IDOK, m_ctlOK);
-	DDX_Control(pDX, IDC_INPUT_BOX_REPLY, m_ctlReply);
-	DDX_Text(pDX, IDC_INPUT_BOX_MESSAGE, m_strMessage);
-	DDX_Text(pDX, IDC_INPUT_BOX_REPLY, m_strReply);
-	//}}AFX_DATA_MAP
+  CDialog::DoDataExchange(pDX);
+  //{{AFX_DATA_MAP(CLuaInputEditDlg)
+  DDX_Control(pDX, IDCANCEL, m_ctlCancel);
+  DDX_Control(pDX, IDOK, m_ctlOK);
+  DDX_Control(pDX, IDC_INPUT_BOX_REPLY, m_ctlReply);
+  DDX_Text(pDX, IDC_INPUT_BOX_MESSAGE, m_strMessage);
+  DDX_Text(pDX, IDC_INPUT_BOX_REPLY, m_strReply);
+  //}}AFX_DATA_MAP
 
+  // we only load from this dialog
+  if (pDX->m_bSaveAndValidate)
+    return;
 
- if(!pDX->m_bSaveAndValidate)
-   {
-   if (!m_strFont.IsEmpty () && m_iFontSize > 3)
-      FixFont (m_font, m_ctlReply, m_strFont, m_iFontSize, FW_NORMAL, DEFAULT_CHARSET);
-   }
-
+  if (!m_strFont.IsEmpty () && m_iFontSize > 3)
+    FixFont (m_font, m_ctlReply, m_strFont, m_iFontSize, FW_NORMAL, DEFAULT_CHARSET);
 }
 
-
 BEGIN_MESSAGE_MAP(CLuaInputEditDlg, CDialog)
-	//{{AFX_MSG_MAP(CLuaInputEditDlg)
-	ON_WM_SIZE()
-	//}}AFX_MSG_MAP
-
+  //{{AFX_MSG_MAP(CLuaInputEditDlg)
+  ON_WM_SIZE()
+  //}}AFX_MSG_MAP
   ON_COMMAND(CLEAR_SELECTION, OnRemoveSelection)
-
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -64,59 +62,50 @@ END_MESSAGE_MAP()
 
 BOOL CLuaInputEditDlg::OnInitDialog() 
 {
-	CDialog::OnInitDialog();
-	
-  SetWindowText (m_strTitle);	
-	
+  CDialog::OnInitDialog();	
+  SetWindowText (m_strTitle);
   PostMessage (WM_COMMAND, CLEAR_SELECTION);
 
-	return TRUE;  // return TRUE unless you set the focus to a control
-	              // EXCEPTION: OCX Property Pages should return FALSE
+  return TRUE; // return TRUE unless you set the focus to a control
+               // EXCEPTION: OCX Property Pages should return FALSE
 }
 
 void CLuaInputEditDlg::OnRemoveSelection()
-  {
-
+{
   m_ctlReply.SetSel (m_strReply.GetLength (), m_strReply.GetLength ());
+}
 
-  }
+
+static const int TEXT_TOP = 32;
 
 void CLuaInputEditDlg::OnSize(UINT nType, int cx, int cy) 
 {
-	CDialog::OnSize(nType, cx, cy);
-	
-  if (m_ctlReply.m_hWnd && m_ctlCancel.m_hWnd && m_ctlOK)
-    {
-    // move OK and Cancel buttons
-    WINDOWPLACEMENT wndpl;
-    int iHeight;
-    int iWidth;
-    int iBorder = 10;
+  CDialog::OnSize(nType, cx, cy);
 
-    // -----------------------
-    // where is OK button?
-    GetButtonSize (m_ctlOK, iHeight, iWidth);
+  if (!(m_ctlReply.m_hWnd && m_ctlCancel.m_hWnd && m_ctlOK))
+    return;
 
-    // move to near bottom
+  // move OK and Cancel buttons
+  WINDOWPLACEMENT wndpl;
+  int iHeight;
+  int iWidth;
+  int iBorder = 10;
 
-    m_ctlOK.MoveWindow (iBorder, cy - iHeight - 10, iWidth, iHeight);
+  // -----------------------
+  // where is OK button?
+  GetButtonSize (m_ctlOK, iHeight, iWidth);
+  // move to near bottom
+  m_ctlOK.MoveWindow (iBorder, cy - iHeight - 10, iWidth, iHeight);
 
-    // -----------------------
-    // where is Cancel button?
-    GetButtonSize (m_ctlCancel, iHeight, iWidth);
+  // -----------------------
+  // where is Cancel button?
+  GetButtonSize (m_ctlCancel, iHeight, iWidth);
+  // move to near bottom
+  m_ctlCancel.MoveWindow (cx - iWidth - iBorder, cy - iHeight - 10, iWidth, iHeight);
 
-    // move to near bottom
-
-    m_ctlCancel.MoveWindow (cx - iWidth - iBorder, cy - iHeight - 10, iWidth, iHeight);
-
-    // -----------------------
-    // where is Cancel button now?
-    m_ctlCancel.GetWindowPlacement (&wndpl);
-
-    const int iTop = 32;
-
-    // move text to just above it
-	  m_ctlReply.MoveWindow(iBorder, iTop, cx - (iBorder * 2), wndpl.rcNormalPosition.top - 10 - iTop);
-    }
-	
+  // -----------------------
+  // where is Cancel button now?
+  m_ctlCancel.GetWindowPlacement (&wndpl);
+  // move text to just above it
+  m_ctlReply.MoveWindow(iBorder, TEXT_TOP, cx - (iBorder * 2), wndpl.rcNormalPosition.top - 10 - TEXT_TOP);
 }

@@ -14,9 +14,13 @@ static char THIS_FILE[] = __FILE__;
 // CInsertUnicodeDlg dialog
 
 CInsertUnicodeDlg::CInsertUnicodeDlg(CWnd* pParent /*=NULL*/)
-  : CDialog(CInsertUnicodeDlg::IDD, pParent),
-    m_strCharacter(_T("")), m_bHex(FALSE)
-{}
+  : CDialog(CInsertUnicodeDlg::IDD, pParent)
+{
+  //{{AFX_DATA_INIT(CInsertUnicodeDlg)
+  m_strCharacter = _T("");
+  m_bHex = FALSE;
+  //}}AFX_DATA_INIT
+}
 
 
 void CInsertUnicodeDlg::DoDataExchange(CDataExchange* pDX)

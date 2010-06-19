@@ -7,49 +7,46 @@
 // LuaInputBox.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CLuaInputBox dialog
 
 class CLuaInputBox : public CDialog
 {
-// Construction
-public:
-	CLuaInputBox(CWnd* pParent = NULL);   // standard constructor
-            
-  ~CLuaInputBox () { delete m_font; }
+  public:
+    CLuaInputBox(CWnd* pParent = NULL);
+    ~CLuaInputBox();
 
-// Dialog Data
-	//{{AFX_DATA(CLuaInputBox)
-	enum { IDD = IDD_LUA_INPUTBOX };
-	CEdit	m_ctlReply;
-	CString	m_strMessage;
-	CString	m_strReply;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CLuaInputBox)
+    enum { IDD = IDD_LUA_INPUTBOX };
+    CEdit   m_ctlReply;
+    CString m_strMessage;
+    CString m_strReply;
+    //}}AFX_DATA
 
-  CString m_strTitle;
+    CString m_strTitle;
+    CString m_strFont;
+    int m_iFontSize;
+    CFont * m_font;
 
-  CString m_strFont;
-  int m_iFontSize;
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CLuaInputBox)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-  CFont * m_font;
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CLuaInputBox)
+    virtual BOOL OnInitDialog();
+    //}}AFX_MSG
+    afx_msg void OnRemoveSelection();
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CLuaInputBox)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
-
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CLuaInputBox)
-	virtual BOOL OnInitDialog();
-	//}}AFX_MSG
-	afx_msg void OnRemoveSelection();
-
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

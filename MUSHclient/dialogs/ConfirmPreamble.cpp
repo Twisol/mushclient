@@ -15,13 +15,20 @@ static char THIS_FILE[] = __FILE__;
 
 
 CConfirmPreamble::CConfirmPreamble(CWnd* pParent /*=NULL*/)
-  : CDialog(CConfirmPreamble::IDD, pParent),
-    m_strPostamble(_T("")), m_strPreamble(_T("")),
-    m_strLinePostamble(_T("")), m_strLinePreamble(_T("")),
-    m_bCommentedSoftcode(FALSE), m_bEcho(FALSE),
-    m_iLineDelay(0), m_nLineDelayPerLines(0),
-    m_strPasteMessage(_T(""))
-{}
+  : CDialog(CConfirmPreamble::IDD, pParent)
+{
+  //{{AFX_DATA_INIT(CConfirmPreamble)
+  m_strPasteMessage = _T("");
+  m_strPostamble = _T("");
+  m_strPreamble = _T("");
+  m_strLinePostamble = _T("");
+  m_strLinePreamble = _T("");
+  m_bCommentedSoftcode = FALSE;
+  m_iLineDelay = 0;
+  m_bEcho = FALSE;
+  m_nLineDelayPerLines = 0;
+  //}}AFX_DATA_INIT
+}
 
 void CConfirmPreamble::DoDataExchange(CDataExchange* pDX)
 {

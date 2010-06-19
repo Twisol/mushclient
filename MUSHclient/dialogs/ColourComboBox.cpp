@@ -17,6 +17,9 @@ CColourComboBox::CColourComboBox()
   : m_iOtherForeground(RGB(0,0,0)),      // black
     m_iOtherBackground(RGB(255,255,255)) // on white
 {
+  //{{AFX_DATA_INIT(CColourComboBox)
+  //}}AFX_DATA_INIT
+
   // default to black on white in case they never set them
   for (int i = 0; i < MAX_CUSTOM; ++i)
     {

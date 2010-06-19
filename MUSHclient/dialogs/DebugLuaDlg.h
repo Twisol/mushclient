@@ -17,8 +17,7 @@ class CDebugLuaDlg : public CDialog
   public:
     // Construction
     CDebugLuaDlg(CWnd* pParent = NULL);   // standard constructor
-    ~CDebugLuaDlg ()
-    { delete m_font; }
+    ~CDebugLuaDlg();
 
     // Dialog Data
     //{{AFX_DATA(CDebugLuaDlg)

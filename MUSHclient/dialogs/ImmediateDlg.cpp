@@ -19,9 +19,12 @@ static char THIS_FILE[] = __FILE__;
 // CImmediateDlg dialog
 
 CImmediateDlg::CImmediateDlg(CWnd* pParent /*=NULL*/)
-  : CDialog(CImmediateDlg::IDD, pParent),
-    m_strExpression(_T(""))
-{}
+  : CDialog(CImmediateDlg::IDD, pParent)
+{
+  //{{AFX_DATA_INIT(CImmediateDlg)
+  m_strExpression = _T("");
+  //}}AFX_DATA_INIT
+}
 
 
 void CImmediateDlg::DoDataExchange(CDataExchange* pDX)

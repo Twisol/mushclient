@@ -7,18 +7,20 @@
 // LuaGsubDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CLuaGsubDlg dialog
 
 class CLuaGsubDlg : public CDialog
 {
-// Construction
-public:
-	CLuaGsubDlg(CWnd* pParent = NULL);   // standard constructor
+  // Construction
+  public:
+    CLuaGsubDlg(CWnd* pParent = NULL);   // standard constructor
 
-// Dialog Data
-	//{{AFX_DATA(CLuaGsubDlg)
-	enum { IDD = IDD_LUA_GSUB };
+    // Dialog Data
+    //{{AFX_DATA(CLuaGsubDlg)
+    enum { IDD = IDD_LUA_GSUB };
 	CEdit	m_ctlReplacementText;
 	CButton	m_ctlCallFunction;
 	CEdit	m_ctlFindText;
@@ -30,28 +32,28 @@ public:
 	CString	m_strSelectionSize;
 	//}}AFX_DATA
 
-  CString m_strFunctionText;
-  lua_State           * L;                  // Lua state
+    CString m_strFunctionText;
+    lua_State * L; // Lua state
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CLuaGsubDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CLuaGsubDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Implementation
-protected:
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CLuaGsubDlg)
+    afx_msg void OnEditFunction();
+    afx_msg void OnEditFind();
+    afx_msg void OnEditReplace();
+    //}}AFX_MSG
+    afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
+    afx_msg void OnUpdateNeedFindText(CCmdUI* pCmdUI);
 
-	// Generated message map functions
-	//{{AFX_MSG(CLuaGsubDlg)
-	afx_msg void OnEditFunction();
-	afx_msg void OnEditFind();
-	afx_msg void OnEditReplace();
-	//}}AFX_MSG
-  afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
-  afx_msg void OnUpdateNeedFindText(CCmdUI* pCmdUI);
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

@@ -15,9 +15,14 @@ static char THIS_FILE[] = __FILE__;
 
 
 CAsciiArtDlg::CAsciiArtDlg(CWnd* pParent /*=NULL*/)
-  : CDialog(CAsciiArtDlg::IDD, pParent),
-    m_strText(_T("")), m_strFont(_T("")), m_iLayout(-1)
-{}
+  : CDialog(CAsciiArtDlg::IDD, pParent)
+{
+  //{{AFX_DATA_INIT(CAsciiArtDlg)
+  m_strText = _T("");
+  m_strFont = _T("");
+  m_iLayout = -1;
+  //}}AFX_DATA_INIT
+}
 
 
 void CAsciiArtDlg::DoDataExchange(CDataExchange* pDX)

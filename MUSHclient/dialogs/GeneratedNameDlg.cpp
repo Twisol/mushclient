@@ -17,8 +17,13 @@ static char THIS_FILE[] = __FILE__;
 
 CGeneratedNameDlg::CGeneratedNameDlg(CWnd* pParent /*=NULL*/)
   : CDialog(CGeneratedNameDlg::IDD, pParent),
-    m_strName(_T("")), m_strFileName(_T("")), m_pDoc(NULL)
-{}
+    m_pDoc(NULL)
+{
+  //{{AFX_DATA_INIT(CGeneratedNameDlg)
+  m_strName = _T("");
+  m_strFileName = _T("");
+  //}}AFX_DATA_INIT
+}
 
 
 void CGeneratedNameDlg::DoDataExchange(CDataExchange* pDX)

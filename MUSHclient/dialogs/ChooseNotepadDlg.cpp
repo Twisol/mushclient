@@ -19,7 +19,10 @@ static char THIS_FILE[] = __FILE__;
 CChooseNotepadDlg::CChooseNotepadDlg(CWnd* pParent /*=NULL*/)
   : CDialog(CChooseNotepadDlg::IDD, pParent),
     m_pWorld(NULL), m_pTextDocument(NULL)
-{}
+{
+  //{{AFX_DATA_INIT(CChooseNotepadDlg)
+  //}}AFX_DATA_INIT
+}
 
 
 void CChooseNotepadDlg::DoDataExchange(CDataExchange* pDX)

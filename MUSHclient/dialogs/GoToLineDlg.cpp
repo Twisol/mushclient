@@ -14,9 +14,12 @@ static char THIS_FILE[] = __FILE__;
 // CGoToLineDlg dialog
 
 CGoToLineDlg::CGoToLineDlg(CWnd* pParent /*=NULL*/)
-  : CDialog(CGoToLineDlg::IDD, pParent),
-    m_iLineNumber(0)
-{}
+  : CDialog(CGoToLineDlg::IDD, pParent)
+{
+  //{{AFX_DATA_INIT(CGoToLineDlg)
+  m_iLineNumber = 0;
+  //}}AFX_DATA_INIT
+}
 
 void CGoToLineDlg::DoDataExchange(CDataExchange* pDX)
 {

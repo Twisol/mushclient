@@ -2,7 +2,6 @@
 //
 
 #include "stdafx.h"
-#include "..\mushclient.h"
 #include "LuaChooseListMulti.h"
 
 #ifdef _DEBUG
@@ -11,33 +10,31 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+
 /////////////////////////////////////////////////////////////////////////////
 // CLuaChooseListMulti dialog
 
-
 CLuaChooseListMulti::CLuaChooseListMulti(CWnd* pParent /*=NULL*/)
-	: CDialog(CLuaChooseListMulti::IDD, pParent)
+  : CDialog(CLuaChooseListMulti::IDD, pParent)
 {
-	//{{AFX_DATA_INIT(CLuaChooseListMulti)
-	m_strMessage = _T("");
-	//}}AFX_DATA_INIT
+  //{{AFX_DATA_INIT(CLuaChooseListMulti)
+  m_strMessage = _T("");
+  //}}AFX_DATA_INIT
 }
-
 
 void CLuaChooseListMulti::DoDataExchange(CDataExchange* pDX)
 {
-	CDialog::DoDataExchange(pDX);
-	//{{AFX_DATA_MAP(CLuaChooseListMulti)
-	DDX_Control(pDX, IDC_CHOOSE_LIST, m_ctlListBox);
-	DDX_Text(pDX, IDC_CHOOSE_MSG, m_strMessage);
-	//}}AFX_DATA_MAP
+  CDialog::DoDataExchange(pDX);
+  //{{AFX_DATA_MAP(CLuaChooseListMulti)
+  DDX_Control(pDX, IDC_CHOOSE_LIST, m_ctlListBox);
+  DDX_Text(pDX, IDC_CHOOSE_MSG, m_strMessage);
+  //}}AFX_DATA_MAP
 }
 
-
 BEGIN_MESSAGE_MAP(CLuaChooseListMulti, CDialog)
-	//{{AFX_MSG_MAP(CLuaChooseListMulti)
-	ON_NOTIFY(NM_DBLCLK, IDC_CHOOSE_LIST, OnDblclkChooseList)
-	//}}AFX_MSG_MAP
+  //{{AFX_MSG_MAP(CLuaChooseListMulti)
+  ON_NOTIFY(NM_DBLCLK, IDC_CHOOSE_LIST, OnDblclkChooseList)
+  //}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -45,22 +42,20 @@ END_MESSAGE_MAP()
 
 BOOL CLuaChooseListMulti::OnInitDialog() 
 {
-	CDialog::OnInitDialog();
-	
-  SetWindowText (m_strTitle);	
+  CDialog::OnInitDialog();
+
+  SetWindowText (m_strTitle);
 	
   m_ctlListBox.InsertColumn(0, TranslateHeading ("Main column"), LVCFMT_LEFT, 340);
 
-  m_ctlListBox.SendMessage (LVM_SETEXTENDEDLISTVIEWSTYLE, 0, 
-                        m_ctlListBox.SendMessage (LVM_GETEXTENDEDLISTVIEWSTYLE, 0, 0) 
-                                                  | LVS_EX_FULLROWSELECT);
+  DWORD listStyles = m_ctlListBox.SendMessage (LVM_GETEXTENDEDLISTVIEWSTYLE, 0, 0);
+  m_ctlListBox.SendMessage (LVM_SETEXTENDEDLISTVIEWSTYLE, 0, listStyles | LVS_EX_FULLROWSELECT);
 
   bool bHaveFocus = false;  // first selected item has the focus
 
-  for (int i = 0; i < m_data.size (); i++)
+  for (size_t i = 0; i < m_data.size (); i++)
     {
     int iPos = m_ctlListBox.InsertItem (i, m_data [i].sValue_.c_str ());
-
     if (iPos != -1)
       {
       m_ctlListBox.SetItemData (iPos, i);
@@ -73,35 +68,31 @@ BOOL CLuaChooseListMulti::OnInitDialog()
            iGiveFocus = LVIS_FOCUSED;
            bHaveFocus = true;
           }
-
-        m_ctlListBox.SetItemState (iPos,
-                                   iGiveFocus | LVIS_SELECTED,
-                                   iGiveFocus | LVIS_SELECTED);
+        m_ctlListBox.SetItemState (
+            iPos,
+            iGiveFocus | LVIS_SELECTED,
+            iGiveFocus | LVIS_SELECTED
+            );
         }
-
       } // end of added OK
     }
-	
-	return TRUE;  // return TRUE unless you set the focus to a control
-	              // EXCEPTION: OCX Property Pages should return FALSE
+
+  return TRUE; // return TRUE unless you set the focus to a control
+               // EXCEPTION: OCX Property Pages should return FALSE
 }
 
 void CLuaChooseListMulti::OnOK() 
 {
+  // iterate through list remembering the item numbers of all selected items
+  int nItem = -1;
+  while ((nItem = m_ctlListBox.GetNextItem(nItem, LVNI_SELECTED)) != -1)
+    m_iResults.insert (m_ctlListBox.GetItemData (nItem));
 
-// iterate through list remembering the item numbers of all selected items
-for (int nItem = -1;
-      (nItem = m_ctlListBox.GetNextItem(nItem, LVNI_SELECTED)) != -1;)
-  m_iResults.insert (m_ctlListBox.GetItemData (nItem));
-
-
-	CDialog::OnOK();
-	
+  CDialog::OnOK();
 }
 
 void CLuaChooseListMulti::OnDblclkChooseList(NMHDR* pNMHDR, LRESULT* pResult) 
 {
   OnOK ();	
-	
-	*pResult = 0;
+  *pResult = 0;
 }

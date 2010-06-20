@@ -544,7 +544,7 @@ int i;
 
   for (ActiveTagsIterator itr = m_ActiveTagList.begin(); itr != m_ActiveTagList.end(); ++itr)
     delete *itr;
-  m_PluginList.clear();
+  m_ActiveTagList.clear();
 
 // delete actions list
 

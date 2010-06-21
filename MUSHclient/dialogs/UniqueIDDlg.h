@@ -7,37 +7,37 @@
 // UniqueIDDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CUniqueIDDlg dialog
 
 class CUniqueIDDlg : public CDialog
 {
-// Construction
-public:
-	CUniqueIDDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CUniqueIDDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CUniqueIDDlg)
-	enum { IDD = IDD_GENERATE_UNIQUE_ID };
-	CString	m_strUniqueID;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CUniqueIDDlg)
+    enum { IDD = IDD_GENERATE_UNIQUE_ID };
+    CString m_strUniqueID;
+    //}}AFX_DATA
 
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CUniqueIDDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CUniqueIDDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CUniqueIDDlg)
+      // NOTE: the ClassWizard will add member functions here
+    //}}AFX_MSG
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CUniqueIDDlg)
-		// NOTE: the ClassWizard will add member functions here
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

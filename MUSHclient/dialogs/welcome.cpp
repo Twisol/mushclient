@@ -2,11 +2,8 @@
 //
 
 #include "stdafx.h"
-#include "..\mushclient.h"
-#include "..\doc.h"
-#include "..\StatLink.h"
-
 #include "welcome.h"
+#include "..\doc.h"
 
 #ifdef _DEBUG
 //#define new DEBUG_NEW
@@ -19,28 +16,28 @@ static char BASED_CODE THIS_FILE[] = __FILE__;
 
 
 CWelcomeDlg::CWelcomeDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CWelcomeDlg::IDD, pParent)
+  : CDialog(CWelcomeDlg::IDD, pParent)
 {
-	//{{AFX_DATA_INIT(CWelcomeDlg)
-	m_strMessage = _T("");
-	m_strChangeHistoryAddress = _T("");
-	//}}AFX_DATA_INIT
+  //{{AFX_DATA_INIT(CWelcomeDlg)
+  m_strMessage = _T("");
+  m_strChangeHistoryAddress = _T("");
+  //}}AFX_DATA_INIT
 }
 
 
 void CWelcomeDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialog::DoDataExchange(pDX);
-	//{{AFX_DATA_MAP(CWelcomeDlg)
-	DDX_Text(pDX, IDC_MESSAGE, m_strMessage);
-	DDX_Text(pDX, IDC_CHANGES_ADDRESS, m_strChangeHistoryAddress);
-	//}}AFX_DATA_MAP
+  CDialog::DoDataExchange(pDX);
+  //{{AFX_DATA_MAP(CWelcomeDlg)
+  DDX_Text(pDX, IDC_MESSAGE, m_strMessage);
+  DDX_Text(pDX, IDC_CHANGES_ADDRESS, m_strChangeHistoryAddress);
+  //}}AFX_DATA_MAP
 }
 
 
 BEGIN_MESSAGE_MAP(CWelcomeDlg, CDialog)
-	//{{AFX_MSG_MAP(CWelcomeDlg)
-	//}}AFX_MSG_MAP
+  //{{AFX_MSG_MAP(CWelcomeDlg)
+  //}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
 
@@ -49,10 +46,8 @@ END_MESSAGE_MAP()
 
 BOOL CWelcomeDlg::OnInitDialog() 
 {
-	// subclass static controls.
-	m_ChangesLink.SubclassDlgItem(IDC_CHANGES_ADDRESS,  this);
- 
+  // subclass static controls.
+  m_ChangesLink.SubclassDlgItem(IDC_CHANGES_ADDRESS,  this);
   m_strChangeHistoryAddress = CHANGES_WEB_PAGE;
-
-	return CDialog::OnInitDialog();
+  return CDialog::OnInitDialog();
 }

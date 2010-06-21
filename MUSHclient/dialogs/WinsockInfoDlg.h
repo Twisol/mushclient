@@ -7,43 +7,44 @@
 // WinsockInfoDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CWinsockInfoDlg dialog
 
 class CWinsockInfoDlg : public CDialog
 {
-// Construction
-public:
-	CWinsockInfoDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CWinsockInfoDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CWinsockInfoDlg)
-	enum { IDD = IDD_WINSOCK_INFO };
-	CString	m_szDescription;
-	CString	m_szSystemStatus;
-	short	m_iMaxSockets;
-	CString	m_strVersion;
-	CString	m_strHighVersion;
-	CString	m_strHostName;
-	CString	m_strAddresses;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CWinsockInfoDlg)
+    enum { IDD = IDD_WINSOCK_INFO };
+    CString m_szDescription;
+    CString m_szSystemStatus;
+    short   m_iMaxSockets;
+    CString m_strVersion;
+    CString m_strHighVersion;
+    CString m_strHostName;
+    CString m_strAddresses;
+    //}}AFX_DATA
 
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CWinsockInfoDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CWinsockInfoDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Implementation
-protected:
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CWinsockInfoDlg)
+      // NOTE: the ClassWizard will add member functions here
+    //}}AFX_MSG
 
-	// Generated message map functions
-	//{{AFX_MSG(CWinsockInfoDlg)
-		// NOTE: the ClassWizard will add member functions here
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

@@ -7,17 +7,19 @@
 #ifndef __PROGDLG_H__
 #define __PROGDLG_H__
 
+#include "..\resource.h"
+
 class CProgressDlg : public CDialog
 {
-// Construction / Destruction
-public:
-    CProgressDlg(UINT nCaptionID = 0);   // standard constructor
+  public:
+    CProgressDlg(UINT nCaptionID = 0);
     ~CProgressDlg();
 
     BOOL Create(CWnd *pParent=NULL);
 
     // Checking for Cancel button
     BOOL CheckCancelButton();
+
     // Progress Dialog manipulation
     void SetStatus(LPCTSTR lpszMessage);
     void SetRange(int nLower,int nUpper);
@@ -26,24 +28,24 @@ public:
     int  OffsetPos(int nPos);
     int  StepIt();
 
-// Dialog Data
+    // Dialog Data
     //{{AFX_DATA(CProgressDlg)
     enum { IDD = CG_IDD_PROGRESS };
-    CProgressCtrl	m_Progress;
+    CProgressCtrl m_Progress;
     //}}AFX_DATA
 
-// Overrides
+    // Overrides
     // ClassWizard generated virtual function overrides
     //{{AFX_VIRTUAL(CProgressDlg)
-    public:
+  public:
     virtual BOOL DestroyWindow();
-    protected:
+  protected:
     virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
     //}}AFX_VIRTUAL
 
-// Implementation
-protected:
-	UINT m_nCaptionID;
+    // Implementation
+  protected:
+    UINT m_nCaptionID;
     int m_nLower;
     int m_nUpper;
     int m_nStep;
@@ -62,6 +64,7 @@ protected:
     //{{AFX_MSG(CProgressDlg)
     virtual BOOL OnInitDialog();
     //}}AFX_MSG
+
     DECLARE_MESSAGE_MAP()
 };
 

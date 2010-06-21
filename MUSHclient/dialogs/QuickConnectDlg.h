@@ -7,39 +7,39 @@
 // QuickConnectDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CQuickConnectDlg dialog
 
 class CQuickConnectDlg : public CDialog
 {
-// Construction
-public:
-	CQuickConnectDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CQuickConnectDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CQuickConnectDlg)
-	enum { IDD = IDD_QUICK_CONNECT };
-	CString	m_strWorldName;
-	CString	m_strAddress;
-	int		m_iPort;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CQuickConnectDlg)
+    enum { IDD = IDD_QUICK_CONNECT };
+    CString m_strWorldName;
+    CString m_strAddress;
+    int     m_iPort;
+    //}}AFX_DATA
 
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CQuickConnectDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CQuickConnectDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CQuickConnectDlg)
+      // NOTE: the ClassWizard will add member functions here
+    //}}AFX_MSG
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CQuickConnectDlg)
-		// NOTE: the ClassWizard will add member functions here
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

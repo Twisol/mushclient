@@ -7,44 +7,45 @@
 // RegexpProblemDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CRegexpProblemDlg dialog
 
 class CRegexpProblemDlg : public CDialog
 {
-// Construction
-public:
-	CRegexpProblemDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CRegexpProblemDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CRegexpProblemDlg)
-	enum { IDD = IDD_REGEXP_PROBLEM };
-	CStatic	m_ctlErrorMessage;
-	CEdit	m_ctlRegexpText;
-	CString	m_strColumn;
-	CString	m_strErrorMessage;
-	CString	m_strText;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CRegexpProblemDlg)
+    enum { IDD = IDD_REGEXP_PROBLEM };
+    CStatic m_ctlErrorMessage;
+    CEdit   m_ctlRegexpText;
+    CString m_strColumn;
+    CString m_strErrorMessage;
+    CString m_strText;
+    //}}AFX_DATA
 
-  CFont m_font;
-  int m_iColumn;
+    CFont m_font;
+    int m_iColumn;
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CRegexpProblemDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CRegexpProblemDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Implementation
-protected:
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CRegexpProblemDlg)
+    virtual BOOL OnInitDialog();
+    afx_msg void OnSetfocusRegexpText();
+    //}}AFX_MSG
 
-	// Generated message map functions
-	//{{AFX_MSG(CRegexpProblemDlg)
-	virtual BOOL OnInitDialog();
-	afx_msg void OnSetfocusRegexpText();
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

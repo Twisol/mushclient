@@ -7,45 +7,46 @@
 // SendToAllDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CSendToAllDlg dialog
 
 class CSendToAllDlg : public CDialog
 {
-// Construction
-public:
-	CSendToAllDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CSendToAllDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CSendToAllDlg)
-	enum { IDD = IDD_SEND_TO_ALL };
-	CEdit	m_ctlSendText;
-	CListBox	m_ctlWorldList;
-	CString	m_strSendText;
-	BOOL	m_bEcho;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CSendToAllDlg)
+    enum { IDD = IDD_SEND_TO_ALL };
+    CEdit    m_ctlSendText;
+    CListBox m_ctlWorldList;
+    CString  m_strSendText;
+    BOOL     m_bEcho;
+    //}}AFX_DATA
 
-  CFont m_font;
+    CFont m_font;
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CSendToAllDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CSendToAllDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Implementation
-protected:
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CSendToAllDlg)
+    virtual BOOL OnInitDialog();
+    afx_msg void OnSelectAll();
+    afx_msg void OnSelectNone();
+    //}}AFX_MSG
+    afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
+    afx_msg void OnUpdateCheckIfReady(CCmdUI* pCmdUI);
 
-	// Generated message map functions
-	//{{AFX_MSG(CSendToAllDlg)
-	virtual BOOL OnInitDialog();
-	afx_msg void OnSelectAll();
-	afx_msg void OnSelectNone();
-	//}}AFX_MSG
-  afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
-  afx_msg void OnUpdateCheckIfReady(CCmdUI* pCmdUI);
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

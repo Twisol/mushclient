@@ -7,42 +7,42 @@
 // MXPscriptRoutinesDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CMXPscriptRoutinesDlg dialog
 
 class CMXPscriptRoutinesDlg : public CDialog
 {
-// Construction
-public:
-	CMXPscriptRoutinesDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CMXPscriptRoutinesDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CMXPscriptRoutinesDlg)
-	enum { IDD = IDD_MXP_SCRIPTS };
-	CString	m_strOnMXP_Start;
-	CString	m_strOnMXP_Stop;
-	CString	m_strOnMXP_OpenTag;
-	CString	m_strOnMXP_CloseTag;
-	CString	m_strOnMXP_SetVariable;
-	CString	m_strOnMXP_Error;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CMXPscriptRoutinesDlg)
+    enum { IDD = IDD_MXP_SCRIPTS };
+    CString m_strOnMXP_Start;
+    CString m_strOnMXP_Stop;
+    CString m_strOnMXP_OpenTag;
+    CString m_strOnMXP_CloseTag;
+    CString m_strOnMXP_SetVariable;
+    CString m_strOnMXP_Error;
+    //}}AFX_DATA
 
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CMXPscriptRoutinesDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CMXPscriptRoutinesDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CMXPscriptRoutinesDlg)
+      // NOTE: the ClassWizard will add member functions here
+    //}}AFX_MSG
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CMXPscriptRoutinesDlg)
-		// NOTE: the ClassWizard will add member functions here
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

@@ -6,55 +6,55 @@
 // Splash.h : header file
 //
 
+#include "..\MUSHclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 //   Splash Screen class
 
 class CSplashWnd : public CWnd
 {
-// Construction
-protected:
-	CSplashWnd();
+  protected:
+    CSplashWnd();
 
-// Attributes:
-public:
-	CBitmap m_bitmap;
+    // Attributes:
+  public:
+    CBitmap m_bitmap;
+    CPalette m_pal;
+    bool m_bNick;
 
-  CPalette m_pal;
+    // Operations
+  public:
+    static void EnableSplashScreen(BOOL bEnable = TRUE);
+    static void ShowSplashScreen(CWnd* pParentWnd, const int iResourceID);
+    static BOOL PreTranslateAppMessage(MSG* pMsg);
+    static bool CSplashWnd::HaveSplashScreen ();
 
-  bool m_bNick;
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CSplashWnd)
+    //}}AFX_VIRTUAL
 
-// Operations
-public:
-	static void EnableSplashScreen(BOOL bEnable = TRUE);
-	static void ShowSplashScreen(CWnd* pParentWnd, const int iResourceID);
-	static BOOL PreTranslateAppMessage(MSG* pMsg);
-  static bool CSplashWnd::HaveSplashScreen (void);
+    // Implementation
+  public:
+    ~CSplashWnd();
+    virtual void PostNcDestroy();
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CSplashWnd)
-	//}}AFX_VIRTUAL
+  protected:
+    BOOL Create(CWnd* pParentWnd, const int iResourceID);
+    void HideSplashScreen();
 
-// Implementation
-public:
-	~CSplashWnd();
-	virtual void PostNcDestroy();
+    static BOOL c_bShowSplashWnd;
+    static CSplashWnd* c_pSplashWnd;
 
-protected:
-	BOOL Create(CWnd* pParentWnd, const int iResourceID);
-	void HideSplashScreen();
-	static BOOL c_bShowSplashWnd;
-	static CSplashWnd* c_pSplashWnd;
+    // Generated message map functions
+  protected:
+    //{{AFX_MSG(CSplashWnd)
+    afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+    afx_msg void OnPaint();
+    afx_msg void OnTimer(UINT nIDEvent);
+    //}}AFX_MSG
 
-// Generated message map functions
-protected:
-	//{{AFX_MSG(CSplashWnd)
-	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
-	afx_msg void OnPaint();
-	afx_msg void OnTimer(UINT nIDEvent);
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
-
 
 #endif

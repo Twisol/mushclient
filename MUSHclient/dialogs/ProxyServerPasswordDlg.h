@@ -7,38 +7,38 @@
 // ProxyServerPasswordDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CProxyServerPasswordDlg dialog
 
 class CProxyServerPasswordDlg : public CDialog
 {
-// Construction
-public:
-	CProxyServerPasswordDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CProxyServerPasswordDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CProxyServerPasswordDlg)
-	enum { IDD = IDD_PROXY_PASSWORD };
-	CString	m_strProxyUserName;
-	CString	m_strProxyPassword;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CProxyServerPasswordDlg)
+    enum { IDD = IDD_PROXY_PASSWORD };
+    CString m_strProxyUserName;
+    CString m_strProxyPassword;
+    //}}AFX_DATA
 
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CProxyServerPasswordDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CProxyServerPasswordDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CProxyServerPasswordDlg)
+      // NOTE: the ClassWizard will add member functions here
+    //}}AFX_MSG
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CProxyServerPasswordDlg)
-		// NOTE: the ClassWizard will add member functions here
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

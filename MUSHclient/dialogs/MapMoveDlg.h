@@ -7,43 +7,43 @@
 // MapMoveDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CMapMoveDlg dialog
 
 class CMapMoveDlg : public CDialog
 {
-// Construction
-public:
-	CMapMoveDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CMapMoveDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CMapMoveDlg)
-	enum { IDD = IDD_MAP_MOVE };
-	CEdit	m_ctlReverse;
-	CEdit	m_ctlAction;
-	CString	m_strAction;
-	CString	m_strReverse;
-	BOOL	m_bSendToMUD;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CMapMoveDlg)
+    enum { IDD = IDD_MAP_MOVE };
+    CEdit   m_ctlReverse;
+    CEdit   m_ctlAction;
+    CString m_strAction;
+    CString m_strReverse;
+    BOOL    m_bSendToMUD;
+    //}}AFX_DATA
 
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CMapMoveDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CMapMoveDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CMapMoveDlg)
+      // NOTE: the ClassWizard will add member functions here
+    //}}AFX_MSG
+    afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
+    afx_msg void OnUpdateNeedAction(CCmdUI* pCmdUI);
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CMapMoveDlg)
-		// NOTE: the ClassWizard will add member functions here
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
-  afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
-  afx_msg void OnUpdateNeedAction(CCmdUI* pCmdUI);
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

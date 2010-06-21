@@ -7,43 +7,43 @@
 // MultiLineTriggerDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CMultiLineTriggerDlg dialog
 
 class CMultiLineTriggerDlg : public CDialog
 {
-// Construction
-public:
-	CMultiLineTriggerDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CMultiLineTriggerDlg(CWnd* pParent = NULL);
+    ~CMultiLineTriggerDlg();
 
-  ~CMultiLineTriggerDlg () { delete m_font; };
+    // Dialog Data
+    //{{AFX_DATA(CMultiLineTriggerDlg)
+    enum { IDD = IDD_MULTILINE_TRIGGER };
+    CEdit   m_ctlTriggerText;
+    CString m_strTriggerText;
+    BOOL    m_bMatchCase;
+    //}}AFX_DATA
 
-// Dialog Data
-	//{{AFX_DATA(CMultiLineTriggerDlg)
-	enum { IDD = IDD_MULTILINE_TRIGGER };
-	CEdit	m_ctlTriggerText;
-	CString	m_strTriggerText;
-	BOOL	m_bMatchCase;
-	//}}AFX_DATA
+    CFont * m_font;
 
-  CFont * m_font;
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CMultiLineTriggerDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CMultiLineTriggerDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CMultiLineTriggerDlg)
+    virtual BOOL OnInitDialog();
+    //}}AFX_MSG
+    afx_msg void OnRemoveSelection();
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CMultiLineTriggerDlg)
-	virtual BOOL OnInitDialog();
-	//}}AFX_MSG
-	afx_msg void OnRemoveSelection();
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

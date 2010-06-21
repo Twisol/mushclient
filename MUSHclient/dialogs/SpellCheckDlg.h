@@ -7,52 +7,50 @@
 // SpellCheckDlg.h : header file
 //
 
+#include "..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CSpellCheckDlg dialog
 
 class CSpellCheckDlg : public CDialog
 {
-// Construction
-public:
-	CSpellCheckDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CSpellCheckDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CSpellCheckDlg)
-	enum { IDD = IDD_SPELLCHECK_DIALOG };
-	CEdit	m_ctlMisspeltWord;
-	CListBox	m_ctlSuggestions;
-	CString	m_strMisspeltWord;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CSpellCheckDlg)
+    enum { IDD = IDD_SPELLCHECK_DIALOG };
+    CEdit    m_ctlMisspeltWord;
+    CListBox m_ctlSuggestions;
+    CString  m_strMisspeltWord;
+    //}}AFX_DATA
 
-  vector<string> m_suggestions;
+    vector<string> m_suggestions;
+    CString m_strOriginalWord;
+    string m_sAction;
 
-  CString m_strOriginalWord;
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CSpellCheckDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-  string m_sAction;
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CSpellCheckDlg)
+    afx_msg void OnIgnore();
+    afx_msg void OnIgnoreAll();
+    afx_msg void OnAdd();
+    afx_msg void OnChange();
+    afx_msg void OnChangeAll();
+    virtual BOOL OnInitDialog();
+    afx_msg void OnDblclkSuggestions();
+    //}}AFX_MSG
+    virtual void OnOK();
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CSpellCheckDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
-
-// Implementation
-protected:
-
-	virtual void OnOK();
-
-	// Generated message map functions
-	//{{AFX_MSG(CSpellCheckDlg)
-	afx_msg void OnIgnore();
-	afx_msg void OnIgnoreAll();
-	afx_msg void OnAdd();
-	afx_msg void OnChange();
-	afx_msg void OnChangeAll();
-	virtual BOOL OnInitDialog();
-	afx_msg void OnDblclkSuggestions();
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

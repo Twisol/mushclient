@@ -7,39 +7,39 @@
 // ChatCallDlg.h : header file
 //
 
+#include "..\..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CChatCallDlg dialog
 
 class CChatCallDlg : public CDialog
 {
-// Construction
-public:
-	CChatCallDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CChatCallDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CChatCallDlg)
-	enum { IDD = IDD_CHAT_CALL };
-	long	m_iPort;
-	CString	m_strAddress;
-	BOOL	m_bzChat;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CChatCallDlg)
+    enum { IDD = IDD_CHAT_CALL };
+    long    m_iPort;
+    CString m_strAddress;
+    BOOL    m_bzChat;
+    //}}AFX_DATA
 
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CChatCallDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CChatCallDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CChatCallDlg)
+      // NOTE: the ClassWizard will add member functions here
+    //}}AFX_MSG
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CChatCallDlg)
-		// NOTE: the ClassWizard will add member functions here
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

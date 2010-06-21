@@ -7,49 +7,49 @@
 // ChatDetailsDlg.h : header file
 //
 
+#include "..\..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CChatDetailsDlg dialog
 
 class CChatDetailsDlg : public CDialog
 {
-// Construction
-public:
-	CChatDetailsDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CChatDetailsDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CChatDetailsDlg)
-	enum { IDD = IDD_CHAT_DETAILS };
-	CString	m_strRemoteUserName;
-	CString	m_strGroup;
-	CString	m_strChatID;
-	CString	m_strRemoteVersion;
-	BOOL	m_bIncoming;
-	BOOL	m_bCanSnoop;
-	BOOL	m_bCanSendFiles;
-	BOOL	m_bPrivate;
-	BOOL	m_bIgnore;
-	BOOL	m_bCanSendCommands;
-	CString	m_strAllegedAddress;
-	CString	m_strAllegedPort;
-	CString	m_strActualIPaddress;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CChatDetailsDlg)
+    enum { IDD = IDD_CHAT_DETAILS };
+    CString m_strRemoteUserName;
+    CString m_strGroup;
+    CString m_strChatID;
+    CString m_strRemoteVersion;
+    BOOL    m_bIncoming;
+    BOOL    m_bCanSnoop;
+    BOOL    m_bCanSendFiles;
+    BOOL    m_bPrivate;
+    BOOL    m_bIgnore;
+    BOOL    m_bCanSendCommands;
+    CString m_strAllegedAddress;
+    CString m_strAllegedPort;
+    CString m_strActualIPaddress;
+    //}}AFX_DATA
 
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CChatDetailsDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CChatDetailsDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CChatDetailsDlg)
+      // NOTE: the ClassWizard will add member functions here
+    //}}AFX_MSG
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CChatDetailsDlg)
-		// NOTE: the ClassWizard will add member functions here
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

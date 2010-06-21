@@ -7,39 +7,39 @@
 // ChatToAllDlg.h : header file
 //
 
+#include "..\..\mushclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CChatToAllDlg dialog
 
 class CChatToAllDlg : public CDialog
 {
-// Construction
-public:
-	CChatToAllDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CChatToAllDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CChatToAllDlg)
-	enum { IDD = IDD_CHAT_SAY_ALL };
-	CString	m_strText;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CChatToAllDlg)
+    enum { IDD = IDD_CHAT_SAY_ALL };
+    CString m_strText;
+    //}}AFX_DATA
 
+    CString m_strTitle;
 
-  CString m_strTitle;
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CChatToAllDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CChatToAllDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CChatToAllDlg)
+    virtual BOOL OnInitDialog();
+    //}}AFX_MSG
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CChatToAllDlg)
-	virtual BOOL OnInitDialog();
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

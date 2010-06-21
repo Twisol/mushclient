@@ -7,85 +7,74 @@
 // ChatListDlg.h : header file
 //
 
-class CMUSHclientDoc;
+#include "..\..\mushclient.h"
 
-  enum 
-  { 
-    eColumnChatName,
-    eColumnGroup,
-    eColumnFromIP,
-    eColumnCallIP,
-    eColumnCallPort,
-    eColumnFlags,
-    eColumnChatCount      // this must be last!
-  };
+class CMUSHclientDoc;
 
 /////////////////////////////////////////////////////////////////////////////
 // CChatListDlg dialog
 
 class CChatListDlg : public CDialog
 {
-// Construction
-public:
-	CChatListDlg(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CChatListDlg(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CChatListDlg)
-	enum { IDD = IDD_CHAT_LIST };
-	CListCtrl	m_ctlChatList;
-	CString	m_strStatus;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CChatListDlg)
+    enum { IDD = IDD_CHAT_LIST };
+    CListCtrl m_ctlChatList;
+    CString   m_strStatus;
+    //}}AFX_DATA
 
+    CMUSHclientDoc * m_pDoc;
 
-  CMUSHclientDoc * m_pDoc;
+    // for sorting the list
+    int m_last_col;
+    BOOL m_reverse;
 
-  // for sorting the list
+    void LoadList ();
+    CString MakeListHash ();
 
-  int m_last_col;
-  BOOL m_reverse;
+    CString m_strListHash;
 
-  void LoadList (void);
-  CString MakeListHash (void);
+    CList<int, int> m_SelectedList; // which ones were selected
+    CList<int, int> m_FocussedList; // which ones were focussed
 
-  CString m_strListHash;
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CChatListDlg)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-  CList<int, int> m_SelectedList;   // which ones were selected
-  CList<int, int> m_FocussedList;   // which ones were focussed
+    // Implementation
+  protected:
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CChatListDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Generated message map functions
+    //{{AFX_MSG(CChatListDlg)
+    afx_msg void OnCall();
+    afx_msg void OnChatAll();
+    afx_msg void OnEmoteAll();
+    virtual BOOL OnInitDialog();
+    afx_msg void OnEdit();
+    afx_msg void OnPing();
+    afx_msg void OnSnoop();
+    afx_msg void OnSendfile();
+    afx_msg void OnHangup();
+    afx_msg void OnChat();
+    afx_msg void OnEmote();
+    afx_msg void OnPeek();
+    afx_msg void OnRequest();
+    afx_msg void OnDestroy();
+    afx_msg void OnDblclkChatSessions(NMHDR* pNMHDR, LRESULT* pResult);
+    afx_msg void OnColumnclickChatSessions(NMHDR* pNMHDR, LRESULT* pResult);
+    //}}AFX_MSG
+    afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
+    afx_msg void OnUpdateNeedSelection(CCmdUI* pCmdUI);
+    afx_msg void OnUpdateNeedOneSelection(CCmdUI* pCmdUI);
+    afx_msg void OnUpdateCheckList(CCmdUI* pCmdUI);
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CChatListDlg)
-	afx_msg void OnCall();
-	afx_msg void OnChatAll();
-	afx_msg void OnEmoteAll();
-	virtual BOOL OnInitDialog();
-	afx_msg void OnEdit();
-	afx_msg void OnPing();
-	afx_msg void OnSnoop();
-	afx_msg void OnSendfile();
-	afx_msg void OnHangup();
-	afx_msg void OnChat();
-	afx_msg void OnEmote();
-	afx_msg void OnPeek();
-	afx_msg void OnRequest();
-	afx_msg void OnDestroy();
-	afx_msg void OnDblclkChatSessions(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnColumnclickChatSessions(NMHDR* pNMHDR, LRESULT* pResult);
-	//}}AFX_MSG
-  afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
-  afx_msg void OnUpdateNeedSelection(CCmdUI* pCmdUI);
-  afx_msg void OnUpdateNeedOneSelection(CCmdUI* pCmdUI);
-  afx_msg void OnUpdateCheckList(CCmdUI* pCmdUI);
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

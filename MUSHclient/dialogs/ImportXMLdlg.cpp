@@ -172,18 +172,14 @@ void CImportXMLdlg::ImportArchive (CArchive & ar)
         &iKeypad,   &iPrinting
         );
 
-    CString strCounts;
-    if (iTriggers + iAliases + iTimers + iMacros + iVariables + iColours + iKeypad + iPrinting <= 0)
-      strCounts = Translate ("No items loaded.");
-    else
-      strCounts = TFormat (
-            "%lu trigger%s, %lu alias%s, %lu timer%s, "
-            "%lu macro%s, %lu variable%s, %lu colour%s, "
-            "%lu keypad%s, %lu printing style%s loaded. ",
-          PLURAL (iTriggers), PLURALES (iAliases), PLURAL (iTimers),
-          PLURAL (iMacros),   PLURAL (iVariables), PLURAL (iColours),
-          PLURAL (iKeypad),   PLURAL (iPrinting)
-          );
+    CString strCounts = TFormat (
+          "%lu trigger%s, %lu alias%s, %lu timer%s, "
+          "%lu macro%s, %lu variable%s, %lu colour%s, "
+          "%lu keypad%s, %lu printing style%s loaded. ",
+        PLURAL (iTriggers), PLURALES (iAliases), PLURAL (iTimers),
+        PLURAL (iMacros),   PLURAL (iVariables), PLURAL (iColours),
+        PLURAL (iKeypad),   PLURAL (iPrinting)
+        );
 
     m_pDoc->SetModifiedFlag (TRUE); // document has now changed
 

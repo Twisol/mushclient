@@ -12,36 +12,27 @@
 
 class CPrefsPropertySheet : public CPropertySheet
 {
-	DECLARE_DYNAMIC(CPrefsPropertySheet)
+  DECLARE_DYNAMIC(CPrefsPropertySheet)
 
-// Construction
-public:
-	CPrefsPropertySheet(UINT nIDCaption, CWnd* pParentWnd = NULL, UINT iSelectPage = 0);
-	CPrefsPropertySheet(LPCTSTR pszCaption, CWnd* pParentWnd = NULL, UINT iSelectPage = 0);
+  public:
+    CPrefsPropertySheet(UINT nIDCaption, CWnd* pParentWnd = NULL, UINT iSelectPage = 0);
+    CPrefsPropertySheet(LPCTSTR pszCaption, CWnd* pParentWnd = NULL, UINT iSelectPage = 0);
+    virtual ~CPrefsPropertySheet();
 
-// Attributes
-public:
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CPrefsPropertySheet)
+  public:
+    virtual BOOL OnInitDialog();
+    //}}AFX_VIRTUAL
 
-// Operations
-public:
+    // Generated message map functions
+  protected:
+    //{{AFX_MSG(CPrefsPropertySheet)
+    //}}AFX_MSG
+    afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CPrefsPropertySheet)
-	public:
-	virtual BOOL OnInitDialog();
-	//}}AFX_VIRTUAL
-
-// Implementation
-public:
-	virtual ~CPrefsPropertySheet();
-
-	// Generated message map functions
-protected:
-	//{{AFX_MSG(CPrefsPropertySheet)
-	//}}AFX_MSG
-  afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 /////////////////////////////////////////////////////////////////////////////

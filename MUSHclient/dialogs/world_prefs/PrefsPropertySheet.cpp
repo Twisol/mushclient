@@ -2,7 +2,6 @@
 //
 
 #include "stdafx.h"
-#include "..\..\mushclient.h"
 #include "PrefsPropertySheet.h"
 
 #ifdef _DEBUG
@@ -17,23 +16,19 @@ static char THIS_FILE[] = __FILE__;
 IMPLEMENT_DYNAMIC(CPrefsPropertySheet, CPropertySheet)
 
 CPrefsPropertySheet::CPrefsPropertySheet(UINT nIDCaption, CWnd* pParentWnd, UINT iSelectPage)
-	:CPropertySheet(nIDCaption, pParentWnd, iSelectPage)
-{
-}
+  : CPropertySheet(nIDCaption, pParentWnd, iSelectPage)
+{}
 
 CPrefsPropertySheet::CPrefsPropertySheet(LPCTSTR pszCaption, CWnd* pParentWnd, UINT iSelectPage)
-	:CPropertySheet(pszCaption, pParentWnd, iSelectPage)
-{
-}
+  : CPropertySheet(pszCaption, pParentWnd, iSelectPage)
+{}
 
 CPrefsPropertySheet::~CPrefsPropertySheet()
-{
-}
-
+{}
 
 BEGIN_MESSAGE_MAP(CPrefsPropertySheet, CPropertySheet)
-	//{{AFX_MSG_MAP(CPrefsPropertySheet)
-	//}}AFX_MSG_MAP
+  //{{AFX_MSG_MAP(CPrefsPropertySheet)
+  //}}AFX_MSG_MAP
   ON_MESSAGE(WM_KICKIDLE, OnKickIdle)
 END_MESSAGE_MAP()
 
@@ -41,22 +36,19 @@ END_MESSAGE_MAP()
 // CPrefsPropertySheet message handlers
 
 LRESULT CPrefsPropertySheet::OnKickIdle(WPARAM, LPARAM)
-  {
+{
   GetActivePage ()->SendMessage (WM_KICKIDLE, 0, 0);
   return 0;
-  } // end of CPrefsPropertySheet::OnKickIdle
+} // end of CPrefsPropertySheet::OnKickIdle
 
 BOOL CPrefsPropertySheet::OnInitDialog() 
 {
-	BOOL bResult = CPropertySheet::OnInitDialog();
-	
+  BOOL bResult = CPropertySheet::OnInitDialog();
+
   // remove apply button
-  CWnd* pTemp;
-  pTemp = GetDlgItem(ID_APPLY_NOW);
+  CWnd* pTemp = GetDlgItem(ID_APPLY_NOW);
   if (pTemp)
-      pTemp->ShowWindow (SW_HIDE);
+    pTemp->ShowWindow (SW_HIDE);
 
-	return bResult;
+  return bResult;
 }
-
-

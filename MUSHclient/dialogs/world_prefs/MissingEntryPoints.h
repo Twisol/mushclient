@@ -7,37 +7,37 @@
 // MissingEntryPoints.h : header file
 //
 
+#include "..\..\MUSHclient.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CMissingEntryPoints dialog
 
 class CMissingEntryPoints : public CDialog
 {
-// Construction
-public:
-	CMissingEntryPoints(CWnd* pParent = NULL);   // standard constructor
+  public:
+    CMissingEntryPoints(CWnd* pParent = NULL);
 
-// Dialog Data
-	//{{AFX_DATA(CMissingEntryPoints)
-	enum { IDD = IDD_MISSING_ENTRY_POINTS };
-	CString	m_strErrorMessage;
-	//}}AFX_DATA
+    // Dialog Data
+    //{{AFX_DATA(CMissingEntryPoints)
+    enum { IDD = IDD_MISSING_ENTRY_POINTS };
+    CString	m_strErrorMessage;
+    //}}AFX_DATA
 
+    // Overrides
+    // ClassWizard generated virtual function overrides
+    //{{AFX_VIRTUAL(CMissingEntryPoints)
+  protected:
+    virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+    //}}AFX_VIRTUAL
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CMissingEntryPoints)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
+    // Implementation
+  protected:
+    // Generated message map functions
+    //{{AFX_MSG(CMissingEntryPoints)
+      // NOTE: the ClassWizard will add member functions here
+    //}}AFX_MSG
 
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CMissingEntryPoints)
-		// NOTE: the ClassWizard will add member functions here
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+    DECLARE_MESSAGE_MAP()
 };
 
 //{{AFX_INSERT_LOCATION}}

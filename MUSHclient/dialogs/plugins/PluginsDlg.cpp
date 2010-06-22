@@ -2,11 +2,9 @@
 //
 
 #include "stdafx.h"
-#include "..\..\mainfrm.h"
-#include "..\..\mushclient.h"
+#include "PluginsDlg.h"
 #include "..\..\doc.h"
 #include "..\..\TextDocument.h"
-#include "PluginsDlg.h"
 #include "..\..\winplace.h"
 
 #ifdef _DEBUG
@@ -15,9 +13,20 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+
+enum {
+  eColumnName,
+  eColumnPurpose,
+  eColumnAuthor,
+  eColumnLanguage,
+  eColumnFile,
+  eColumnEnabled,
+  eColumnVersion,
+  eColumnCount,  // this must be last!
+};
+
 /////////////////////////////////////////////////////////////////////////////
 // CPluginsDlg dialog
-
 
 CPluginsDlg::CPluginsDlg(CWnd* pParent /*=NULL*/)
   : CDialog(CPluginsDlg::IDD, pParent), m_pDoc(NULL),

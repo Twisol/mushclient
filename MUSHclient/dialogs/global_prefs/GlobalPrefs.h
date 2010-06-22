@@ -18,6 +18,7 @@ class CGlobalPrefsP1 : public CPropertyPage
 
   public:
     CGlobalPrefsP1();
+    ~CGlobalPrefsP1();
 
     // Dialog Data
     //{{AFX_DATA(CGlobalPrefsP1)
@@ -68,6 +69,7 @@ class CGlobalPrefsP2 : public CPropertyPage
 
   public:
     CGlobalPrefsP2();
+    ~CGlobalPrefsP2();
 
     // Dialog Data
     //{{AFX_DATA(CGlobalPrefsP2)
@@ -124,6 +126,7 @@ class CGlobalPrefsP3 : public CPropertyPage
 
   public:
     CGlobalPrefsP3();
+    ~CGlobalPrefsP3();
 
     // Dialog Data
     //{{AFX_DATA(CGlobalPrefsP3)
@@ -161,6 +164,7 @@ class CGlobalPrefsP4 : public CPropertyPage
 
   public:
     CGlobalPrefsP4();
+    ~CGlobalPrefsP4();
 
     // Dialog Data
     //{{AFX_DATA(CGlobalPrefsP4)
@@ -202,6 +206,7 @@ class CGlobalPrefsP5 : public CPropertyPage
 
   public:
     CGlobalPrefsP5();
+    ~CGlobalPrefsP5();
 
     // Dialog Data
     //{{AFX_DATA(CGlobalPrefsP5)
@@ -239,6 +244,7 @@ class CGlobalPrefsP6 : public CPropertyPage
 
   public:
     CGlobalPrefsP6();
+    ~CGlobalPrefsP6();
 
     // Dialog Data
     //{{AFX_DATA(CGlobalPrefsP6)
@@ -272,6 +278,7 @@ class CGlobalPrefsP7 : public CPropertyPage
 
   public:
     CGlobalPrefsP7();
+    ~CGlobalPrefsP7();
 
     // Dialog Data
     //{{AFX_DATA(CGlobalPrefsP7)
@@ -307,6 +314,7 @@ class CGlobalPrefsP9 : public CPropertyPage
 
   public:
     CGlobalPrefsP9();
+    ~CGlobalPrefsP9();
 
     int   m_iDefaultInputFontHeight;
     int   m_iDefaultInputFontWeight;
@@ -371,6 +379,7 @@ class CGlobalPrefsP10 : public CPropertyPage
 
   public:
     CGlobalPrefsP10();
+    ~CGlobalPrefsP10();
 
     // Dialog Data
     //{{AFX_DATA(CGlobalPrefsP10)
@@ -429,6 +438,7 @@ class CGlobalPrefsP11 : public CPropertyPage
 
   public:
     CGlobalPrefsP11();
+    ~CGlobalPrefsP11();
 
     // Dialog Data
     //{{AFX_DATA(CGlobalPrefsP11)
@@ -465,6 +475,7 @@ class CGlobalPrefsP12 : public CPropertyPage
 
   public:
     CGlobalPrefsP12();
+    ~CGlobalPrefsP12();
 
     // Dialog Data
     //{{AFX_DATA(CGlobalPrefsP12)
@@ -511,6 +522,7 @@ class CGlobalPrefsP13 : public CPropertyPage
 
   public:
     CGlobalPrefsP13();
+    ~CGlobalPrefsP13();
 
     // Dialog Data
     //{{AFX_DATA(CGlobalPrefsP13)

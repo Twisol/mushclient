@@ -59,6 +59,9 @@ CGlobalPrefsP1::CGlobalPrefsP1()
   //}}AFX_DATA_INIT
 }
 
+CGlobalPrefsP1::~CGlobalPrefsP1()
+{}
+
 void CGlobalPrefsP1::DoDataExchange(CDataExchange* pDX)
 {
   CPropertyPage::DoDataExchange(pDX);
@@ -118,8 +121,7 @@ void CGlobalPrefsP1::OnNewStartupWorld()
     CListBox* pList = (CListBox*) GetDlgItem(IDC_WORLD_LIST);
     ASSERT_VALID(pList);
 
-    POSITION pos = dlg.GetStartPosition();
-    while (pos != NULL)
+    for (POSITION pos = dlg.GetStartPosition(); pos;)
       {
       CString strFile = dlg.GetNextPathName(pos);
 
@@ -226,11 +228,11 @@ void CGlobalPrefsP1::OnOK()
   CListBox* pList = (CListBox*) GetDlgItem(IDC_WORLD_LIST);
 
   m_strWorldList.Empty ();
-  CString strItem;
 
   // make a long string containing all world names, separated by asterisks
   for (int i = 0; i < pList->GetCount (); ++i)
     {
+    CString strItem;
     pList->GetText (i, strItem);
     if (!m_strWorldList.IsEmpty ())
       m_strWorldList += '*';
@@ -296,7 +298,6 @@ void CGlobalPrefsP1::OnDefaultDirectory()
     {
     char pszBuffer[MAX_PATH];
     BROWSEINFO   bi;
-    LPITEMIDLIST pidl;
 
     // Get help on BROWSEINFO struct - it's got all the bit settings.
     bi.hwndOwner = GetSafeHwnd();
@@ -310,7 +311,8 @@ void CGlobalPrefsP1::OnDefaultDirectory()
     GetDlgItemText(IDC_DEFAULT_DIRECTORY_NAME, strStartingDirectory);
 
     // This next call issues the dialog box.
-    if ((pidl = ::SHBrowseForFolder(&bi)) != NULL)
+    LPITEMIDLIST pidl = ::SHBrowseForFolder(&bi);
+    if (pidl != NULL)
       {
       if (::SHGetPathFromIDList(pidl, pszBuffer))
         SetDlgItemText(IDC_DEFAULT_DIRECTORY_NAME, pszBuffer);
@@ -420,6 +422,9 @@ void CGlobalPrefsP2::DoDataExchange(CDataExchange* pDX)
   //}}AFX_DATA_MAP
 }
 
+CGlobalPrefsP2::~CGlobalPrefsP2()
+{}
+
 
 BEGIN_MESSAGE_MAP(CGlobalPrefsP2, CPropertyPage)
   //{{AFX_MSG_MAP(CGlobalPrefsP2)
@@ -440,6 +445,9 @@ CGlobalPrefsP3::CGlobalPrefsP3()
   m_bConfirmBeforeSavingVariables = FALSE;
   //}}AFX_DATA_INIT
 }
+
+CGlobalPrefsP3::~CGlobalPrefsP3()
+{}
 
 void CGlobalPrefsP3::DoDataExchange(CDataExchange* pDX)
 {
@@ -473,6 +481,9 @@ CGlobalPrefsP4::CGlobalPrefsP4()
   m_nPrinterLinesPerPage = 0;
   //}}AFX_DATA_INIT
 }
+
+CGlobalPrefsP4::~CGlobalPrefsP4()
+{}
 
 void CGlobalPrefsP4::DoDataExchange(CDataExchange* pDX)
 {
@@ -543,6 +554,9 @@ CGlobalPrefsP5::CGlobalPrefsP5()
   //}}AFX_DATA_INIT
 }
 
+CGlobalPrefsP5::~CGlobalPrefsP5()
+{}
+
 
 void CGlobalPrefsP5::DoDataExchange(CDataExchange* pDX)
 {
@@ -569,8 +583,7 @@ void CGlobalPrefsP5::OnDefaultDirectory()
   if (::SHGetMalloc(&pMalloc) == NOERROR)
     {
     char pszBuffer[MAX_PATH];
-    BROWSEINFO   bi;
-    LPITEMIDLIST pidl;
+    BROWSEINFO bi;
 
     // Get help on BROWSEINFO struct - it's got all the bit settings.
     bi.hwndOwner = GetSafeHwnd();
@@ -583,7 +596,8 @@ void CGlobalPrefsP5::OnDefaultDirectory()
     GetDlgItemText(IDC_DEFAULT_DIRECTORY_NAME, strStartingDirectory);
 
     // This next call issues the dialog box.
-    if ((pidl = ::SHBrowseForFolder(&bi)) != NULL)
+    LPITEMIDLIST pidl = ::SHBrowseForFolder(&bi);
+    if (pidl != NULL)
       {
       if (::SHGetPathFromIDList(pidl, pszBuffer))
         SetDlgItemText(IDC_DEFAULT_DIRECTORY_NAME, pszBuffer);
@@ -606,6 +620,9 @@ CGlobalPrefsP6::CGlobalPrefsP6()
   m_nTimerInterval = 0;
   //}}AFX_DATA_INIT
 }
+
+CGlobalPrefsP6::~CGlobalPrefsP6()
+{}
 
 void CGlobalPrefsP6::DoDataExchange(CDataExchange* pDX)
 {
@@ -706,6 +723,9 @@ CGlobalPrefsP7::CGlobalPrefsP7()
   //}}AFX_DATA_INIT
 }
 
+CGlobalPrefsP7::~CGlobalPrefsP7()
+{}
+
 void CGlobalPrefsP7::DoDataExchange(CDataExchange* pDX)
 {
   CPropertyPage::DoDataExchange(pDX);
@@ -757,6 +777,9 @@ CGlobalPrefsP9::CGlobalPrefsP9()
   //}}AFX_DATA_INIT
 }
 
+CGlobalPrefsP9::~CGlobalPrefsP9()
+{}
+
 void CGlobalPrefsP9::DoDataExchange(CDataExchange* pDX)
 {
   CPropertyPage::DoDataExchange(pDX);
@@ -798,8 +821,7 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // CGlobalPrefsP9 message handlers
 
-bool CGlobalPrefsP9::GeneralBrowse (const int set_type,
-                                    CString & strPathName)
+bool CGlobalPrefsP9::GeneralBrowse (const int set_type, CString & strPathName)
 {
   CString suggested_name = "Default";
   CString filter, title, suggested_extension;
@@ -959,6 +981,9 @@ CGlobalPrefsP10::CGlobalPrefsP10()
   //}}AFX_DATA_INIT
 }
 
+CGlobalPrefsP10::~CGlobalPrefsP10()
+{}
+
 void CGlobalPrefsP10::DoDataExchange(CDataExchange* pDX)
 {
   CPropertyPage::DoDataExchange(pDX);
@@ -1103,6 +1128,9 @@ CGlobalPrefsP11::CGlobalPrefsP11()
   //}}AFX_DATA_INIT
 }
 
+CGlobalPrefsP11::~CGlobalPrefsP11()
+{}
+
 
 void CGlobalPrefsP11::DoDataExchange(CDataExchange* pDX)
 {
@@ -1167,6 +1195,9 @@ CGlobalPrefsP12::CGlobalPrefsP12()
   //}}AFX_DATA_INIT
 }
 
+CGlobalPrefsP12::~CGlobalPrefsP12()
+{}
+
 void CGlobalPrefsP12::DoDataExchange(CDataExchange* pDX)
 {
   CPropertyPage::DoDataExchange(pDX);
@@ -1203,7 +1234,6 @@ void CGlobalPrefsP12::OnPluginsDirectory()
     {
     char pszBuffer[MAX_PATH];
     BROWSEINFO bi;
-    LPITEMIDLIST pidl;
 
     // Get help on BROWSEINFO struct - it's got all the bit settings.
     bi.hwndOwner = GetSafeHwnd();
@@ -1216,7 +1246,8 @@ void CGlobalPrefsP12::OnPluginsDirectory()
     GetDlgItemText(IDC_PLUGINS_DIRECTORY_NAME, strStartingDirectory);
 
     // This next call issues the dialog box.
-    if ((pidl = ::SHBrowseForFolder(&bi)) != NULL)
+    LPITEMIDLIST pidl = ::SHBrowseForFolder(&bi);
+    if (pidl != NULL)
       {
       if (::SHGetPathFromIDList(pidl, pszBuffer))
         SetDlgItemText(IDC_PLUGINS_DIRECTORY_NAME, pszBuffer);
@@ -1260,8 +1291,7 @@ void CGlobalPrefsP12::OnNewPlugin()
     CListBox* pList = (CListBox*) GetDlgItem(IDC_PLUGIN_LIST);
     ASSERT_VALID(pList);
 
-    POSITION pos = dlg.GetStartPosition();
-    while (pos != NULL)
+    for (POSITION pos = dlg.GetStartPosition(); pos;)
       {
       CString strFile = dlg.GetNextPathName(pos);
 
@@ -1290,7 +1320,7 @@ void CGlobalPrefsP12::OnRemovePlugin()
   pList->DeleteString(nIndex);
 
   if (nIndex >= pList->GetCount())
-      nIndex = pList->GetCount() - 1;
+    nIndex = pList->GetCount() - 1;
   pList->SetCurSel(nIndex);
 
   CString strPluginCount;
@@ -1358,10 +1388,10 @@ BOOL CGlobalPrefsP12::OnInitDialog()
   CString strPluginCount;
   strPluginCount.Format ("%i plugin%s", PLURAL(pList->GetCount()));
 
-	SetDlgItemText(IDC_PLUGIN_COUNT, strPluginCount);
-	
-	return TRUE;  // return TRUE unless you set the focus to a control
-	              // EXCEPTION: OCX Property Pages should return FALSE
+  SetDlgItemText(IDC_PLUGIN_COUNT, strPluginCount);
+
+  return TRUE; // return TRUE unless you set the focus to a control
+               // EXCEPTION: OCX Property Pages should return FALSE
 }
 
 void CGlobalPrefsP12::OnOK() 
@@ -1440,6 +1470,9 @@ CGlobalPrefsP13::CGlobalPrefsP13() : CPropertyPage(CGlobalPrefsP13::IDD)
   m_bEnablePackageLibrary = FALSE;
   //}}AFX_DATA_INIT
 }
+
+CGlobalPrefsP13::~CGlobalPrefsP13()
+{}
 
 void CGlobalPrefsP13::DoDataExchange(CDataExchange* pDX)
 {

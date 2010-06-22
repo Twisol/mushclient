@@ -7,17 +7,7 @@
 // PluginsDlg.h : header file
 //
 
-enum {
-  eColumnName,
-  eColumnPurpose,
-  eColumnAuthor,
-  eColumnLanguage,
-  eColumnFile,
-  eColumnEnabled,
-  eColumnVersion,
-  eColumnCount,  // this must be last!
-};
-
+#include "..\..\mushclient.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CPluginsDlg dialog

@@ -6999,6 +6999,14 @@ static flags_pair miniwindow_flags [] =
   {  "drag_got_control",    0x02  },          
   {  "drag_got_alt",        0x04  },          
 
+  // mouse wheel handler callback flags
+
+  {  "wheel_got_shift",      0x01  },          
+  {  "wheel_got_control",    0x02  },          
+  {  "wheel_got_alt",        0x04  },          
+  {  "wheel_scroll_back",    0x100  },          
+
+
   { NULL, 0 }
 };
 

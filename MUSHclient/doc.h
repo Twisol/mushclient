@@ -1888,7 +1888,7 @@ public:
   void SavePrefsP22 (CPrefsP22 &page22);
   void SavePrefsP23 (CPrefsP23 &page23);
 
-  CString AppendMUDName (const CString strName);
+  CString AppendMUDName (const CString &strName);
 
   bool GamePreferences (const int iPage); 
 

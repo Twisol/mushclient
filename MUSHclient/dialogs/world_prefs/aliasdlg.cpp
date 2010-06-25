@@ -261,7 +261,6 @@ void CAliasDlg::DoDataExchange(CDataExchange* pDX)
       ::TMessageBox("The alias contents cannot be blank unless you specify a script subroutine.");
       DDX_Text(pDX, IDC_ALIAS_CONTENTS, m_contents);
       pDX->Fail();
-      return;
       } // end of contents being blank
 
     if (!m_strProcedure.IsEmpty () &&      // blank procedure is OK
@@ -273,7 +272,6 @@ void CAliasDlg::DoDataExchange(CDataExchange* pDX)
           );
       DDX_Text(pDX, IDC_SCRIPT_NAME, m_strProcedure);
       pDX->Fail();
-      return;
       } // end of invalid procedure name
    } // end of saving and validating
   else if (App.m_bFixedFontForEditing)

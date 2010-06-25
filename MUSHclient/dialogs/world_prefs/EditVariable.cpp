@@ -50,7 +50,6 @@ void CEditVariable::DoDataExchange(CDataExchange* pDX)
           );
       DDX_Text(pDX, IDC_VARIABLE_NAME, m_strName);
       pDX->Fail();
-      return;
       }
 
     CVariable * variable_item = NULL;
@@ -61,7 +60,6 @@ void CEditVariable::DoDataExchange(CDataExchange* pDX)
       ::TMessageBox("This variable name is already in the list of variables.");
       DDX_Text(pDX, IDC_VARIABLE_NAME, m_strName);
       pDX->Fail();
-      return;
       }
    } // end of saving and validating
 }

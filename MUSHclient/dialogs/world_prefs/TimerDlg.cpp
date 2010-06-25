@@ -122,7 +122,6 @@ void CTimerDlg::DoDataExchange(CDataExchange* pDX)
         ::TMessageBox("The timer interval must be greater than zero.");
         DDX_Text(pDX, IDC_INTERVAL_HOUR, m_iEveryHour);
         pDX->Fail();
-        return;
         }     // end of interval <= 0
 
       if (ts2 >= ts1)
@@ -130,7 +129,6 @@ void CTimerDlg::DoDataExchange(CDataExchange* pDX)
         ::TMessageBox("The timer offset must be less than the timer period.");
         DDX_Text(pDX, IDC_OFFSET_HOUR, m_iOffsetHour);
         pDX->Fail();
-        return;
         } // end of offset >= period
       } // end of doing a periodical timer
 
@@ -155,7 +153,6 @@ void CTimerDlg::DoDataExchange(CDataExchange* pDX)
         ::UMessageBox(strMsg);
         DDX_Text(pDX, IDC_TIMER_LABEL, m_strLabel);
         pDX->Fail();
-        return;
         }
       }   // end of checking each Timer
 
@@ -169,7 +166,6 @@ void CTimerDlg::DoDataExchange(CDataExchange* pDX)
           );
       DDX_Text(pDX, IDC_TIMER_LABEL, m_strLabel);
       pDX->Fail();
-      return;
       } // end of checking valid label
 
     if (m_strVariable.IsEmpty ()) // we can have blank variables
@@ -208,7 +204,6 @@ void CTimerDlg::DoDataExchange(CDataExchange* pDX)
       ::TMessageBox("The timer contents cannot be blank unless you specify a script subroutine.");
       DDX_Text(pDX, IDC_TIMER_CONTENTS, m_strContents);
       pDX->Fail();
-      return;
       } // end of contents being blank
 
     if (!m_strProcedure.IsEmpty () &&      // blank procedure is OK
@@ -220,7 +215,6 @@ void CTimerDlg::DoDataExchange(CDataExchange* pDX)
           );
       DDX_Text(pDX, IDC_SCRIPT_NAME, m_strProcedure);
       pDX->Fail();
-      return;
       } // end of checking valid procedure
     } // end of saving and validating
 }

@@ -266,9 +266,8 @@ void CTriggerDlg::DoDataExchange(CDataExchange* pDX)
       DDX_Text(pDX, IDC_VARIABLE, m_strVariable);
       pDX->Fail();
       } // end of checking valid variable
-
     // check label is valid
-    if (!m_strLabel.IsEmpty () && CheckLabel (m_strLabel))
+    else if (!m_strLabel.IsEmpty () && CheckLabel (m_strLabel))
       {
       ::TMessageBox(
             "The label must start with a letter and consist of letters, "
@@ -278,9 +277,8 @@ void CTriggerDlg::DoDataExchange(CDataExchange* pDX)
       DDX_Text(pDX, IDC_TRIGGER_NAME, m_strLabel);
       pDX->Fail();
       } // end of checking valid label
-
     // check procedure is valid
-    if (!m_strProcedure.IsEmpty () && // blank procedure is OK
+    else if (!m_strProcedure.IsEmpty () && // blank procedure is OK
         CheckLabel (m_strProcedure, true))
       {
       ::TMessageBox(

@@ -70,8 +70,8 @@
 
 extern "C"
   {
-  #include "lua.h"
-  #include "lauxlib.h"
+  #include "lua\lua.h"
+  #include "lua\lauxlib.h"
   }
 
 using namespace std ;

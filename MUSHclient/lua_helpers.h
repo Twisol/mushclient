@@ -1,5 +1,5 @@
-#include "lua.h"
-#include "lauxlib.h"
+#include "lua\lua.h"
+#include "lua\lauxlib.h"
 
 void MakeTableItem (lua_State *L, const char * name, const CString & str);
 void MakeTableItem (lua_State *L, const char * name, const string & str);

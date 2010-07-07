@@ -244,18 +244,19 @@ enum {
 };
 
 // style flags 
-
-#define NORMAL     0x0000   // a mnemonic way of clearing all attributes
-#define HILITE     0x0001   // bold
-#define UNDERLINE  0x0002   // underline
-#define BLINK      0x0004   // italic??
-#define INVERSE    0x0008   // need to invert it
-#define CHANGED    0x0010   // colour has been changed by a trigger
-#define COLOURTYPE 0x0300   // type of colour in iForeColour/iBackColour, see above
-#define ACTIONTYPE 0x0C00   // action type, see above
-#define STYLE_BITS 0x0FFF   // everything except START_TAG
-#define START_TAG  0x1000   // strAction is tag name - start of tag (eg. <b> )
-#define TEXT_STYLE 0x000F   // bold, underline, italic, inverse flags
+enum {
+  NORMAL     = 0x0000, // a mnemonic way of clearing all attributes
+  HILITE     = 0x0001, // bold
+  UNDERLINE  = 0x0002, // underline
+  BLINK      = 0x0004, // italic??
+  INVERSE    = 0x0008, // need to invert it
+  CHANGED    = 0x0010, // colour has been changed by a trigger
+  COLOURTYPE = 0x0300, // type of colour in iForeColour/iBackColour, see above
+  ACTIONTYPE = 0x0C00, // action type, see above
+  STYLE_BITS = 0x0FFF, // everything except START_TAG
+  START_TAG  = 0x1000, // strAction is tag name - start of tag (eg. <b> )
+  TEXT_STYLE = 0x000F, // bold, underline, italic, inverse flags
+};
 
 // eg. <send "command1|command2|command3" hint="click to see menu|Item 1|Item 2|Item 2">this is a menu link</SEND>
 

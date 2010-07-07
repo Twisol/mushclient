@@ -13,14 +13,7 @@
 // Each style run consists of text in an identical style
 //   (eg. green on blue, italic)
 
-// text styles
-// note: by or'ing these together we get a number in the range 0-7
-// which will help select the correct output font
-
-#define NORMAL     0x0000   // plain, not bold, underline or italic
-#define HILITE     0x0001   // bold
-#define UNDERLINE  0x0002   // underline
-#define ITALIC     0x0004   // italic
+#include "OtherTypes.h"
 
 
 // standard colours

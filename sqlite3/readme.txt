@@ -1,6 +1,6 @@
 Sqlite3 built as follows:
 
-1. Download recent version from http://www.sqlite.org/sqlite-amalgamation-3_6_22.zip
+1. Download recent version from http://www.sqlite.org/sqlite-amalgamation-3_6_23_1.zip
 
 2. Unzip and untar the file
 

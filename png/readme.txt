@@ -1,10 +1,13 @@
 PNG built as follows:
 
-1. Download: http://sourceforge.net/projects/libpng/files/01-libpng-master/1.4.0/lpng140.zip/download
+1. Download recent version from http://sourceforge.net/projects/libpng/files/
 
-2. Unzip and untar the file, eg.
+    In this case: lpng143.7z
 
-   tar xzf libpng-1.4.0.tar.gz
+2. Uncompress the archive with 7-Zip, obtainable from:
+
+	http://www.7-zip.org/
+
 
 3. Copy the following files to the mushclient source "png" directory:
 

@@ -4679,7 +4679,7 @@ CString CMUSHclientDoc::RecallText (const CString strSearchString,   // what to 
       CString strSearchLine = strLine;
       if (bRegexp)
         {
-        if (regexec (regexp, strSearchLine))
+        if (regexp->Execute(strSearchLine))
           {
           if (!strRecallLinePreamble.IsEmpty ())
             strMessage += FormatTime (theTime, strRecallLinePreamble);

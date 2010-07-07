@@ -12,67 +12,89 @@ static char BASED_CODE THIS_FILE[] = __FILE__;
 #endif
 
 
-t_regexp * regcomp(const char *exp, const int options)
-  {
-const char *error;
-int erroroffset;
-t_regexp * re;
-pcre * program;
-pcre_extra * extra;
+static const int MAX_PCRE_WILDCARDS = 1000;
 
-  program = pcre_compile(exp, options, &error, &erroroffset, NULL);
 
+t_regexp::t_regexp(const char* pattern, const int flags)
+  : m_program(NULL), m_extra(NULL), iTimeTaken(0),
+    m_iCount(0), m_iExecutionError(0)
+{
+  const char *error = NULL;
+  int erroroffset;
+
+  pcre * program = pcre_compile(pattern, flags, &error, &erroroffset, NULL);
   if (!program)
     ThrowErrorException("Failed: %s at offset %d", Translate (error), erroroffset);
 
   // study it for speed purposes
-  extra =  pcre_study(program, 0, &error);        
-
+  pcre_extra * extra =  pcre_study(program, 0, &error);        
   if (error)
+    {
+    pcre_free(program);
     ThrowErrorException("Regexp study failed: %s", error);
-
-  // we need to allocate memory for the substring offsets
-  re = new t_regexp;
-
-  if (!re)
-    ThrowErrorException("Could not allocate memory for regular expression");
+    }
 
   // remember program and extra stuff
-  re->m_program = program;
-  re->m_extra = extra;
-  re->m_iExecutionError = 0; // no error now
+  this->m_program = program;
+  this->m_extra = extra;
+}
 
-  return re;
-  }
+t_regexp::~t_regexp ()
+{ 
+  if (m_program)
+    pcre_free (m_program);
+  if (m_extra)
+    pcre_free (m_extra);
+}
 
-#define MAX_PCRE_WILDCARDS 1000
+string t_regexp::GetWildcard (const int iNumber) const
+{
+  if (iNumber >= 0 && iNumber < m_iCount)
+    return string (
+      &m_sTarget.c_str () [m_vOffsets [iNumber * 2]],
+      m_vOffsets [(iNumber * 2) + 1] - m_vOffsets [iNumber * 2]
+      ).c_str ();
+  else
+    return "";
+}
 
-int regexec(register t_regexp *prog, 
-            register const char *string,
-            const int start_offset)
-  {
-int options = App.m_bRegexpMatchEmpty ? 0 : PCRE_NOTEMPTY;    // don't match on an empty string
-int count;
-static int offsets [MAX_PCRE_WILDCARDS * 3];  // hopefully we won't recurse and crash ;)
+string t_regexp::GetWildcard (const string sName) const
+{
+  int iNumber;
+  if (IsStringNumber (sName))
+    iNumber = atoi (sName.c_str ());
+  else if (m_program != NULL)
+    iNumber = njg_get_first_set (m_program, sName.c_str (), &m_vOffsets [0]);
+  else
+    iNumber = PCRE_ERROR_NOSUBSTRING;
+  return GetWildcard (iNumber);
+}
 
-LARGE_INTEGER start, 
-              finish;
+int t_regexp::Execute(const char *string, const int start_offset)
+{
+  static int offsets [MAX_PCRE_WILDCARDS * 3]; // hopefully we won't recurse and crash ;)
 
   // exit if no regexp program to process (possibly because of previous error)
-  if (prog->m_program == NULL)
+  if (this->m_program == NULL)
     return false;
 
+  LARGE_INTEGER start;
   if (App.m_iCounterFrequency)
     QueryPerformanceCounter (&start);
 
-  pcre_callout = NULL;
-  count = pcre_exec(prog->m_program, prog->m_extra, string, strlen (string),
-                    start_offset, options, offsets, NUMITEMS (offsets));
+  int options = App.m_bRegexpMatchEmpty ? 0 : PCRE_NOTEMPTY; // don't match on an empty string
+  pcre_callout = NULL; // un-set the global pcre_callout() function pointer
+  int count = pcre_exec(
+      this->m_program, this->m_extra,
+      string, strlen (string), start_offset,
+      options, offsets, NUMITEMS (offsets)
+      );
 
   if (App.m_iCounterFrequency)
     {
+    LARGE_INTEGER finish;
     QueryPerformanceCounter (&finish);
-    prog->iTimeTaken += finish.QuadPart - start.QuadPart;
+    this->iTimeTaken += finish.QuadPart - start.QuadPart;
     }
 
   if (count == PCRE_ERROR_NOMATCH)
@@ -81,50 +103,74 @@ LARGE_INTEGER start,
   // free program as an indicator that we can't keep trying to do this one
   if (count <= 0)
     {
-    free (prog->m_program);
-    prog->m_program = NULL;
-    prog->m_iExecutionError = count; // remember reason
+    pcre_free (this->m_program);
+    this->m_program = NULL;
+    this->m_iExecutionError = count; // remember reason
+
+    if (count == 0)
+      ThrowErrorException (Translate ("Too many substrings in regular expression"));
+    else
+      ThrowErrorException (TFormat (
+          "Error executing regular expression: %s",
+          Convert_PCRE_Runtime_Error (count)
+          ));
     }
-
-  if (count == 0)
-    ThrowErrorException (Translate ("Too many substrings in regular expression"));
-
-  if (count < 0)
-    ThrowErrorException (TFormat ("Error executing regular expression: %s",
-      Convert_PCRE_Runtime_Error (count)));
-
 
   // if, and only if, we match we will save the matching string, the count
   // and offsets, so we can extract the wildcards later on
+  this->m_sTarget = string; // for extracting wildcards
+  this->m_iCount  = count;  // ditto
+  this->m_vOffsets.clear ();
 
-  prog->m_sTarget = string;  // for extracting wildcards
-  prog->m_iCount = count;    // ditto
-  prog->m_vOffsets.clear ();
   // only need first 2/3 of offsets
-  copy (offsets, &offsets [count * 2], back_inserter (prog->m_vOffsets));
+  copy (offsets, &offsets [count * 2], back_inserter (this->m_vOffsets));
 
   return true; // match
+}
+
+bool t_regexp::CheckPattern(const CString strRegexp, const int iOptions,
+                                   const char** error, int* errorOffset)
+{
+  pcre * program = pcre_compile(strRegexp, iOptions, error, errorOffset, NULL);
+  if (program != NULL)
+  {
+    pcre_free(program);
+    return true;
   }
+  else
+    return false;
+}
+
+t_regexp * regcomp(const char *exp, const int options)
+{
+  t_regexp* re = NULL;
+  try
+  {
+    re = new t_regexp(exp, options);
+  }
+  catch (std::bad_alloc&)
+  {
+    ThrowErrorException("Could not allocate memory for regular expression");
+  }
+  return re;
+}
+
+int regexec(register t_regexp *prog, register const char *string, const int start_offset)
+{
+  return prog->Execute(string, start_offset);
+}
 
 // checks a regular expression, raises a dialog if bad
-
 bool CheckRegularExpression (const CString strRegexp, const int iOptions)
-  {
-const char *error;
-int erroroffset;
-pcre * program;
+{
+  const char *error = NULL;
+  int erroroffset;
 
-  program = pcre_compile(strRegexp, iOptions, &error, &erroroffset, NULL);
-
-  if (program)
-    {
-    free (program);
-    return true;     // good
-    }
+  if (t_regexp::CheckPattern(strRegexp, iOptions, &error, &erroroffset))
+    return true; // good
 
   CRegexpProblemDlg dlg;
   dlg.m_strErrorMessage = Translate (error);
-
   dlg.m_strErrorMessage += ".";   // end the sentence
   // make first character upper-case, so it looks like a sentence. :)
   dlg.m_strErrorMessage.SetAt (0, toupper (dlg.m_strErrorMessage [0]));
@@ -136,6 +182,7 @@ pcre * program;
     dlg.m_strText += CString ('-', erroroffset - 1);
   dlg.m_strText += '^';
   dlg.m_iColumn = erroroffset + 1;
+
   dlg.DoModal ();
-  return false;   // bad
-  }
+  return false; // bad
+}

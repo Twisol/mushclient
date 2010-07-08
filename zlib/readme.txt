@@ -12,6 +12,11 @@ crc32.c
 crc32.h
 deflate.c
 deflate.h
+gzclose.c
+gzguts.h
+gzlib.c
+gzread.c
+gzwrite.c
 inffast.c
 inffast.h
 inffixed.h
@@ -27,3 +32,13 @@ zconf.h
 zlib.h
 zutil.c
 zutil.h
+
+
+3. Edit: zconf.h and after the lines:
+
+#ifndef ZCONF_H
+#define ZCONF_H
+
+add:
+
+#undef ZLIB_DLL      // NJG

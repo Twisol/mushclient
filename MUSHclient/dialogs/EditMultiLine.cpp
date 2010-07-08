@@ -70,49 +70,49 @@ void CEditMultiLine::OnSize(UINT nType, int cx, int cy)
 {
   CDialog::OnSize(nType, cx, cy);
 
-  if (!(m_ctlText.m_hWnd && m_ctlCancel.m_hWnd && m_ctlOK &&
+  if (!(m_ctlText.m_hWnd && m_ctlCancel.m_hWnd && m_ctlOK.m_hWnd &&
       m_ctlFunctionListButton.m_hWnd &&
       m_ctlCompleteFunctionButton.m_hWnd &&
       m_ctlGoToLineButton.m_hWnd))
-    {
-    // move OK and Cancel buttons
-    int iHeight;
-    int iWidth;
-    int iBorder = 10;
+    return;
 
-    const int iButtonCount = 5; // how many buttons
+  // move OK and Cancel buttons
+  int iHeight;
+  int iWidth;
+  int iBorder = 10;
 
-    // -----------------------
-    // where is OK button?
-    GetButtonSize (m_ctlOK, iHeight, iWidth);
+  const int iButtonCount = 5; // how many buttons
 
-    int iTopOfRow = cy - iHeight - 10;
+  // -----------------------
+  // where is OK button?
+  GetButtonSize (m_ctlOK, iHeight, iWidth);
 
-    // ------------------------
-    // calculate gaps for middle buttons - I will assume all buttons are the same size here
+  int iTopOfRow = cy - iHeight - 10;
 
-    // gap (between OK and cancel buttons) will be the width of the dialog
-    // less the gaps on the side of those buttons, less the width of the iButtonCount buttons themselves
-    int iGap = cx - (iBorder * 2) - (iWidth * iButtonCount);
+  // ------------------------
+  // calculate gaps for middle buttons - I will assume all buttons are the same size here
 
-    // we need (iButtonCount - 1) gaps:  OK --1-- Functions --2-- Complete --3-- GoToLine --4-- Cancel
-    iGap /= iButtonCount - 1;
+  // gap (between OK and cancel buttons) will be the width of the dialog
+  // less the gaps on the side of those buttons, less the width of the iButtonCount buttons themselves
+  int iGap = cx - (iBorder * 2) - (iWidth * iButtonCount);
 
-    // -----------------------
+  // we need (iButtonCount - 1) gaps:  OK --1-- Functions --2-- Complete --3-- GoToLine --4-- Cancel
+  iGap /= iButtonCount - 1;
 
-    ADJUST_BUTTON (m_ctlOK, 1);                     // OK button (1)
-    ADJUST_BUTTON (m_ctlFunctionListButton, 2);     // Function list button (2)
-    ADJUST_BUTTON (m_ctlCompleteFunctionButton, 3); // Complete function name button (3)
-    ADJUST_BUTTON (m_ctlGoToLineButton, 4);         // Go to Line button (4)
-    ADJUST_BUTTON (m_ctlCancel, 5);                 // Cancel Button (5)
+  // -----------------------
 
-    // -----------------------
-    // where is Cancel button now?
-    WINDOWPLACEMENT wndpl;
-    m_ctlCancel.GetWindowPlacement (&wndpl);
-    // move text to just above it
-    m_ctlText.MoveWindow(0, 0, cx, wndpl.rcNormalPosition.top - 10);
-    }
+  ADJUST_BUTTON (m_ctlOK, 1);                     // OK button (1)
+  ADJUST_BUTTON (m_ctlFunctionListButton, 2);     // Function list button (2)
+  ADJUST_BUTTON (m_ctlCompleteFunctionButton, 3); // Complete function name button (3)
+  ADJUST_BUTTON (m_ctlGoToLineButton, 4);         // Go to Line button (4)
+  ADJUST_BUTTON (m_ctlCancel, 5);                 // Cancel Button (5)
+
+  // -----------------------
+  // where is Cancel button now?
+  WINDOWPLACEMENT wndpl;
+  m_ctlCancel.GetWindowPlacement (&wndpl);
+  // move text to just above it
+  m_ctlText.MoveWindow(0, 0, cx, wndpl.rcNormalPosition.top - 10);
 }
 
 BOOL CEditMultiLine::OnInitDialog() 

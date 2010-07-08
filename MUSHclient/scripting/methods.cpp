@@ -527,7 +527,7 @@ long CMUSHclientDoc::AddTriggerEx(LPCTSTR TriggerName,
   t_regexp * regexp = NULL;
   try 
     {
-    regexp = regcomp (strMatchText, (Flags & eIgnoreCase ? PCRE_CASELESS : 0) | (m_bUTF_8 ? PCRE_UTF8 : 0));
+    regexp = new t_regexp (strMatchText, (Flags & eIgnoreCase ? PCRE_CASELESS : 0) | (m_bUTF_8 ? PCRE_UTF8 : 0));
     }   // end of try
   catch(CException* e)
     {
@@ -909,7 +909,7 @@ long CMUSHclientDoc::AddAlias(LPCTSTR AliasName,
   t_regexp * regexp = NULL;
   try 
     {
-    regexp = regcomp (strMatchText, (Flags & eIgnoreAliasCase ? PCRE_CASELESS : 0)
+    regexp = new t_regexp (strMatchText, (Flags & eIgnoreAliasCase ? PCRE_CASELESS : 0)
 #if ALIASES_USE_UTF8
                                   | (m_bUTF_8 ? PCRE_UTF8 : 0)
 #endif // ALIASES_USE_UTF8
@@ -2035,15 +2035,15 @@ VARIANT CMUSHclientDoc::GetAliasInfo(LPCTSTR AliasName, short InfoType)
       break;
 
     case  25: // last matching string
-      SetUpVariantString (vaResult, (alias_item->regexp) ? alias_item->regexp->m_sTarget.c_str () : "");
+      SetUpVariantString (vaResult, (alias_item->regexp) ? alias_item->regexp->LastTarget().c_str () : "");
       break;
 
     case  26: SetUpVariantBool   (vaResult, alias_item->bExecutingScript); break;
     case  27: SetUpVariantBool   (vaResult, alias_item->dispid != DISPID_UNKNOWN); break;
 
     case  28: 
-      if (alias_item->regexp && alias_item->regexp->m_program == NULL)
-        SetUpVariantLong   (vaResult, alias_item->regexp->m_iExecutionError);
+      if (alias_item->regexp)
+        SetUpVariantLong   (vaResult, alias_item->regexp->LastError());
       else
         SetUpVariantLong   (vaResult, 0);
       break;
@@ -2125,13 +2125,13 @@ VARIANT CMUSHclientDoc::GetTriggerInfo(LPCTSTR TriggerName, short InfoType)
       SetUpVariantLong (vaResult, (trigger_item->regexp) ? trigger_item->regexp->m_iCount : 0);
       break;
     case  32: // last matching string
-      SetUpVariantString (vaResult, (trigger_item->regexp) ? trigger_item->regexp->m_sTarget.c_str () : "");
+      SetUpVariantString (vaResult, (trigger_item->regexp) ? trigger_item->regexp->LastTarget().c_str () : "");
       break;
     case  33: SetUpVariantBool   (vaResult, trigger_item->bExecutingScript); break;
     case  34: SetUpVariantBool   (vaResult, trigger_item->dispid != DISPID_UNKNOWN); break;
     case  35: 
-      if (trigger_item->regexp && trigger_item->regexp->m_program == NULL)
-        SetUpVariantLong   (vaResult, trigger_item->regexp->m_iExecutionError);
+      if (trigger_item->regexp)
+        SetUpVariantLong   (vaResult, trigger_item->regexp->LastError());
       else
         SetUpVariantLong   (vaResult, 0);
       break;
@@ -4165,7 +4165,7 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
           GetTriggerMap ().GetNextAssoc (pos, strName, pTrigger);
           // calculate time taken to execute triggers
           if (pTrigger->regexp)
-            iTimeTaken += pTrigger->regexp->iTimeTaken;
+            iTimeTaken += pTrigger->regexp->TimeTaken();
           }
 
         double elapsed_time = ((double) iTimeTaken) / ((double) App.m_iCounterFrequency);
@@ -4187,7 +4187,7 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
           GetAliasMap ().GetNextAssoc (pos, strName, pAlias);
           // calculate time taken to execute triggers
           if (pAlias->regexp)
-            iTimeTaken += pAlias->regexp->iTimeTaken;
+            iTimeTaken += pAlias->regexp->TimeTaken();
           }
 
         double elapsed_time = ((double) iTimeTaken) / ((double) App.m_iCounterFrequency);
@@ -5686,7 +5686,7 @@ long CMUSHclientDoc::SetTriggerOption(LPCTSTR TriggerName, LPCTSTR OptionName, L
         // compile regular expression
         try 
           {
-          regexp = regcomp (strValue, (trigger_item->ignore_case ? PCRE_CASELESS : 0) |
+          regexp = new t_regexp (strValue, (trigger_item->ignore_case ? PCRE_CASELESS : 0) |
               (trigger_item->bMultiLine  ? PCRE_MULTILINE : 0) |
               (m_bUTF_8 ? PCRE_UTF8 : 0));
           }   // end of try
@@ -5911,7 +5911,7 @@ long CMUSHclientDoc::SetAliasOption(LPCTSTR AliasName, LPCTSTR OptionName, LPCTS
         t_regexp * regexp = NULL;
         try 
           {
-          regexp = regcomp (strValue, (alias_item->bIgnoreCase ? PCRE_CASELESS : 0)
+          regexp = new t_regexp (strValue, (alias_item->bIgnoreCase ? PCRE_CASELESS : 0)
 #if ALIASES_USE_UTF8
                              | (m_bUTF_8 ? PCRE_UTF8 : 0)
 #endif // ALIASES_USE_UTF8

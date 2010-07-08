@@ -4596,7 +4596,7 @@ CString CMUSHclientDoc::RecallText (const CString strSearchString,   // what to 
 
   // compile regular expression if needed
   if (bRegexp)
-    regexp = regcomp (strSearchString, (bMatchCase ? 0 : PCRE_CASELESS) | (m_bUTF_8 ? PCRE_UTF8 : 0));
+    regexp = new t_regexp (strSearchString, (bMatchCase ? 0 : PCRE_CASELESS) | (m_bUTF_8 ? PCRE_UTF8 : 0));
 
   CString strFindString = strSearchString;
   

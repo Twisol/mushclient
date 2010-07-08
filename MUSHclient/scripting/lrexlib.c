@@ -116,7 +116,7 @@ static int posix_comp(lua_State *L) {
     p2->r.re_endp = pattern + clen;
 #endif
 
-  res = regcomp(&p2->r, pattern, cflags);
+  res = new t_regexp(&p2->r, pattern, cflags);
   if (res) {
     size_t sz = regerror(res, &p2->r, NULL, 0);
     char *errbuf = (char *) Lmalloc(L, sz);

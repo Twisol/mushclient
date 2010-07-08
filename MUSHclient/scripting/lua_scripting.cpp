@@ -468,7 +468,7 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
     unsigned char *tabptr;
     lua_newtable(L);                                                            
     paramCount++;   // we have one more parameter to the call
-    pcre_fullinfo(regexp->m_program, regexp->m_extra, PCRE_INFO_CAPTURECOUNT, &ncapt);
+    regexp->GetInfo(PCRE_INFO_CAPTURECOUNT, &ncapt);
 
     int iTot = regexp->m_vOffsets.size ();    // how many did we actually get?
 
@@ -476,7 +476,7 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
       {
       int j = i * 2;
       if (j < iTot)    // save if available, otherwise push a false value
-        lua_pushlstring(L, regexp->m_sTarget.c_str () + regexp->m_vOffsets[j], regexp->m_vOffsets[j + 1] - regexp->m_vOffsets[j]);
+        lua_pushlstring(L, regexp->LastTarget().c_str () + regexp->m_vOffsets[j], regexp->m_vOffsets[j + 1] - regexp->m_vOffsets[j]);
       else
         lua_pushboolean (L, 0);
       lua_rawseti (L, -2, i);
@@ -486,11 +486,11 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
 //    lua_rawseti(L, -2, 0);
 
     /* now do named subpatterns  */
-    pcre_fullinfo(regexp->m_program, regexp->m_extra, PCRE_INFO_NAMECOUNT, &namecount);
+    regexp->GetInfo(PCRE_INFO_NAMECOUNT, &namecount);
     if (namecount > 0)
       {
-      pcre_fullinfo(regexp->m_program, regexp->m_extra, PCRE_INFO_NAMETABLE, &name_table);
-      pcre_fullinfo(regexp->m_program, regexp->m_extra, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
+      regexp->GetInfo(PCRE_INFO_NAMETABLE, &name_table);
+      regexp->GetInfo(PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
       tabptr = name_table;
       set<string> found_strings;
       for (i = 0; i < namecount; i++, tabptr += name_entry_size) 
@@ -499,7 +499,7 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
         int j = n * 2;
         const unsigned char * name = tabptr + 2;
         // if duplicates were possible then ...
-        if ((regexp->m_program->options & (PCRE_DUPNAMES | PCRE_JCHANGED)) != 0)
+        if (regexp->DupNamesAllowed())
           {
           // this code is to ensure that we don't find a match (eg. mob = Kobold)
           // and then if duplicates were allowed, replace Kobold with false.
@@ -521,7 +521,7 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
         if (n >= 0 && n <= ncapt) 
           {
           if (j < iTot)    // save if available, otherwise push a false value
-            lua_pushlstring(L, regexp->m_sTarget.c_str () + regexp->m_vOffsets[j], regexp->m_vOffsets[j + 1] - regexp->m_vOffsets[j]);
+            lua_pushlstring(L, regexp->LastTarget().c_str () + regexp->m_vOffsets[j], regexp->m_vOffsets[j + 1] - regexp->m_vOffsets[j]);
           else
             lua_pushboolean(L, 0);
         }

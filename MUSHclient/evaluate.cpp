@@ -340,29 +340,17 @@ int iCount = GetTriggerArray ().GetSize ();    // how many there are
                                         trigger_item->bRegexp,  // is it regexp or normal?
                                         false);   // don't throw exceptions
 
-
-        LONGLONG iOldTimeTaken = 0;
-
-        // remember time taken to execute them
-
-        if (trigger_item->regexp)
-          iOldTimeTaken = trigger_item->regexp->iTimeTaken;
-
-        delete trigger_item->regexp;    // get rid of earlier regular expression
-        trigger_item->regexp = NULL;
-
-      // all triggers are now regular expressions
-
+        // all triggers are now regular expressions
         CString strRegexp; 
-
         if (trigger_item->bRegexp)
           strRegexp = strOutput;
         else
           strRegexp = ConvertToRegularExpression (strOutput);
 
+        // recompile the regexp
         try
           {
-          trigger_item->regexp = regcomp (strRegexp,
+          trigger_item->regexp->Compile (strRegexp,
                                           (trigger_item->ignore_case  ? PCRE_CASELESS : 0) |
                                           (trigger_item->bMultiLine  ? PCRE_MULTILINE : 0) |
                                           (m_bUTF_8 ? PCRE_UTF8 : 0)
@@ -370,17 +358,14 @@ int iCount = GetTriggerArray ().GetSize ();    // how many there are
           } // end of try
     	  catch(CException* e)
           {
+          delete trigger_item->regexp;
+          trigger_item->regexp = NULL;
+
           e->ReportError ();
           e->Delete ();
           continue;
           }   // end of catch
-
-        // add back execution time
-        if (trigger_item->regexp)
-          trigger_item->regexp->iTimeTaken += iOldTimeTaken;
-
         } // end of variable substitution
-
       try
         {
 //        timer t ("Evaluating regular expression");

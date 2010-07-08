@@ -19,24 +19,7 @@ t_regexp::t_regexp(const char* pattern, const int flags)
   : m_program(NULL), m_extra(NULL), iTimeTaken(0),
     m_iCount(0), m_iExecutionError(0)
 {
-  const char *error = NULL;
-  int erroroffset;
-
-  pcre * program = pcre_compile(pattern, flags, &error, &erroroffset, NULL);
-  if (!program)
-    ThrowErrorException("Failed: %s at offset %d", Translate (error), erroroffset);
-
-  // study it for speed purposes
-  pcre_extra * extra =  pcre_study(program, 0, &error);        
-  if (error)
-    {
-    pcre_free(program);
-    ThrowErrorException("Regexp study failed: %s", error);
-    }
-
-  // remember program and extra stuff
-  this->m_program = program;
-  this->m_extra = extra;
+  this->Compile(pattern, flags);
 }
 
 t_regexp::~t_regexp ()
@@ -70,9 +53,48 @@ string t_regexp::GetWildcard (const string sName) const
   return GetWildcard (iNumber);
 }
 
-int t_regexp::Execute(const char *string, const int start_offset)
+void t_regexp::Compile(const char* pattern, const int flags)
 {
-  static int offsets [MAX_PCRE_WILDCARDS * 3]; // hopefully we won't recurse and crash ;)
+  const char *error = NULL;
+  int erroroffset;
+
+  pcre * program = pcre_compile(pattern, flags, &error, &erroroffset, NULL);
+  if (!program)
+    ThrowErrorException("Failed: %s at offset %d", Translate (error), erroroffset);
+
+  // Ensure that there aren't too many captures in the regexp.
+  int capturecount = 0;
+  pcre_fullinfo(program, NULL, PCRE_INFO_CAPTURECOUNT, &capturecount);
+  if (capturecount > MAX_PCRE_WILDCARDS + 1)
+    {
+    pcre_free(program);
+    ThrowErrorException (Translate ("Too many substrings in regular expression"));
+    }
+
+  // study it for speed purposes
+  pcre_extra * extra = pcre_study(program, 0, &error);        
+  if (error)
+    {
+    pcre_free(program);
+    ThrowErrorException("Regexp study failed: %s", error);
+    }
+
+  // Remove old regexp
+  pcre_free(this->m_program);
+  pcre_free(this->m_extra);
+
+  // remember program and extra stuff
+  this->m_program = program;
+  this->m_extra = extra;
+  this->m_iExecutionError = 0; // reset the error code
+  // leave the time taken alone
+}
+
+bool t_regexp::Execute(const char *string, const int start_offset)
+{
+  int capturecount = 0;
+  pcre_fullinfo(this->m_program, NULL, PCRE_INFO_CAPTURECOUNT, &capturecount);
+  int* offsets = new int[(capturecount + 1) * 3];
 
   // exit if no regexp program to process (possibly because of previous error)
   if (this->m_program == NULL)
@@ -99,21 +121,13 @@ int t_regexp::Execute(const char *string, const int start_offset)
 
   if (count == PCRE_ERROR_NOMATCH)
     return false;  // no match
-
-  // free program as an indicator that we can't keep trying to do this one
-  if (count <= 0)
+  else if (count < 0)
     {
-    pcre_free (this->m_program);
-    this->m_program = NULL;
     this->m_iExecutionError = count; // remember reason
-
-    if (count == 0)
-      ThrowErrorException (Translate ("Too many substrings in regular expression"));
-    else
-      ThrowErrorException (TFormat (
-          "Error executing regular expression: %s",
-          Convert_PCRE_Runtime_Error (count)
-          ));
+    ThrowErrorException (TFormat (
+        "Error executing regular expression: %s",
+        Convert_PCRE_Runtime_Error (count)
+        ));
     }
 
   // if, and only if, we match we will save the matching string, the count
@@ -128,36 +142,52 @@ int t_regexp::Execute(const char *string, const int start_offset)
   return true; // match
 }
 
+LONGLONG t_regexp::TimeTaken() const
+{
+  return this->iTimeTaken;
+}
+
+int t_regexp::LastError() const
+{
+  return this->m_iExecutionError;
+}
+
+string t_regexp::LastTarget() const
+{
+  return this->m_sTarget;
+}
+
+int t_regexp::GetInfo(int what, void* where) const
+{
+  return pcre_fullinfo(this->m_program, this->m_extra, what, where);
+}
+
+bool t_regexp::DupNamesAllowed() const
+{
+  unsigned long int options = 0;
+  this->GetInfo(PCRE_INFO_OPTIONS, &options);
+  if ((options & PCRE_DUPNAMES) != 0)
+    return true;
+
+  int jchanged = false;
+  this->GetInfo(PCRE_INFO_JCHANGED, &jchanged);
+  if (jchanged)
+    return true;
+
+  return false;
+}
+
 bool t_regexp::CheckPattern(const CString strRegexp, const int iOptions,
                                    const char** error, int* errorOffset)
 {
   pcre * program = pcre_compile(strRegexp, iOptions, error, errorOffset, NULL);
   if (program != NULL)
-  {
+    {
     pcre_free(program);
     return true;
-  }
+    }
   else
     return false;
-}
-
-t_regexp * regcomp(const char *exp, const int options)
-{
-  t_regexp* re = NULL;
-  try
-  {
-    re = new t_regexp(exp, options);
-  }
-  catch (std::bad_alloc&)
-  {
-    ThrowErrorException("Could not allocate memory for regular expression");
-  }
-  return re;
-}
-
-int regexec(register t_regexp *prog, register const char *string, const int start_offset)
-{
-  return prog->Execute(string, start_offset);
 }
 
 // checks a regular expression, raises a dialog if bad

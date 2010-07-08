@@ -31,34 +31,36 @@ class t_regexp
     t_regexp (const char* pattern, const int flags = 0);
     ~t_regexp ();
 
-    string GetWildcard (const int iNumber) const; // numbered wildcards
+    string GetWildcard (const int iNumber) const;  // numbered wildcards
     string GetWildcard (const string sName) const; // named wildcards
 
-    int Execute(const char *string, const int start_offset = 0);
+    void Compile(const char* pattern, const int flags = 0);
+    bool Execute(const char *string, const int start_offset = 0);
+
+    LONGLONG TimeTaken() const;
+    int LastError() const;
+    string LastTarget() const;
+
+    int GetInfo(int what, void* where) const;
+    bool DupNamesAllowed() const;
 
     static bool CheckPattern(const CString strRegexp, const int iOptions,
                              const char** error = NULL, int* errorOffset = NULL);
 
-    // pairs of offsets from match
-    vector<int> m_vOffsets;
+    int m_iCount;           // count of matches
+    vector<int> m_vOffsets; // pairs of offsets from match
 
-    // count of matches
-    int m_iCount;
-    // the string we match on (to extract wildcards from)
+  private:
+    pcre * m_program;     // the program itself
+    pcre_extra * m_extra; // extra stuff for speed
+
+    // the string we last matched on (to extract wildcards from)
     string m_sTarget;
-    // the program itself
-    pcre * m_program;
-
-    // extra stuff for speed
-    pcre_extra * m_extra;
 
     int m_iExecutionError;  // error code if failed execution
 
     LONGLONG iTimeTaken;
 };
-
-__declspec(deprecated)
-t_regexp * regcomp(const char *exp, const int options = 0);
 
 bool CheckRegularExpression (const CString strRegexp, const int iOptions);
 

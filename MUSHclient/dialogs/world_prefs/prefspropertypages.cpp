@@ -2488,11 +2488,10 @@ void CPrefsP7::LoadDialog (CDialog * pDlg, CObject * pItem)
   dlg->m_current_alias = alias_item;
 
   if (alias_item->regexp && 
-      alias_item->regexp->m_program == NULL && 
-      alias_item->regexp->m_iExecutionError < PCRE_ERROR_NOMATCH)
+      alias_item->regexp->LastError() < PCRE_ERROR_NOMATCH)
     dlg->m_strRegexpError = TFormat (
         "Error: %s ",
-        Convert_PCRE_Runtime_Error (alias_item->regexp->m_iExecutionError)
+        Convert_PCRE_Runtime_Error (alias_item->regexp->LastError())
         );
 
   // NB - also see MapDlg.cpp for alias processing
@@ -2540,7 +2539,7 @@ void CPrefsP7::UnloadDialog (CDialog * pDlg, CObject * pItem)
   else
     strRegexp = ConvertToRegularExpression (alias_item->name);
 
-  alias_item->regexp = regcomp (
+  alias_item->regexp = new t_regexp (
       strRegexp,
         (alias_item->bIgnoreCase  ? PCRE_CASELESS : 0)
 #if ALIASES_USE_UTF8
@@ -3310,11 +3309,10 @@ void CPrefsP8::LoadDialog (CDialog * pDlg, CObject * pItem)
   dlg->m_iColourChangeType = trigger_item->iColourChangeType;
 
   if (trigger_item->regexp && 
-      trigger_item->regexp->m_program == NULL && 
-      trigger_item->regexp->m_iExecutionError < PCRE_ERROR_NOMATCH)
+      trigger_item->regexp->LastError() < PCRE_ERROR_NOMATCH)
     dlg->m_strRegexpError = TFormat (
       "Error: %s ",
-      Convert_PCRE_Runtime_Error (trigger_item->regexp->m_iExecutionError)
+      Convert_PCRE_Runtime_Error (trigger_item->regexp->LastError())
       );
 } // end of CPrefsP8::LoadDialog
 
@@ -3412,12 +3410,6 @@ void CPrefsP8::UnloadDialog (CDialog * pDlg, CObject * pItem)
 
   trigger_item->omit_from_log = dlg->m_omit_from_log;
 
-  // remember time taken to execute them
-  LONGLONG iOldTimeTaken = (trigger_item->regexp) ? 0 : trigger_item->regexp->iTimeTaken;
-
-  delete trigger_item->regexp;    // get rid of earlier regular expression
-  trigger_item->regexp = NULL;
-
   // all triggers are now regular expressions
   CString strRegexp; 
   if (trigger_item->bRegexp)
@@ -3425,16 +3417,13 @@ void CPrefsP8::UnloadDialog (CDialog * pDlg, CObject * pItem)
   else
     strRegexp = ConvertToRegularExpression (trigger_item->trigger);
 
-  trigger_item->regexp = regcomp (
+  // recompile the regular expression
+  trigger_item->regexp = new t_regexp (
       strRegexp,
         (trigger_item->ignore_case  ? PCRE_CASELESS : 0) |
         (trigger_item->bMultiLine  ? PCRE_MULTILINE : 0) |
         (m_doc->m_bUTF_8 ? PCRE_UTF8 : 0)
       );
-
-  // add back execution time
-  if (trigger_item->regexp)
-    trigger_item->regexp->iTimeTaken += iOldTimeTaken;
 } // end of  CPrefsP8::UnloadDialog
 
 CString CPrefsP8::GetObjectName (CDialog * pDlg) const

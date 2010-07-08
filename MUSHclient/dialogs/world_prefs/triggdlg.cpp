@@ -558,7 +558,7 @@ void CTriggerDlg::OnUpdateTimeTaken(CCmdUI* pCmdUI)
     CString strMessage;
     strMessage.Format (
         "%12.6f sec.",
-        ((double) m_current_trigger->regexp->iTimeTaken) / ((double) App.m_iCounterFrequency)
+        ((double) m_current_trigger->regexp->TimeTaken()) / ((double) App.m_iCounterFrequency)
         );
     pCmdUI->SetText (strMessage);
     }   // end of having a trigger item

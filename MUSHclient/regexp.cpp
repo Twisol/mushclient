@@ -138,7 +138,7 @@ bool t_regexp::Execute(const char *string, const int start_offset)
 
   // only need first 2/3 of offsets
   copy (offsets, &offsets [count * 2], back_inserter (this->m_vOffsets));
-
+  delete[] offsets;
   return true; // match
 }
 

@@ -12,9 +12,6 @@ static char BASED_CODE THIS_FILE[] = __FILE__;
 #endif
 
 
-static const int MAX_PCRE_WILDCARDS = 1000;
-
-
 t_regexp::t_regexp(const char* pattern, const int flags)
   : m_program(NULL), m_extra(NULL), iTimeTaken(0),
     m_iCount(0), m_iExecutionError(0)
@@ -88,15 +85,6 @@ void t_regexp::Compile(const char* pattern, const int flags)
   if (!program)
     ThrowErrorException("Failed: %s at offset %d", Translate (error), erroroffset);
 
-  // Ensure that there aren't too many captures in the regexp.
-  int capturecount = 0;
-  pcre_fullinfo(program, NULL, PCRE_INFO_CAPTURECOUNT, &capturecount);
-  if (capturecount > MAX_PCRE_WILDCARDS + 1)
-    {
-    pcre_free(program);
-    ThrowErrorException (Translate ("Too many substrings in regular expression"));
-    }
-
   // study it for speed purposes
   pcre_extra * extra = pcre_study(program, 0, &error);        
   if (error)
@@ -114,15 +102,17 @@ void t_regexp::Compile(const char* pattern, const int flags)
   this->m_extra = extra;
   this->m_iExecutionError = 0; // reset the error code
   // leave the time taken alone
+
+  // inspired by a suggestion by Twisol (to remove a hard-coded limit on the number of wildcards)
+  int capturecount = 0;
+  // how many captures did we get?
+  this->GetInfo(PCRE_INFO_CAPTURECOUNT, &capturecount);
+  // allocate memory for them
+  this->m_vOffsets.resize ((capturecount + 1) * 3);  // add 1 for the whole expression
 }
 
 bool t_regexp::Execute(const char *string, const int start_offset)
 {
-  int capturecount = 0;
-  pcre_fullinfo(this->m_program, NULL, PCRE_INFO_CAPTURECOUNT, &capturecount);
-  int nOffsets = (capturecount + 1) * 3;
-  int* offsets = new int[nOffsets];
-
   // exit if no regexp program to process (possibly because of previous error)
   if (this->m_program == NULL)
     return false;
@@ -136,7 +126,7 @@ bool t_regexp::Execute(const char *string, const int start_offset)
   int count = pcre_exec(
       this->m_program, this->m_extra,
       string, strlen (string), start_offset,
-      options, offsets, nOffsets
+      options, &this->m_vOffsets[0], this->m_vOffsets.size()
       );
 
   if (App.m_iCounterFrequency)
@@ -161,11 +151,7 @@ bool t_regexp::Execute(const char *string, const int start_offset)
   // and offsets, so we can extract the wildcards later on
   this->m_sTarget = string; // for extracting wildcards
   this->m_iCount  = count;  // ditto
-  this->m_vOffsets.clear ();
 
-  // only need first 2/3 of offsets
-  copy (offsets, &offsets [count * 2], back_inserter (this->m_vOffsets));
-  delete[] offsets;
   return true; // match
 }
 

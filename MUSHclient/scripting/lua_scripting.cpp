@@ -470,18 +470,11 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
     paramCount++;   // we have one more parameter to the call
     regexp->GetInfo(PCRE_INFO_CAPTURECOUNT, &ncapt);
 
-    int iTot = regexp->MatchedCapturesCount();    // how many did we actually get?
-
     for (i = 0; i <= ncapt; i++) 
       {
       int j = i * 2;
-      if (j < iTot)    // save if available, otherwise push a false value
-        {
-        string wildcard = regexp->GetWildcard(j);
-        lua_pushlstring(L, wildcard.c_str(), wildcard.length());
-        }
-      else
-        lua_pushboolean (L, 0);
+      string wildcard = regexp->GetWildcard(j);
+      lua_pushlstring(L, wildcard.c_str(), wildcard.length());
       lua_rawseti (L, -2, i);
     }
     // now add item 0 - the whole matching line
@@ -513,7 +506,7 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
           if (found_strings.find (sName) != found_strings.end ())
             {
             // do not replace if this one is out of range
-            if (n < 0 || n > ncapt || j >= iTot)
+            if (n < 0 || n > ncapt)
               continue;
             } // end of duplicate
           else
@@ -523,14 +516,9 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
         lua_pushstring (L, (LPCTSTR) name);
         if (n >= 0 && n <= ncapt) 
           {
-          if (j < iTot)    // save if available, otherwise push a false value
-            {
-            string wildcard = regexp->GetWildcard(j);
-            lua_pushlstring(L, wildcard.c_str(), wildcard.length());
-            }
-          else
-            lua_pushboolean(L, 0);
-        }
+          string wildcard = regexp->GetWildcard(j);
+          lua_pushlstring(L, wildcard.c_str(), wildcard.length());
+          }
         else
           lua_pushnil (L);  /* n out of range */
         lua_settable (L, -3);

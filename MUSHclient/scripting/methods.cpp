@@ -2031,7 +2031,7 @@ VARIANT CMUSHclientDoc::GetAliasInfo(LPCTSTR AliasName, short InfoType)
 //    case  ??: SetUpVariantBool   (vaResult, alias_item->bDelayed); break;
 
     case  24: // number of matches to regexp
-      SetUpVariantLong (vaResult, (alias_item->regexp) ? alias_item->regexp->m_iCount : 0);
+      SetUpVariantLong (vaResult, (alias_item->regexp) ? alias_item->regexp->MatchedCapturesCount() : 0);
       break;
 
     case  25: // last matching string
@@ -2122,7 +2122,7 @@ VARIANT CMUSHclientDoc::GetTriggerInfo(LPCTSTR TriggerName, short InfoType)
     case  29: SetUpVariantLong   (vaResult, trigger_item->iOtherForeground); break;
     case  30: SetUpVariantLong   (vaResult, trigger_item->iOtherBackground); break;
     case  31: // number of matches to regexp
-      SetUpVariantLong (vaResult, (trigger_item->regexp) ? trigger_item->regexp->m_iCount : 0);
+      SetUpVariantLong (vaResult, (trigger_item->regexp) ? trigger_item->regexp->MatchedCapturesCount() : 0);
       break;
     case  32: // last matching string
       SetUpVariantString (vaResult, (trigger_item->regexp) ? trigger_item->regexp->LastTarget().c_str () : "");

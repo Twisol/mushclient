@@ -470,13 +470,16 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
     paramCount++;   // we have one more parameter to the call
     regexp->GetInfo(PCRE_INFO_CAPTURECOUNT, &ncapt);
 
-    int iTot = regexp->m_vOffsets.size ();    // how many did we actually get?
+    int iTot = regexp->MatchedCapturesCount();    // how many did we actually get?
 
     for (i = 0; i <= ncapt; i++) 
       {
       int j = i * 2;
       if (j < iTot)    // save if available, otherwise push a false value
-        lua_pushlstring(L, regexp->LastTarget().c_str () + regexp->m_vOffsets[j], regexp->m_vOffsets[j + 1] - regexp->m_vOffsets[j]);
+        {
+        string wildcard = regexp->GetWildcard(j);
+        lua_pushlstring(L, wildcard.c_str(), wildcard.length());
+        }
       else
         lua_pushboolean (L, 0);
       lua_rawseti (L, -2, i);
@@ -521,7 +524,10 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
         if (n >= 0 && n <= ncapt) 
           {
           if (j < iTot)    // save if available, otherwise push a false value
-            lua_pushlstring(L, regexp->LastTarget().c_str () + regexp->m_vOffsets[j], regexp->m_vOffsets[j + 1] - regexp->m_vOffsets[j]);
+            {
+            string wildcard = regexp->GetWildcard(j);
+            lua_pushlstring(L, wildcard.c_str(), wildcard.length());
+            }
           else
             lua_pushboolean(L, 0);
         }

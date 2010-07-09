@@ -49,8 +49,34 @@ string t_regexp::GetWildcard (const string sName) const
   else if (m_program != NULL)
     iNumber = this->GetFirstSet (sName.c_str ());
   else
-    iNumber = PCRE_ERROR_NOSUBSTRING;
+    return "";
+
   return GetWildcard (iNumber);
+}
+
+bool t_regexp::GetWildcardOffsets (const int iNumber, int& left, int& right) const
+{
+  if (iNumber >= 0 && iNumber < m_iCount)
+  {
+    left  = m_vOffsets [iNumber * 2];
+    right = m_vOffsets [iNumber * 2 + 1];
+    return true;
+  }
+  else
+    return false;
+}
+
+bool t_regexp::GetWildcardOffsets (const string sName, int& left, int& right) const
+{
+  int iNumber;
+  if (IsStringNumber (sName))
+    iNumber = atoi (sName.c_str ());
+  else if (m_program != NULL)
+    iNumber = this->GetFirstSet (sName.c_str ());
+  else
+    return false;
+
+  return GetWildcardOffsets (iNumber, left, right);
 }
 
 void t_regexp::Compile(const char* pattern, const int flags)
@@ -168,11 +194,16 @@ int t_regexp::GetInfo(int what, void* where) const
   return pcre_fullinfo(this->m_program, this->m_extra, what, where);
 }
 
+int t_regexp::MatchedCapturesCount() const
+{
+  return this->m_iCount;
+}
+
 bool t_regexp::DupNamesAllowed() const
 {
   unsigned long int options = 0;
   this->GetInfo(PCRE_INFO_OPTIONS, &options);
-  if ((options & PCRE_DUPNAMES) != 0)
+  if (options & PCRE_DUPNAMES)
     return true;
 
   int jchanged = false;
@@ -233,7 +264,7 @@ string t_regexp::ErrorCodeToString(const int code)
 *    Find first set of multiple named strings    *
 *************************************************/
 
-// taken from pcre_get.c - with modifications
+// adapted from get_first_set in pcre_get.c
 
 /* This function allows for duplicate names in the table of named substrings.
 It returns the number of the first one that was set in a pattern match.

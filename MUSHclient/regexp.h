@@ -19,12 +19,8 @@
 #define PCRE_EXP_DECL extern
 
 #include "pcre\pcre.h"
-                 
-// for duplicate named wildcards
-int njg_get_first_set(const pcre *code, const char *stringname, const int *ovector);
 
 // compiled regular expression type
-
 class t_regexp 
 {
   public:
@@ -38,8 +34,11 @@ class t_regexp
     bool Execute(const char *string, const int start_offset = 0);
 
     LONGLONG TimeTaken() const;
-    int LastError() const;
+
     string LastTarget() const;
+
+    int LastError() const;
+    string LastErrorString() const;
 
     int GetInfo(int what, void* where) const;
     bool DupNamesAllowed() const;
@@ -60,6 +59,10 @@ class t_regexp
     int m_iExecutionError;  // error code if failed execution
 
     LONGLONG iTimeTaken;
+
+    int GetFirstSet(const char* name) const; // for duplicate named wildcards
+
+    static string ErrorCodeToString(const int code);
 };
 
 bool CheckRegularExpression (const CString strRegexp, const int iOptions);

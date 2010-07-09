@@ -47,7 +47,7 @@ string t_regexp::GetWildcard (const string sName) const
   if (IsStringNumber (sName))
     iNumber = atoi (sName.c_str ());
   else if (m_program != NULL)
-    iNumber = njg_get_first_set (m_program, sName.c_str (), &m_vOffsets [0]);
+    iNumber = this->GetFirstSet (sName.c_str ());
   else
     iNumber = PCRE_ERROR_NOSUBSTRING;
   return GetWildcard (iNumber);
@@ -126,7 +126,7 @@ bool t_regexp::Execute(const char *string, const int start_offset)
     this->m_iExecutionError = count; // remember reason
     ThrowErrorException (TFormat (
         "Error executing regular expression: %s",
-        Convert_PCRE_Runtime_Error (count)
+        this->ErrorCodeToString (count)
         ));
     }
 
@@ -147,14 +147,19 @@ LONGLONG t_regexp::TimeTaken() const
   return this->iTimeTaken;
 }
 
+string t_regexp::LastTarget() const
+{
+  return this->m_sTarget;
+}
+
 int t_regexp::LastError() const
 {
   return this->m_iExecutionError;
 }
 
-string t_regexp::LastTarget() const
+string t_regexp::LastErrorString() const
 {
-  return this->m_sTarget;
+  return this->ErrorCodeToString(this->m_iExecutionError);
 }
 
 int t_regexp::GetInfo(int what, void* where) const
@@ -215,4 +220,77 @@ bool CheckRegularExpression (const CString strRegexp, const int iOptions)
 
   dlg.DoModal ();
   return false; // bad
+}
+
+
+
+string t_regexp::ErrorCodeToString(const int code)
+{
+  switch (code)
+    {
+    case PCRE_ERROR_NOMATCH:        return Translate ("No match");       
+    case PCRE_ERROR_NULL:           return Translate ("Null");           
+    case PCRE_ERROR_BADOPTION:      return Translate ("Bad option");     
+    case PCRE_ERROR_BADMAGIC:       return Translate ("Bad magic");      
+    case PCRE_ERROR_UNKNOWN_OPCODE: return Translate ("Unknown Opcode"); 
+    case PCRE_ERROR_NOMEMORY:       return Translate ("No Memory");      
+    case PCRE_ERROR_NOSUBSTRING:    return Translate ("No Substring");   
+    case PCRE_ERROR_MATCHLIMIT:     return Translate ("Match Limit");    
+    case PCRE_ERROR_CALLOUT:        return Translate ("Callout");        
+    case PCRE_ERROR_BADUTF8:        return Translate ("Bad UTF8");       
+    case PCRE_ERROR_BADUTF8_OFFSET: return Translate ("Bad UTF8 Offset");
+    case PCRE_ERROR_PARTIAL:        return Translate ("Partial");        
+    case PCRE_ERROR_BADPARTIAL:     return Translate ("Bad Partial");    
+    case PCRE_ERROR_INTERNAL:       return Translate ("Internal");       
+    case PCRE_ERROR_BADCOUNT:       return Translate ("Bad Count");      
+    case PCRE_ERROR_DFA_UITEM:      return Translate ("Dfa Uitem");      
+    case PCRE_ERROR_DFA_UCOND:      return Translate ("Dfa Ucond");      
+    case PCRE_ERROR_DFA_UMLIMIT:    return Translate ("Dfa Umlimit");    
+    case PCRE_ERROR_DFA_WSSIZE:     return Translate ("Dfa Wssize");     
+    case PCRE_ERROR_DFA_RECURSE:    return Translate ("Dfa Recurse");    
+    case PCRE_ERROR_RECURSIONLIMIT: return Translate ("Recursion Limit");
+    case PCRE_ERROR_NULLWSLIMIT:    return Translate ("Null Ws Limit");  
+    case PCRE_ERROR_BADNEWLINE:     return Translate ("Bad Newline");    
+    default:                        return Translate ("Unknown PCRE error");
+    }
+}
+
+
+/*************************************************
+*    Find first set of multiple named strings    *
+*************************************************/
+
+// taken from pcre_get.c - with modifications
+
+/* This function allows for duplicate names in the table of named substrings.
+It returns the number of the first one that was set in a pattern match.
+
+Arguments:
+  name   the name of the capturing substring
+
+Returns:       the number of the first that is set,
+               or the number of the last one if none are set,
+               or a negative number on error
+*/
+
+typedef unsigned char uschar;
+
+int t_regexp::GetFirstSet(const char* name) const
+{
+  if (!this->DupNamesAllowed())
+    return pcre_get_stringnumber(this->m_program, name);
+
+  char *first, *last;
+  int entrysize = pcre_get_stringtable_entries(this->m_program, name, &first, &last);
+  if (entrysize <= 0)
+    return entrysize;
+
+  for (uschar* entry = (uschar *)first; entry <= (uschar *)last; entry += entrysize)
+    {
+    int n = (entry[0] << 8) + entry[1];
+    if (this->m_vOffsets[n*2] >= 0)
+      return n;
+    }
+
+  return (first[0] << 8) + first[1];
 }

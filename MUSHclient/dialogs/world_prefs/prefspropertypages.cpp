@@ -2491,7 +2491,7 @@ void CPrefsP7::LoadDialog (CDialog * pDlg, CObject * pItem)
       alias_item->regexp->LastError() < PCRE_ERROR_NOMATCH)
     dlg->m_strRegexpError = TFormat (
         "Error: %s ",
-        Convert_PCRE_Runtime_Error (alias_item->regexp->LastError())
+        alias_item->regexp->LastErrorString ()
         );
 
   // NB - also see MapDlg.cpp for alias processing
@@ -3312,7 +3312,7 @@ void CPrefsP8::LoadDialog (CDialog * pDlg, CObject * pItem)
       trigger_item->regexp->LastError() < PCRE_ERROR_NOMATCH)
     dlg->m_strRegexpError = TFormat (
       "Error: %s ",
-      Convert_PCRE_Runtime_Error (trigger_item->regexp->LastError())
+      trigger_item->regexp->LastErrorString ()
       );
 } // end of CPrefsP8::LoadDialog
 
@@ -3424,6 +3424,7 @@ void CPrefsP8::UnloadDialog (CDialog * pDlg, CObject * pItem)
         (trigger_item->ignore_case  ? PCRE_CASELESS : 0) |
         (trigger_item->bMultiLine  ? PCRE_MULTILINE : 0) |
         (m_doc->m_bUTF_8 ? PCRE_UTF8 : 0)
+      );
   else
     trigger_item->regexp = new t_regexp (
       strRegexp,

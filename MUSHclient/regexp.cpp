@@ -147,6 +147,8 @@ bool t_regexp::Execute(const char *string, const int start_offset)
         ));
     }
 
+  this->m_iExecutionError = 0; // success!
+
   // if, and only if, we match we will save the matching string, the count
   // and offsets, so we can extract the wildcards later on
   this->m_sTarget = string; // for extracting wildcards

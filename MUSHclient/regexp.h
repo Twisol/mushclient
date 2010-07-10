@@ -25,7 +25,10 @@ class t_regexp
 {
   public:
     t_regexp (const char* pattern, const int flags = 0);
+    t_regexp (const t_regexp& other);
     ~t_regexp ();
+
+    t_regexp& operator=(const t_regexp& other);
 
     string GetWildcard (const int iNumber) const;  // numbered wildcards
     string GetWildcard (const string sName) const; // named wildcards
@@ -64,6 +67,9 @@ class t_regexp
     LONGLONG iTimeTaken;
 
     int GetFirstSet(const char* name) const; // for duplicate named wildcards
+
+    void AcquirePattern(pcre* program, pcre_extra* extra); // Acquire ownership of the pattern.
+    void ReleasePattern(); // Release the pattern after we're done using it.
 
     static string ErrorCodeToString(const int code);
 };

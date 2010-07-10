@@ -11,7 +11,6 @@
 static char BASED_CODE THIS_FILE[] = __FILE__;
 #endif
 
-
 t_regexp::t_regexp(const char* pattern, const int flags)
   : m_program(NULL), m_extra(NULL), iTimeTaken(0),
     m_iCount(0), m_iExecutionError(0)
@@ -19,12 +18,31 @@ t_regexp::t_regexp(const char* pattern, const int flags)
   this->Compile(pattern, flags);
 }
 
+t_regexp::t_regexp (const t_regexp& other)
+  : iTimeTaken(other.iTimeTaken), m_iCount(other.m_iCount),
+    m_sTarget(other.m_sTarget), m_vOffsets(other.m_vOffsets),
+    m_iExecutionError(other.m_iExecutionError)
+{
+  this->AcquirePattern(other.m_program, other.m_extra);
+}
+
 t_regexp::~t_regexp ()
-{ 
-  if (m_program)
-    pcre_free (m_program);
-  if (m_extra)
-    pcre_free (m_extra);
+{
+  this->ReleasePattern();
+}
+
+t_regexp& t_regexp::operator=(const t_regexp& other)
+{
+  this->ReleasePattern();
+  this->AcquirePattern(other.m_program, other.m_extra);
+
+  this->m_iExecutionError = other.m_iExecutionError;
+  this->iTimeTaken        = other.iTimeTaken;
+  this->m_iCount          = other.m_iCount;
+  this->m_sTarget         = other.m_sTarget;
+  this->m_vOffsets        = other.m_vOffsets;
+
+  return *this;
 }
 
 string t_regexp::GetWildcard (const int iNumber) const
@@ -76,6 +94,7 @@ bool t_regexp::GetWildcardOffsets (const string sName, int& left, int& right) co
   return GetWildcardOffsets (iNumber, left, right);
 }
 
+
 void t_regexp::Compile(const char* pattern, const int flags)
 {
   const char *error = NULL;
@@ -93,14 +112,9 @@ void t_regexp::Compile(const char* pattern, const int flags)
     ThrowErrorException("Regexp study failed: %s", error);
     }
 
-  // Remove old regexp
-  pcre_free(this->m_program);
-  pcre_free(this->m_extra);
-
-  // remember program and extra stuff
-  this->m_program = program;
-  this->m_extra = extra;
-  this->m_iExecutionError = 0; // reset the error code
+  this->ReleasePattern(); // Release previous pattern
+  this->AcquirePattern(program, extra);
+  this->m_iExecutionError = 0; // Start with no error
   // leave the time taken alone
 }
 
@@ -206,6 +220,8 @@ bool t_regexp::DupNamesAllowed() const
   return false;
 }
 
+
+
 bool t_regexp::CheckPattern(const CString strRegexp, const int iOptions,
                                    const char** error, int* errorOffset)
 {
@@ -218,7 +234,6 @@ bool t_regexp::CheckPattern(const CString strRegexp, const int iOptions,
   else
     return false;
 }
-
 
 string t_regexp::ErrorCodeToString(const int code)
 {
@@ -250,7 +265,6 @@ string t_regexp::ErrorCodeToString(const int code)
     default:                        return Translate ("Unknown PCRE error");
     }
 }
-
 
 /*************************************************
 *    Find first set of multiple named strings    *
@@ -289,6 +303,28 @@ int t_regexp::GetFirstSet(const char* name) const
     }
 
   return (first[0] << 8) + first[1];
+}
+
+void t_regexp::AcquirePattern(pcre* program, pcre_extra* extra)
+{
+  this->ReleasePattern();
+  this->m_program = program;
+  this->m_extra   = extra;
+  pcre_refcount(program, 1);
+}
+
+void t_regexp::ReleasePattern()
+{
+  if (this->m_program != NULL)
+    return;
+
+  if (pcre_refcount(this->m_program, -1) == 0)
+    {
+    pcre_free(this->m_program);
+    this->m_program = NULL;
+    pcre_free(this->m_extra);
+    this->m_extra   = NULL;
+    }
 }
 
 // checks a regular expression, raises a dialog if bad

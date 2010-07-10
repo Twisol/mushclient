@@ -9,9 +9,12 @@
 #include "color.h"
 
 #include "scripting\errors.h"
+#include "dialogs\RegexpProblemDlg.h"
 
 #define PNG_NO_CONSOLE_IO
 #include "png\png.h"
+
+#include <direct.h>
 
 #ifdef _DEBUG
 //#define new DEBUG_NEW
@@ -115,7 +118,32 @@ char * pOut;
   return strRegexp;
   }   // end of ConvertToRegularExpression
 
+// checks a regular expression, raises a dialog if bad
+bool CheckRegularExpression (const CString strRegexp, const int iOptions)
+{
+  const char *error = NULL;
+  int erroroffset;
 
+  if (t_regexp::CheckPattern(strRegexp, iOptions, &error, &erroroffset))
+    return true; // good
+
+  CRegexpProblemDlg dlg;
+  dlg.m_strErrorMessage = Translate (error);
+  dlg.m_strErrorMessage += ".";   // end the sentence
+  // make first character upper-case, so it looks like a sentence. :)
+  dlg.m_strErrorMessage.SetAt (0, toupper (dlg.m_strErrorMessage [0]));
+
+  dlg.m_strColumn = TFormat ("Error occurred at column %i.", erroroffset + 1);
+  dlg.m_strText = strRegexp;
+  dlg.m_strText += ENDLINE;
+  if (erroroffset > 0)
+    dlg.m_strText += CString ('-', erroroffset - 1);
+  dlg.m_strText += '^';
+  dlg.m_iColumn = erroroffset + 1;
+
+  dlg.DoModal ();
+  return false; // bad
+}
 
 // Helper routine for setting the font in certain description windows to a
 // fixed-pitch courier, to make editing easier.
@@ -3276,9 +3304,6 @@ int myAtoF(const char *z, double *pResult)
   *pResult = (double)(sign<0 ? -v1 : v1);
   return (int)(z - zBegin);
 }  // end of myAtoF
-
-
-#include <direct.h>
 
 // change to the current file browsing directory, browse for a file, put it back
 

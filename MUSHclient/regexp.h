@@ -49,7 +49,7 @@ class t_regexp
     int GetInfo(int what, void* where) const;
     bool DupNamesAllowed() const;
 
-    static bool CheckPattern(const CString strRegexp, const int iOptions,
+    static bool CheckPattern(const char* strRegexp, const int iOptions,
                              const char** error = NULL, int* errorOffset = NULL);
 
   private:
@@ -72,7 +72,5 @@ class t_regexp
 
     static string ErrorCodeToString(const int code);
 };
-
-bool CheckRegularExpression (const CString strRegexp, const int iOptions);
 
 #endif  // #ifndef __REGEXP_H

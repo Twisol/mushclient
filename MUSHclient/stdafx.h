@@ -308,6 +308,7 @@ CString ConvertToRegularExpression (const CString & strMatchString,
                                     const bool bWholeLine = true,
                                     const bool bMakeAsterisksWildcards = true);
 
+bool CheckRegularExpression (const CString strRegexp, const int iOptions);
 
 // Helper routine for setting the font in certain description windows to a
 // fixed-pitch courier, to make editing easier.

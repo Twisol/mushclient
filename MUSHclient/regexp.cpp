@@ -1,10 +1,7 @@
 // PCRE or regexp
 
 #include "stdafx.h"
-
-// only used by CheckRegularExpression below
 #include "doc.h"
-#include "dialogs\RegexpProblemDlg.h"
 
 #ifdef _DEBUG
 //#define new DEBUG_NEW
@@ -213,7 +210,7 @@ bool t_regexp::DupNamesAllowed() const
 
 
 
-bool t_regexp::CheckPattern(const CString strRegexp, const int iOptions,
+bool t_regexp::CheckPattern(const char* strRegexp, const int iOptions,
                                    const char** error, int* errorOffset)
 {
   pcre * program = pcre_compile(strRegexp, iOptions, error, errorOffset, NULL);
@@ -257,12 +254,6 @@ string t_regexp::ErrorCodeToString(const int code)
     }
 }
 
-/*************************************************
-*    Find first set of multiple named strings    *
-*************************************************/
-
-// adapted from get_first_set in pcre_get.c
-
 /* This function allows for duplicate names in the table of named substrings.
 It returns the number of the first one that was set in a pattern match.
 
@@ -274,10 +265,11 @@ Returns:       the number of the first that is set,
                or a negative number on error
 */
 
-typedef unsigned char uschar;
-
+// adapted from get_first_set in pcre_get.c
 int t_regexp::GetFirstSet(const char* name) const
 {
+  typedef unsigned char uschar;
+
   if (!this->DupNamesAllowed())
     return pcre_get_stringnumber(this->m_program, name);
 
@@ -316,31 +308,4 @@ void t_regexp::ReleasePattern()
     pcre_free(this->m_extra);
     this->m_extra   = NULL;
     }
-}
-
-// checks a regular expression, raises a dialog if bad
-bool CheckRegularExpression (const CString strRegexp, const int iOptions)
-{
-  const char *error = NULL;
-  int erroroffset;
-
-  if (t_regexp::CheckPattern(strRegexp, iOptions, &error, &erroroffset))
-    return true; // good
-
-  CRegexpProblemDlg dlg;
-  dlg.m_strErrorMessage = Translate (error);
-  dlg.m_strErrorMessage += ".";   // end the sentence
-  // make first character upper-case, so it looks like a sentence. :)
-  dlg.m_strErrorMessage.SetAt (0, toupper (dlg.m_strErrorMessage [0]));
-
-  dlg.m_strColumn = TFormat ("Error occurred at column %i.", erroroffset + 1);
-  dlg.m_strText = strRegexp;
-  dlg.m_strText += ENDLINE;
-  if (erroroffset > 0)
-    dlg.m_strText += CString ('-', erroroffset - 1);
-  dlg.m_strText += '^';
-  dlg.m_iColumn = erroroffset + 1;
-
-  dlg.DoModal ();
-  return false; // bad
 }

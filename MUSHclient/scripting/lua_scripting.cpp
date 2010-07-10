@@ -472,10 +472,10 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
 
     for (i = 0; i <= ncapt; i++) 
       {
-      string wildcard = regexp->GetWildcard(i);
-      lua_pushlstring(L, wildcard.c_str(), wildcard.length());
+      string wildcard (regexp->GetWildcard (i));
+      lua_pushlstring (L, wildcard.c_str (), wildcard.size ());
       lua_rawseti (L, -2, i);
-    }
+      }
 
     /* now do named subpatterns  */
     regexp->GetInfo(PCRE_INFO_NAMECOUNT, &namecount);
@@ -512,8 +512,8 @@ bool CScriptEngine::ExecuteLua (DISPID & dispid,  // dispatch ID, will be set to
         lua_pushstring (L, (LPCTSTR) name);
         if (n >= 0 && n <= ncapt) 
           {
-          string wildcard = regexp->GetWildcard(i);
-          lua_pushlstring(L, wildcard.c_str(), wildcard.length());
+          string wildcard (regexp->GetWildcard (n));
+          lua_pushlstring (L, wildcard.c_str (), wildcard.size ());
           }
         else
           lua_pushnil (L);  /* n out of range */

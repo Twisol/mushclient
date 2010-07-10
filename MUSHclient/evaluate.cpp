@@ -1225,7 +1225,7 @@ const char * pText,
 
             if (regexp)
               {
-              CString strWildcard = FixWildcard (regexp->GetWildcard (string (1, *++pText)),
+              CString strWildcard = FixWildcard (regexp->GetWildcard ((*++pText) - '0'),
                                                  bMakeWildcardsLower,
                                                  iSendTo,
                                                  sLanguage).c_str ();

@@ -6,7 +6,7 @@
 
 
 
-#define MAX_WILDCARDS 10
+const short MAX_WILDCARDS = 10;
 
 // This is Perl-Compatible Regular Expressions 
 
@@ -17,7 +17,6 @@
 /* Copyright (c) 1997-2000 University of Cambridge */
 
 #define PCRE_EXP_DECL extern
-
 #include "pcre\pcre.h"
 
 // compiled regular expression type

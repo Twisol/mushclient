@@ -1,7 +1,8 @@
 // PCRE or regexp
 
 #include "stdafx.h"
-#include "MUSHclient.h"
+
+// only used by CheckRegularExpression below
 #include "doc.h"
 #include "dialogs\RegexpProblemDlg.h"
 
@@ -58,15 +59,10 @@ string t_regexp::GetWildcard (const int iNumber) const
 
 string t_regexp::GetWildcard (const string sName) const
 {
-  int iNumber;
-  if (IsStringNumber (sName))
-    iNumber = atoi (sName.c_str ());
-  else if (m_program != NULL)
-    iNumber = this->GetFirstSet (sName.c_str ());
-  else
+  if (m_program == NULL)
     return "";
 
-  return GetWildcard (iNumber);
+  return GetWildcard (this->GetFirstSet (sName.c_str ()));
 }
 
 bool t_regexp::GetWildcardOffsets (const int iNumber, int& left, int& right) const
@@ -83,15 +79,10 @@ bool t_regexp::GetWildcardOffsets (const int iNumber, int& left, int& right) con
 
 bool t_regexp::GetWildcardOffsets (const string sName, int& left, int& right) const
 {
-  int iNumber;
-  if (IsStringNumber (sName))
-    iNumber = atoi (sName.c_str ());
-  else if (m_program != NULL)
-    iNumber = this->GetFirstSet (sName.c_str ());
-  else
+  if (m_program == NULL)
     return false;
 
-  return GetWildcardOffsets (iNumber, left, right);
+  return GetWildcardOffsets (this->GetFirstSet (sName.c_str ()), left, right);
 }
 
 

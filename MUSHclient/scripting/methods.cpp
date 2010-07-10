@@ -8816,7 +8816,12 @@ VARIANT CMUSHclientDoc::GetTriggerWildcard(LPCTSTR TriggerName, LPCTSTR Wildcard
   CheckObjectName (strTriggerName, false);
 
   if (WildcardName [0] != '\0' && GetTriggerMap ().Lookup (strTriggerName, trigger_item) && trigger_item->regexp)
-    SetUpVariantString (vaResult, trigger_item->regexp->GetWildcard (WildcardName).c_str ());
+    {
+    if (IsStringNumber (WildcardName))
+      SetUpVariantString (vaResult, trigger_item->regexp->GetWildcard (atoi (WildcardName)).c_str ());
+    else
+      SetUpVariantString (vaResult, trigger_item->regexp->GetWildcard (WildcardName).c_str ());
+    }
 
   return vaResult;
 }
@@ -8833,7 +8838,12 @@ VARIANT CMUSHclientDoc::GetAliasWildcard(LPCTSTR AliasName, LPCTSTR WildcardName
   CheckObjectName (strAliasName, false);
 
   if (WildcardName[0] != '\0' && GetAliasMap ().Lookup (strAliasName, alias_item) && alias_item->regexp)
-    SetUpVariantString (vaResult, alias_item->regexp->GetWildcard (WildcardName).c_str ());
+    {
+    if (IsStringNumber (WildcardName))
+      SetUpVariantString (vaResult, alias_item->regexp->GetWildcard (atoi (WildcardName)).c_str ());
+    else
+      SetUpVariantString (vaResult, alias_item->regexp->GetWildcard (WildcardName).c_str ());
+    }
 
   return vaResult;
 }

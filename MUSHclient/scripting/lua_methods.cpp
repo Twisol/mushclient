@@ -294,7 +294,6 @@ LUALIB_API lua_Number my_optnumber (lua_State *L, int narg, lua_Number def)
   return luaL_opt(L, my_checknumber, narg, def);
 }
 
-
 LUALIB_API lua_Integer my_checkinteger (lua_State *L, int narg)
 {
   lua_Integer d = lua_tointeger(L, narg);
@@ -309,6 +308,19 @@ LUALIB_API lua_Integer my_optinteger (lua_State *L, int narg, lua_Integer def)
   return luaL_opt(L, my_checkinteger, narg, def);
 }
 
+LUALIB_API const char *get_option_value (lua_State *L, int narg) {
+
+  // if boolean convert to 0 or 1
+  if (lua_isboolean (L, narg))
+    return (lua_toboolean (L, narg) ? "1" : "0");
+  else if (lua_isnil (L, narg))
+    return "0";  // nil is considered false
+
+  const char *s = lua_tolstring(L, narg, NULL);
+  if (!s) 
+    my_tag_error(L, narg, LUA_TSTRING);
+  return s;
+}
 
 #define my_checkstring(L,n)	(my_checklstring(L, (n), NULL))
 #define my_optstring(L,n,d)	(my_optlstring(L, (n), (d), NULL))
@@ -4656,9 +4668,9 @@ static int L_SetAliasOption (lua_State *L)
 {
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetAliasOption (
-      my_checkstring (L, 1), // AliasName
-      my_checkstring (L, 2), // OptionName
-      my_checkstring (L, 3)  // Value
+      my_checkstring (L, 1),    // AliasName
+      my_checkstring (L, 2),    // OptionName
+      get_option_value (L, 3)   // Value
       ));
   return 1;  // number of result fields
 } // end of L_SetAliasOption
@@ -4709,9 +4721,9 @@ static int L_SetChatOption (lua_State *L)
 {
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetChatOption (
-      my_checklong   (L, 1), // Chat ID
-      my_checkstring (L, 2), // OptionName
-      my_checkstring (L, 3)  // Value
+      my_checklong (L, 1),    // Chat ID
+      my_checkstring (L, 2),    // OptionName
+      get_option_value (L, 3)   // Value
       ));
   return 1;  // number of result fields
 } // end of L_SetChatOption
@@ -4840,9 +4852,19 @@ static int L_SetNotes (lua_State *L)
 static int L_SetOption (lua_State *L)
 {
   CMUSHclientDoc *pDoc = doc (L);
+  lua_Number option;
+
+  // if boolean convert to 0 or 1
+  if (lua_isboolean (L, 2))
+    option = lua_toboolean (L, 2) ? 1 : 0;
+  else if (lua_isnil (L, 2))
+    option = 0;
+  else
+    option = my_checklong (L, 2);
+
   lua_pushnumber (L, pDoc->SetOption (
-      my_checkstring (L, 1), // OptionName
-      my_checklong   (L, 2)  // Value
+      my_checkstring (L, 1),    // OptionName
+      option                    // Value
       ));
   return 1;  // number of result fields
 } // end of L_SetOption
@@ -4880,9 +4902,9 @@ static int L_SetTimerOption (lua_State *L)
 {
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetTimerOption (
-      my_checkstring (L, 1), // AliasName
-      my_checkstring (L, 2), // OptionName
-      my_checkstring (L, 3)  // Value
+      my_checkstring (L, 1),    // TimerName
+      my_checkstring (L, 2),    // OptionName
+      get_option_value (L, 3)   // Value
       ));
   return 1;  // number of result fields
 } // end of L_SetTimerOption
@@ -4894,11 +4916,11 @@ static int L_SetToolBarPosition (lua_State *L)
 {
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetToolBarPosition (
-      my_checkshort (L, 1), // Which
-      optboolean (L, 2, 0), // Float
-      my_checkshort (L, 3), // Side
-      my_checklong  (L, 4), // Top
-      my_checklong  (L, 5)  // Left
+      my_checkshort (L, 1),    // Which
+      optboolean (L, 2, 0),     // Float
+      my_checkshort (L, 3),    // Side
+      my_checklong  (L, 4),    // Top
+      my_checklong  (L, 5)     // Left
       ));
   return 1;  // number of result fields
 } // end of L_SetToolBarPosition
@@ -4910,9 +4932,9 @@ static int L_SetTriggerOption (lua_State *L)
 {
   CMUSHclientDoc *pDoc = doc (L);
   lua_pushnumber (L, pDoc->SetTriggerOption (
-      my_checkstring (L, 1), // AliasName
-      my_checkstring (L, 2), // OptionName
-      my_checkstring (L, 3)  // Value
+      my_checkstring (L, 1),    // TriggerName
+      my_checkstring (L, 2),    // OptionName
+      get_option_value (L, 3)   // Value
       ));
   return 1;  // number of result fields
 } // end of L_SetTriggerOption

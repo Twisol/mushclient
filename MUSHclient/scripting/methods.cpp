@@ -5628,9 +5628,21 @@ long CMUSHclientDoc::SetTriggerOption(LPCTSTR TriggerName, LPCTSTR OptionName, L
   if (iResult == eOK)
     {
     // this is a numeric option
-    
-    if (!IsNumber (strValue, true))
-      return eOptionOutOfRange;
+
+    // for boolean options, accept "y" or "n"
+    if (TriggerOptionsTable [iItem].iMinimum == 0 &&
+      TriggerOptionsTable [iItem].iMaximum == 0)
+      {
+      if (strValue == "Y" || strValue == "y")
+        Value = "1";
+      else if (strValue == "N" || strValue == "n")
+        Value = "0";
+      }
+
+    if (!IsNumber (Value, true))
+       return eOptionOutOfRange;
+
+    long iValue = atol (Value);
 
     if (m_CurrentPlugin &&
         (TriggerOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
@@ -5857,8 +5869,21 @@ long CMUSHclientDoc::SetAliasOption(LPCTSTR AliasName, LPCTSTR OptionName, LPCTS
   if (iResult == eOK)
     {
     // this is a numeric option
-    if (!IsNumber (strValue, true))
-      return eOptionOutOfRange;
+
+    // for boolean options, accept "y" or "n"
+    if (AliasOptionsTable [iItem].iMinimum == 0 &&
+      AliasOptionsTable [iItem].iMaximum == 0)
+      {
+      if (strValue == "Y" || strValue == "y")
+        Value = "1";
+      else if (strValue == "N" || strValue == "n")
+        Value = "0";
+      }
+
+    if (!IsNumber (Value, true))
+       return eOptionOutOfRange;
+
+    long iValue = atol (Value);
 
     if (m_CurrentPlugin &&
         (AliasOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
@@ -6093,6 +6118,17 @@ long CMUSHclientDoc::SetTimerOption(LPCTSTR TimerName, LPCTSTR OptionName, LPCTS
   if (iResult == eOK)
     {
     // this is a numeric option
+
+    // for boolean options, accept "y" or "n"
+    if (TimerOptionsTable [iItem].iMinimum == 0 &&
+      TimerOptionsTable [iItem].iMaximum == 0)
+      {
+      if (strValue == "Y" || strValue == "y")
+        Value = "1";
+      else if (strValue == "N" || strValue == "n")
+        Value = "0";
+      }
+
     long iValue = 0;
     double fValue = 0;
 
@@ -7494,9 +7530,19 @@ long CMUSHclientDoc::SetChatOption(long ID, LPCTSTR OptionName, LPCTSTR Value)
   if (iResult == eOK)
     {
     // this is a numeric option
-    
-    if (!IsNumber (strValue, true))
-      return eOptionOutOfRange;
+
+    // for boolean options, accept "y" or "n"
+    if (ChatOptionsTable [iItem].iMinimum == 0 &&
+      ChatOptionsTable [iItem].iMaximum == 0)
+      {
+      if (strValue == "Y" || strValue == "y")
+        Value = "1";
+      else if (strValue == "N" || strValue == "n")
+        Value = "0";
+      }
+
+    if (!IsNumber (Value, true))
+       return eOptionOutOfRange;
 
     if (m_CurrentPlugin && (ChatOptionsTable [iItem].iFlags & OPT_PLUGIN_CANNOT_WRITE))
       return ePluginCannotSetOption;  // not available to plugin

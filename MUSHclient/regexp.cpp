@@ -102,13 +102,6 @@ void t_regexp::Compile(const char* pattern, const int flags)
   this->m_extra = extra;
   this->m_iExecutionError = 0; // reset the error code
   // leave the time taken alone
-
-  // inspired by a suggestion by Twisol (to remove a hard-coded limit on the number of wildcards)
-  int capturecount = 0;
-  // how many captures did we get?
-  this->GetInfo(PCRE_INFO_CAPTURECOUNT, &capturecount);
-  // allocate memory for them
-  this->m_vOffsets.resize ((capturecount + 1) * 3);  // add 1 for the whole expression
 }
 
 bool t_regexp::Execute(const char *string, const int start_offset)
@@ -116,6 +109,13 @@ bool t_regexp::Execute(const char *string, const int start_offset)
   // exit if no regexp program to process (possibly because of previous error)
   if (this->m_program == NULL)
     return false;
+
+  // inspired by a suggestion by Twisol (to remove a hard-coded limit on the number of wildcards)
+  int capturecount = 0;
+  // how many captures are in the pattern?
+  this->GetInfo(PCRE_INFO_CAPTURECOUNT, &capturecount);
+  // allocate memory for them
+  vector<int> offsets((capturecount + 1) * 3); // we always get offset 0 - the whole match
 
   LARGE_INTEGER start;
   if (App.m_iCounterFrequency)
@@ -126,7 +126,7 @@ bool t_regexp::Execute(const char *string, const int start_offset)
   int count = pcre_exec(
       this->m_program, this->m_extra,
       string, strlen (string), start_offset,
-      options, &this->m_vOffsets[0], this->m_vOffsets.size()
+      options, &offsets[0], offsets.size()
       );
 
   if (App.m_iCounterFrequency)
@@ -137,7 +137,7 @@ bool t_regexp::Execute(const char *string, const int start_offset)
     }
 
   if (count == PCRE_ERROR_NOMATCH)
-    return false;  // no match
+    return false; // no match  - don't save matching string etc.
   else if (count < 0)
     {
     this->m_iExecutionError = count; // remember reason
@@ -153,6 +153,10 @@ bool t_regexp::Execute(const char *string, const int start_offset)
   // and offsets, so we can extract the wildcards later on
   this->m_sTarget = string; // for extracting wildcards
   this->m_iCount  = count;  // ditto
+
+  // store the captures
+  this->m_vOffsets.clear();
+  this->m_vOffsets.insert(this->m_vOffsets.begin(), offsets.begin(), offsets.end());
 
   return true; // match
 }

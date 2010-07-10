@@ -17,24 +17,20 @@ class CMUSHclientDoc;
 
 class CWorldSocket : public CAsyncSocket
 {
-	DECLARE_DYNAMIC(CWorldSocket);
+  DECLARE_DYNAMIC(CWorldSocket);
 
-// Construction
-public:
-	CWorldSocket(CMUSHclientDoc* pDoc);
+  public:
+    CWorldSocket(CMUSHclientDoc* pDoc);
 
-// Operations
-public:
-	CMUSHclientDoc* m_pDoc;
-  CString m_outstanding_data;
+    // Operations
+    CMUSHclientDoc* m_pDoc;
+    CString m_outstanding_data;
 
-// Implementation
-
-  virtual void OnReceive(int nErrorCode);
-	virtual void OnSend(int nErrorCode);
-	virtual void OnClose(int nErrorCode);
-	virtual void OnConnect(int nErrorCode);
-
+   // Implementation
+    virtual void OnReceive(int nErrorCode);
+    virtual void OnSend(int nErrorCode);
+    virtual void OnClose(int nErrorCode);
+    virtual void OnConnect(int nErrorCode);
 };
 
 #endif // __WORLDSOCK_H__

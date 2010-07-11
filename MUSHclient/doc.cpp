@@ -7206,25 +7206,3 @@ void CMUSHclientDoc::PluginListChanged ()
   m_CurrentPlugin = pSavedPlugin;
   bInPluginListChanged = false;
 }    // end CMUSHclientDoc::PluginListChanged 
-
-void CMUSHclientDoc::PushPlugin (CPlugin* plugin)
-{
-  if (m_savedPlugins.empty() && m_CurrentPlugin == NULL)
-    m_CurrentPlugin = plugin;
-  else
-    {
-    m_savedPlugins.push(m_CurrentPlugin);
-    m_CurrentPlugin = plugin;
-    }
-}
-
-void CMUSHclientDoc::PopPlugin ()
-{
-  if (m_savedPlugins.empty() && m_CurrentPlugin != NULL)
-    m_CurrentPlugin = NULL;
-  else
-    {
-    m_CurrentPlugin = m_savedPlugins.top();
-    m_savedPlugins.pop();
-    }
-}

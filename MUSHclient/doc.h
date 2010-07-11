@@ -2039,6 +2039,10 @@ public:
 
   void EditFileWithEditor (CString strName);
 
+  stack<CPlugin*> m_savedPlugins;
+  void PushPlugin (CPlugin* plugin);
+  void PopPlugin ();
+
 // Overrides
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CMUSHclientDoc)

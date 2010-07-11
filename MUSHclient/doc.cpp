@@ -7206,3 +7206,18 @@ void CMUSHclientDoc::PluginListChanged ()
   m_CurrentPlugin = pSavedPlugin;
   bInPluginListChanged = false;
 }    // end CMUSHclientDoc::PluginListChanged 
+
+void CMUSHclientDoc::PushPlugin (CPlugin* plugin)
+{
+  m_savedPlugins.push(m_CurrentPlugin);
+  m_CurrentPlugin = plugin;
+}
+
+void CMUSHclientDoc::PopPlugin ()
+{
+  if (m_savedPlugins.empty())
+    return;
+
+  m_CurrentPlugin = m_savedPlugins.top();
+  m_savedPlugins.pop();
+}

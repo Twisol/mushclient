@@ -265,6 +265,7 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                                 nInvocationCount,
                                 NULL, NULL, NULL,
                                 &bResult); 
+    m_pDoc->m_CurrentPlugin = pSavedPlugin;
     return bResult;
     }   // end of Lua
   else
@@ -357,6 +358,7 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                                 nInvocationCount,
                                 NULL, NULL, NULL,
                                 &bResult); 
+    m_pDoc->m_CurrentPlugin = pSavedPlugin;
     return bResult;
     }   // end of Lua
   else
@@ -447,6 +449,7 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                                 nInvocationCount,
                                 NULL, NULL, NULL,
                                 &bResult); 
+    m_pDoc->m_CurrentPlugin = pSavedPlugin;
     return bResult;
     } // end of Lua
   else

@@ -167,12 +167,13 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                                (LPCTSTR) m_strName,
                                sName );
 
+  bool bResult = true;
+
   if (m_ScriptEngine->IsLua ())
     {
     list<double> nparams;
     list<string> sparams;
     sparams.push_back (sText);
-    bool result;
     m_ScriptEngine->ExecuteLua (iRoutine, 
                                  sName, 
                                  eDontChangeAction,
@@ -182,9 +183,7 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                                  sparams, 
                                  nInvocationCount,
                                  NULL, NULL, NULL,
-                                 &result);
-    m_pDoc->m_CurrentPlugin = pSavedPlugin;
-    return result;
+                                 &bResult);
     }   // end of Lua
   else
     {
@@ -211,23 +210,18 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                              nInvocationCount, 
                              &result);
 
-    m_pDoc->m_CurrentPlugin = pSavedPlugin;
-
     // see what result was
     if (result.vt != VT_EMPTY)
       {
-      result.ChangeType (VT_I4);  // make a long
-      if (result.vt == VT_I4)   // conversion successful
-        if (result.lVal)        // return if non-zero
-          return true;
-        else
-          return false;
-      }// end of having some sort of result
-    }  // end of not Lua
+      result.ChangeType (VT_I4); // make a long
+      if (result.vt == VT_I4) // conversion successful
+        bResult = result.lVal != 0;
+      } // end of having some sort of result
+    } // end of not Lua
 
-  return true;    // assume they OK'd it
-
-  }  // end of CPlugin::ExecutePluginScript
+  m_pDoc->m_CurrentPlugin = pSavedPlugin;
+  return bResult;
+} // end of CPlugin::ExecutePluginScript
 
 bool CPlugin::ExecutePluginScript (const char * sName, 
                                   DISPID & iRoutine, 
@@ -248,9 +242,10 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                                      (LPCTSTR) m_strName,
                                      sName );
 
+  bool bResult = true;
+
   if (m_ScriptEngine->IsLua ())
     {
-    bool bResult;
     list<double> nparams;
     list<string> sparams;
     nparams.push_back (arg1);
@@ -265,8 +260,6 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                                 nInvocationCount,
                                 NULL, NULL, NULL,
                                 &bResult); 
-    m_pDoc->m_CurrentPlugin = pSavedPlugin;
-    return bResult;
     }   // end of Lua
   else
     {
@@ -277,7 +270,6 @@ bool CPlugin::ExecutePluginScript (const char * sName,
       eArg1,
       eArgCount,     // this MUST be last
       };    
-
 
     COleVariant args [eArgCount];
     
@@ -303,21 +295,17 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                              nInvocationCount, 
                              &result);
 
-    m_pDoc->m_CurrentPlugin = pSavedPlugin;
-
     // see what result was
     if (result.vt != VT_EMPTY)
       {
       result.ChangeType (VT_I4);  // make a long
       if (result.vt == VT_I4)   // conversion successful
-        if (result.lVal)        // return if non-zero
-          return true;
-        else
-          return false;
+        bResult = result.lVal != 0;
       }  // end of having some sort of result
     }
 
-  return true; // assume they OK'd it
+  m_pDoc->m_CurrentPlugin = pSavedPlugin;
+  return bResult;
 } // end of CPlugin::ExecutePluginScript
 
 bool CPlugin::ExecutePluginScript (const char * sName, 
@@ -340,9 +328,10 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                                      (LPCTSTR) m_strName,
                                      sName );
 
+  bool bResult = true;
+
   if (m_ScriptEngine->IsLua ())
     {
-    bool bResult;
     list<double> nparams;
     list<string> sparams;
     nparams.push_back (arg1);
@@ -358,8 +347,6 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                                 nInvocationCount,
                                 NULL, NULL, NULL,
                                 &bResult); 
-    m_pDoc->m_CurrentPlugin = pSavedPlugin;
-    return bResult;
     }   // end of Lua
   else
     {
@@ -392,21 +379,17 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                              nInvocationCount, 
                              &result);
 
-    m_pDoc->m_CurrentPlugin = pSavedPlugin;
-
     // see what result was
     if (result.vt != VT_EMPTY)
       {
       result.ChangeType (VT_I4);  // make a long
       if (result.vt == VT_I4)   // conversion successful
-        if (result.lVal)        // return if non-zero
-          return true;
-        else
-          return false;
+        bResult = result.lVal != 0;
       }  // end of having some sort of result
     }
 
-  return true; // assume they OK'd it
+  m_pDoc->m_CurrentPlugin = pSavedPlugin;
+  return bResult;
 } // end of CPlugin::ExecutePluginScript
 
 bool CPlugin::ExecutePluginScript (const char * sName, 
@@ -430,9 +413,10 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                                      (LPCTSTR) m_strName,
                                      sName );
 
+  bool bResult = true;
+
   if (m_ScriptEngine->IsLua ())
     {
-    bool bResult;
     list<double> nparams;
     list<string> sparams;
     nparams.push_back (arg1);
@@ -449,8 +433,6 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                                 nInvocationCount,
                                 NULL, NULL, NULL,
                                 &bResult); 
-    m_pDoc->m_CurrentPlugin = pSavedPlugin;
-    return bResult;
     } // end of Lua
   else
     {
@@ -484,21 +466,17 @@ bool CPlugin::ExecutePluginScript (const char * sName,
                              nInvocationCount, 
                              &result);
 
-    m_pDoc->m_CurrentPlugin = pSavedPlugin;
-
     // see what result was
     if (result.vt != VT_EMPTY)
       {
       result.ChangeType (VT_I4);  // make a long
       if (result.vt == VT_I4)   // conversion successful
-        if (result.lVal)        // return if non-zero
-          return true;
-        else
-          return false;
+        bResult = result.lVal != 0;
       }  // end of having some sort of result
     }
 
-  return true; // assume they OK'd it
+  m_pDoc->m_CurrentPlugin = pSavedPlugin;
+  return bResult; 
 } // end of CPlugin::ExecutePluginScript
 
 void CPlugin::ExecutePluginScript (const char * sName, 

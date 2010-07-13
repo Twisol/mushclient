@@ -791,10 +791,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\plugins.h"
-				>
-			</File>
-			<File
 				RelativePath="ProcessPreviousLine.cpp"
 				>
 				<FileConfiguration
@@ -1191,6 +1187,10 @@
 			</File>
 			<File
 				RelativePath=".\paneline.h"
+				>
+			</File>
+			<File
+				RelativePath=".\plugins.h"
 				>
 			</File>
 			<File

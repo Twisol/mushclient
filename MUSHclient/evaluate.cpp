@@ -338,7 +338,8 @@ int iCount = GetTriggerArray ().GetSize ();    // how many there are
                                         false,    // expand wildcards
                                         true,     // convert regexps
                                         trigger_item->bRegexp,  // is it regexp or normal?
-                                        false);   // don't throw exceptions
+                                        false,         // don't throw exceptions
+                                        NULL);    // no name substitution in match text
 
         // all triggers are now regular expressions
         CString strRegexp; 
@@ -411,6 +412,11 @@ int iCount = GetTriggerArray ().GetSize ();    // how many there are
 
 // copy contents to output area, replacing %1, %2 etc. with appropriate contents
 
+    // get unlabelled trigger's internal name
+    const char * pLabel = trigger_item->strLabel;
+    if (pLabel [0] == '\0')
+       pLabel = trigger_item->strInternalName;
+
     output += FixSendText (::FixupEscapeSequences (trigger_item->contents), 
                             trigger_item->iSendTo,    // where it is going
                             trigger_item->regexp,     // regexp
@@ -420,7 +426,8 @@ int iCount = GetTriggerArray ().GetSize ();    // how many there are
                             true,      // expand wildcards
                             false,     // convert regexps
                             false,     // is it regexp or normal?
-                            false);    // don't throw exceptions
+                            false,         // don't throw exceptions
+                            pLabel);   
 
     break;   // break out of loop, we have a trigger match
 
@@ -837,6 +844,11 @@ bool CMUSHclientDoc::ProcessOneAliasSequence (const CString strCurrentLine,
     else
       Trace ("Matched alias %s", (LPCTSTR) alias_item->strLabel);
   
+    // get unlabelled alias's internal name
+    const char * pLabel = alias_item->strLabel;
+    if (pLabel [0] == 0)
+       pLabel = alias_item->strInternalName;
+
     // if we have to do parameter substitution on the alias, do it now
 
     CString strSendText;
@@ -854,7 +866,8 @@ bool CMUSHclientDoc::ProcessOneAliasSequence (const CString strCurrentLine,
                               true,      // expand wildcards
                               false,     // convert regexps
                               false,     // is it regexp or normal?
-                              true);     // throw exceptions
+                              true,         // throw exceptions
+                              pLabel);   
       }
 	  catch (CException* e)
 	    {
@@ -1013,6 +1026,7 @@ bool CMUSHclientDoc::ExecuteAliasScript (CAlias * alias_item,
 //      %<22> :  contents of wildcard 22
 //      %% :     %
 //      %C :     contents of (text) clipboard
+//      %N :     name of trigger / timer / alias
 
 // If bThrowExceptions is set certain conditions (such as variable not existing)
 // cause an exception to be thrown (eg. for alias handling), 
@@ -1028,7 +1042,8 @@ CString CMUSHclientDoc::FixSendText (const CString strSource,
                                      const bool bExpandWildcards,   // convert %x
                                      const bool bFixRegexps, // convert \ to \\ for instance
                                      const bool bIsRegexp,   // true = regexp trigger
-                                     const bool bThrowExceptions)
+                                     const bool bThrowExceptions,   // throw exception on error
+                                     const char * sName)            // the name of the trigger/timer/alias (for %N)
   {
 CString strOutput;   // result of expansion
 
@@ -1314,6 +1329,26 @@ const char * pText,
               pStartOfGroup = pText;
              }
              break; // end of %c
+
+/* -------------------------------------------------------------------- *
+ *  %N - name of the thing                                              *
+ * -------------------------------------------------------------------- */
+
+           case 'N':
+           case 'n':
+             {
+            // copy up to the percent sign
+              strOutput += CString (pStartOfGroup, pText - pStartOfGroup);
+
+              if (sName)
+                strOutput += sName;
+
+        // get ready for next batch from beyond the 'n'
+
+              pText += 2;
+              pStartOfGroup = pText;
+             }
+             break; // end of %n
 
 /* -------------------------------------------------------------------- *
  *  %(something else)                                                   *

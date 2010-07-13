@@ -22,89 +22,74 @@ static char BASED_CODE THIS_FILE[] = __FILE__;
 
 */
 
-// CLine constructor
-
 CLine::CLine (const long nLineNumber, 
               const unsigned int nWrapColumn,
               const unsigned short iFlags,      
-              const COLORREF       iForeColour,
-              const COLORREF       iBackColour,
-              const bool bUnicode
-              )
-  {
-  hard_return = false;
-  len = 0;
-  last_space = -1;
-  m_theTime = CTime::GetCurrentTime(); 
+              const COLORREF iForeColour,
+              const COLORREF iBackColour,
+              const bool bUnicode)
+  : hard_return(false), len(0), last_space(-1),
+    m_theTime(CTime::GetCurrentTime()), m_nLineNumber(nLineNumber),
+    iMemoryAllocated(nWrapColumn * (bUnicode ? 4 : 1)), // allocate 4 bytes per character for UTF-8
+    flags(0) // no special flags yet (ie. normal output line)
+{
   QueryPerformanceCounter (&m_lineHighPerformanceTime);
-  m_nLineNumber = nLineNumber;
-
-  if (bUnicode)
-    iMemoryAllocated = nWrapColumn * 4;
-  else
-    iMemoryAllocated = nWrapColumn;
-
-  // allocate 4 bytes per character for UTF-8
 
 #ifdef USE_REALLOC
   text = (char *) malloc (iMemoryAllocated);
-#else
-  text = new char [iMemoryAllocated];
-#endif
-  ASSERT (text);
   if (!text)
     AfxThrowMemoryException ();
-  flags = 0;      // no special flags yet (ie. normal output line)
-
-  CStyle * pStyle; 
+#else
+  try
+    {
+    text = new char [iMemoryAllocated];
+    }
+  catch (bad_alloc&)
+    {
+    AfxThrowMemoryException ();
+    }
+#endif
 
   // have at least one style item in the list
-  styleList.AddTail (pStyle = NEWSTYLE);
-
+  CStyle * pStyle = NEWSTYLE;
   pStyle->iFlags = iFlags;
   pStyle->iForeColour = iForeColour;
   pStyle->iBackColour = iBackColour;
 
-  }   // end of CLine::CLine
+  styleList.AddTail (pStyle);
+}
 
 // CLine destructor
 
 CLine::~CLine ()
-  {
+{
 #ifdef USE_REALLOC
   free (text);
 #else
   delete [] text;
 #endif
 
-// delete styles list
-
+  // delete styles list
   for (POSITION pos = styleList.GetHeadPosition(); pos; )
-      DELETESTYLE (styleList.GetNext (pos));
-  
-  styleList.RemoveAll();
+    DELETESTYLE (styleList.GetNext (pos));
 
-  }
+  styleList.RemoveAll();
+}
 
 // for tracking down style allocation errors
-
 CStyle * GetNewStyle (const char * filename, const long linenumber)
   {
   CStyle * pNewStyle = new CStyle;
   TRACE3 ("new CStyle at %p at file %s line %ld\n",
-          pNewStyle,
-          filename,
-          linenumber);
-
+      pNewStyle, filename, linenumber
+      );
   return pNewStyle;
-  }
+}
 
 void DeleteStyle (CStyle * pStyle, const char * filename, const long linenumber)
-  {
+{
   TRACE3 ("delete CStyle at %p at file %s line %ld\n",
-          pStyle,
-          filename,
-          linenumber);
-
+      pStyle, filename, linenumber
+      );
   delete pStyle;
-  }
+}

@@ -11,7 +11,8 @@ static char BASED_CODE THIS_FILE[] = __FILE__;
 
 t_regexp::t_regexp(const char* pattern, const int flags)
   : m_program(NULL), m_extra(NULL), iTimeTaken(0),
-    m_iCount(0), m_iExecutionError(0)
+    m_iCount(0), m_iExecutionError(0),
+    m_iMatchAttempts(0)
 {
   this->Compile(pattern, flags);
 }
@@ -102,7 +103,9 @@ void t_regexp::Compile(const char* pattern, const int flags)
 
   this->ReleasePattern(); // Release previous pattern
   this->AcquirePattern(program, extra);
+
   this->m_iExecutionError = 0; // Start with no error
+  this->m_iMatchAttempts = 0;
   // leave the time taken alone
 }
 
@@ -138,6 +141,8 @@ bool t_regexp::Execute(const char *string, const int start_offset)
     this->iTimeTaken += finish.QuadPart - start.QuadPart;
     }
 
+  this->m_iMatchAttempts += 1; // how many times did we try to match?
+
   if (count == PCRE_ERROR_NOMATCH)
     return false; // no match  - don't save matching string etc.
   else if (count < 0)
@@ -166,6 +171,11 @@ bool t_regexp::Execute(const char *string, const int start_offset)
 LONGLONG t_regexp::TimeTaken() const
 {
   return this->iTimeTaken;
+}
+
+long t_regexp::MatchAttempts() const
+{
+  return this->m_iMatchAttempts;
 }
 
 string t_regexp::LastTarget() const

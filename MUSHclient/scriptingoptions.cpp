@@ -71,7 +71,24 @@ tConfigurationNumericOption OptionsTable [] = {
 {"ctrl_n_goes_to_next_command",         false, O(m_bCtrlNGoesToNextCommand)},           
 {"ctrl_p_goes_to_previous_command",     false, O(m_bCtrlPGoesToPreviousCommand)},       
 {"ctrl_z_goes_to_end_of_buffer",        false, O(m_bCtrlZGoesToEndOfBuffer)},
-{"custom_16_is_default_colour",         false, O(m_bCustom16isDefaultColour), 0, 0, OPT_UPDATE_VIEWS},           
+{"custom_16_is_default_colour",         false, O(m_bCustom16isDefaultColour), 0, 0, OPT_UPDATE_VIEWS},  
+
+{"default_trigger_send_to",              eSendToWorld, O(m_iDefaultTriggerSendTo), eSendToWorld, eSendToLast - 1},                      
+{"default_trigger_sequence",             DEFAULT_TRIGGER_SEQUENCE, O(m_iDefaultTriggerSequence), 0, 10000},                      
+{"default_trigger_regexp",               false, O(m_bDefaultTriggerRegexp)},                      
+{"default_trigger_expand_variables",     false, O(m_bDefaultTriggerExpandVariables)},                      
+{"default_trigger_keep_evaluating",      false, O(m_bDefaultTriggerKeepEvaluating)},                      
+{"default_trigger_ignore_case",          false, O(m_bDefaultTriggerIgnoreCase)},                      
+
+{"default_alias_send_to",                eSendToWorld, O(m_iDefaultAliasSendTo), eSendToWorld, eSendToLast - 1},                      
+{"default_alias_sequence",               DEFAULT_ALIAS_SEQUENCE, O(m_iDefaultAliasSequence), 0, 10000},                      
+{"default_alias_regexp",                 false, O(m_bDefaultAliasRegexp)},                      
+{"default_alias_expand_variables",       false, O(m_bDefaultAliasExpandVariables)},                      
+{"default_alias_keep_evaluating",        false, O(m_bDefaultAliasKeepEvaluating)},                      
+{"default_alias_ignore_case",            false, O(m_bDefaultAliasIgnoreCase)},                      
+
+{"default_timer_send_to",                eSendToWorld, O(m_iDefaultTimerSendTo), eSendToWorld, eSendToLast - 1},                      
+         
 {"detect_pueblo",                       true,  O(m_bPueblo)},
 {"do_not_add_macros_to_command_history",false, O(m_bDoNotAddMacrosToCommandHistory)}, 
 {"do_not_show_outstanding_lines",       false, O(m_bDoNotShowOutstandingLines)},

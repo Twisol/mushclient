@@ -21,8 +21,8 @@
 
 // New versions - things to change
 
-#define THISVERSION 453                       // Step 1.
-const CString MUSHCLIENT_VERSION = "4.53";    // Step 2.
+#define THISVERSION 454                       // Step 1.
+const CString MUSHCLIENT_VERSION = "4.54";    // Step 2.
 // Step 3. Don't forget VERSION resource in Resources tab
 // Step 4. Remember: README.TXT 
 
@@ -833,6 +833,24 @@ public:
   unsigned short m_bDoNotAddMacrosToCommandHistory;    // macros not into command history
   unsigned short m_bSendKeepAlives;            // set the socket option SO_KEEPALIVE on the TCP/IP connections
 
+  // version 4.54
+
+  unsigned short m_iDefaultTriggerSendTo;            // default send-to location for triggers
+  unsigned short m_iDefaultTriggerSequence;          // default sequence for triggers
+  unsigned short m_bDefaultTriggerRegexp;            // default regular expression flag for triggers
+  unsigned short m_bDefaultTriggerExpandVariables;   // default expand-variables flag for triggers
+  unsigned short m_bDefaultTriggerKeepEvaluating;    // default keep-evaluating flag for triggers
+  unsigned short m_bDefaultTriggerIgnoreCase;        // default ignore-case flag for triggers
+
+  unsigned short m_iDefaultAliasSendTo;              // default send-to location for aliases
+  unsigned short m_iDefaultAliasSequence;            // default sequence for aliases
+  unsigned short m_bDefaultAliasRegexp;              // default regular expression flag for aliases
+  unsigned short m_bDefaultAliasExpandVariables;     // default expand-variables flag for aliases
+  unsigned short m_bDefaultAliasKeepEvaluating;      // default keep-evaluating flag for aliases
+  unsigned short m_bDefaultAliasIgnoreCase;          // default ignore-case flag for aliases
+                                                    
+  unsigned short m_iDefaultTimerSendTo;              // default send-to location for timers
+
   // end of stuff saved to disk **************************************************************
 
   // stuff from pre version 11, read from disk but not saved
@@ -1247,6 +1265,8 @@ public:
   // for mapping colours to colours
   map<COLORREF, COLORREF> m_ColourTranslationMap;
 
+  list<CPaneStyle> m_OutstandingLines;
+
 #ifdef PANE
   // for pane windows
 
@@ -1434,6 +1454,7 @@ public:
 
   BOOL OpenSession (void);
   void SetUpOutputWindow (void);
+  void OutputOutstandingLines (void);
 
   bool m_bInPlaySoundFilePlugin;
   bool m_bInCancelSoundFilePlugin;

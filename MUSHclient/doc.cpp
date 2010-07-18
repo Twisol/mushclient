@@ -674,6 +674,43 @@ static void zlib_free (void * opaque, void * address)
 */
 
 
+void CMUSHclientDoc::OutputOutstandingLines ()
+{
+  if (m_OutstandingLines.empty ())
+    return;
+
+  // save old colours
+  bool bOldNotesInRGB = m_bNotesInRGB;
+  COLORREF iOldNoteColourFore = m_iNoteColourFore;
+  COLORREF iOldNoteColourBack = m_iNoteColourBack;
+  unsigned short iOldNoteStyle = m_iNoteStyle;
+
+  m_bNotesInRGB = true;
+
+  // output saved lines
+
+  list<CPaneStyle>::iterator it;
+  for (it = m_OutstandingLines.begin (); it != m_OutstandingLines.end (); ++it)
+    {
+    m_iNoteColourFore = it->m_cText;
+    m_iNoteColourBack = it->m_cBack;
+    m_iNoteStyle = it->m_iStyle;
+    Tell (it->m_sText.c_str ());
+    }
+
+  m_OutstandingLines.clear ();
+
+  // put the colours back
+  if (bOldNotesInRGB)
+    {
+    m_iNoteColourFore = iOldNoteColourFore;
+    m_iNoteColourBack = iOldNoteColourBack;
+    }
+  else
+    m_bNotesInRGB = false;
+
+  m_iNoteStyle = iOldNoteStyle;
+}
 
 void CMUSHclientDoc::SetUpOutputWindow ()
 {
@@ -729,6 +766,9 @@ void CMUSHclientDoc::SetUpOutputWindow ()
   Hyperlink (MUSHCLIENT_FORUM_URL, FORUM_URL, Translate ("Go to forum"), 
              "deepskyblue", "black", TRUE);
   Note ("");
+
+  // output stuff that appeared before we set up the output buffer
+  OutputOutstandingLines ();
 
   // set output window(s) to "pause" if wanted
   POSITION pos = GetFirstViewPosition();
@@ -789,7 +829,7 @@ void CMUSHclientDoc::SetUpOutputWindow ()
   catch (CArchiveException* e) 
     {
     UMessageBox (TFormat (
-        "There was a problem loading the plugin %s. See the error window for more details",
+        "There was a problem loading the plugin %s. See the output window for more details",
         (LPCTSTR) strPath),
         MB_ICONEXCLAMATION);
     e->Delete ();
@@ -7159,14 +7199,14 @@ void CMUSHclientDoc::EditFileWithEditor (CString strName)
 {
   CString strArgument = m_strScriptEditorArgument;
   if (strArgument.IsEmpty ())
-    strArgument = "%file";          // default
+    strArgument = "\"%file\"";          // default
 
-  // replace %file%
+  // replace %file
   strArgument.Replace ("%file", strName);
 
   HINSTANCE hInst = ShellExecute (
       Frame, _T("open"), m_strScriptEditor, 
-      CFormat ("\"%s\"", (LPCTSTR) strArgument),   // quote argument
+      strArgument, // argument
       NULL, SW_SHOWNORMAL
       );
 

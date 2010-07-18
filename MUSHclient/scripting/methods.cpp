@@ -232,13 +232,15 @@ void CMUSHclientDoc::Note(LPCTSTR Message)
 
 void CMUSHclientDoc::Tell(LPCTSTR Message) 
 {
-  // return if attempt to do tell (or note) before output buffer exists
-  if (m_pCurrentLine == NULL)
-    return;
-
   // don't muck around if empty message
   if (Message [0] == 0)
     return;
+
+  if (m_pCurrentLine == NULL)
+    {
+    m_OutstandingLines.push_back (CPaneStyle (Message, m_iNoteColourFore, m_iNoteColourBack, m_iNoteStyle));
+    return;
+    }
 
   // If current line is not a note line, force a line change (by displaying
   // an empty string), so that the style change is on the note line and not
@@ -2049,6 +2051,12 @@ VARIANT CMUSHclientDoc::GetAliasInfo(LPCTSTR AliasName, short InfoType)
       break;
     case   29: SetUpVariantBool   (vaResult, alias_item->bOneShot); break;
 
+    case   30:
+      if (alias_item->regexp && App.m_iCounterFrequency)
+        SetUpVariantDouble (vaResult, ((double) alias_item->regexp->TimeTaken()) /
+            ((double) App.m_iCounterFrequency));
+      break;
+
     case 101: SetUpVariantString (vaResult, alias_item->wildcards [1].c_str ()); break;
     case 102: SetUpVariantString (vaResult, alias_item->wildcards [2].c_str ()); break;
     case 103: SetUpVariantString (vaResult, alias_item->wildcards [3].c_str ()); break;
@@ -2137,8 +2145,19 @@ VARIANT CMUSHclientDoc::GetTriggerInfo(LPCTSTR TriggerName, short InfoType)
       break;
     case   36: SetUpVariantBool   (vaResult, trigger_item->bOneShot); break;
 
+    case   37:
+      if (trigger_item->regexp && App.m_iCounterFrequency)
+        SetUpVariantDouble (vaResult, ((double) trigger_item->regexp->TimeTaken()) /
+            ((double) App.m_iCounterFrequency));
+      break;
+
+    case   38:
+      if (trigger_item->regexp)
+        SetUpVariantLong (vaResult, ((double) trigger_item->regexp->MatchAttempts()));
+      break;
+
 #ifdef PANE
-    case  37: SetUpVariantString (vaResult, trigger_item->strPane); break;
+    case  38: SetUpVariantString (vaResult, trigger_item->strPane); break;
 #endif // PANE
 
     case 101: SetUpVariantString (vaResult, trigger_item->wildcards [1].c_str ()); break;

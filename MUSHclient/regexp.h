@@ -39,6 +39,7 @@ class t_regexp
     bool Execute(const char *string, const int start_offset = 0);
 
     LONGLONG TimeTaken() const;
+    long MatchAttempts() const;
 
     string LastTarget() const;
 
@@ -59,11 +60,12 @@ class t_regexp
     // the string we last matched on (to extract wildcards from)
     string m_sTarget;
 
-    int m_iCount;           // count of matches
+    int m_iCount;           // count of matching wildcards
     vector<int> m_vOffsets; // pairs of offsets from match
 
     int m_iExecutionError;  // error code if failed execution
     LONGLONG iTimeTaken;
+    long m_iMatchAttempts;
 
     int GetFirstSet(const char* name) const; // for duplicate named wildcards
 

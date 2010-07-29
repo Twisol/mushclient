@@ -674,10 +674,8 @@ BOOL CPluginWizardPage7::OnInitDialog()
   else if (m_strLanguage.CompareNoCase ("tclscript") == 0)
     nItem = 4;
 #endif
-#ifdef USE_LUA
   else if (m_strLanguage.CompareNoCase ("lua") == 0)
     nItem = 5;
-#endif
 #ifdef USE_PHP
   else if (m_strLanguage.CompareNoCase ("phpscript") == 0)
     nItem = 6;
@@ -710,9 +708,7 @@ void CPluginWizardPage7::OnOK()
 #ifdef USE_TCL
     case SCRIPT_TCL:        m_strLanguage = "TclScript";  break;
 #endif
-#ifdef USE_LUA
     case SCRIPT_LUA:        m_strLanguage = "Lua";        break;
-#endif
 #ifdef USE_PHP
     case SCRIPT_PHP:        m_strLanguage = "PhpScript";  break;
 #endif

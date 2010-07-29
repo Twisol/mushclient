@@ -4814,7 +4814,8 @@ VARIANT CMUSHclientDoc::GetPluginInfo(LPCTSTR PluginID, short InfoType)
       break;
       }
 
-    case 22: SetUpVariantDate (vaResult, COleDateTime (pPlugin->m_tDateInstalled.GetTime ()));  break;
+    case 22: SetUpVariantDate   (vaResult, COleDateTime (pPlugin->m_tDateInstalled.GetTime ())); break;
+    case 23: SetUpVariantString (vaResult, pPlugin->m_strCallingPluginID); break;
 
     default:
       vaResult.vt = VT_NULL;
@@ -5023,7 +5024,13 @@ long CMUSHclientDoc::CallPlugin(LPCTSTR PluginID, LPCTSTR Routine, LPCTSTR Argum
 
   // do this so plugin can find its own state (eg. with GetPluginID)
   CPlugin * pSavedPlugin = m_CurrentPlugin; 
-  m_CurrentPlugin = pPlugin;   
+  m_CurrentPlugin = pPlugin;
+
+  CString strOldCallingPluginID = pPlugin->m_strCallingPluginID;
+  if (m_CurrentPlugin)
+    pPlugin->m_strCallingPluginID = m_CurrentPlugin->m_strID;
+  else
+    pPlugin->m_strCallingPluginID.Empty ();
 
   CString strType = TFormat ("Plugin %s", (LPCTSTR) pPlugin->m_strName); 
   CString strReason = TFormat ("Executing plugin %s sub %s", 
@@ -5069,6 +5076,7 @@ long CMUSHclientDoc::CallPlugin(LPCTSTR PluginID, LPCTSTR Routine, LPCTSTR Argum
     } // not Lua
 
   m_CurrentPlugin = pSavedPlugin;
+  pPlugin->m_strCallingPluginID = strOldCallingPluginID;
 
   if (iDispid == DISPID_UNKNOWN)
     return eErrorCallingPluginRoutine;

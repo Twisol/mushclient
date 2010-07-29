@@ -6234,12 +6234,10 @@ BOOL CPrefsP17::ScriptBrowser (BOOL bLoad)
       strPrompt = "Tcl source files (*.tcl)|*.tcl";
       break;
 #endif
-#ifdef USE_LUA
     case SCRIPT_LUA:
       strSubscript = "lua"; 
       strPrompt = "Lua source files (*.lua)|*.lua";
       break;
-#endif
 #ifdef USE_PHP
     case SCRIPT_PHP:
       strSubscript = "phpscript"; 

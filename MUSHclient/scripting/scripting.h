@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef USE_LUA
-
 extern "C"
   {
   #include "lua\lua.h"
@@ -22,8 +20,6 @@ void LuaError (lua_State *L,
                LPCTSTR strReason = "",
                CMUSHclientDoc * pDoc = NULL);
 
-#endif // USE_LUA
-
 class CScriptEngine : public CObject
   {
 
@@ -37,9 +33,7 @@ class CScriptEngine : public CObject
       m_IActiveScriptParse = NULL;
       m_site = NULL;
       m_pDispatch = NULL;
-#ifdef USE_LUA
       L = NULL;
-#endif // USE_LUA
       };  // end of constructor
 
     ~CScriptEngine () // destructor
@@ -65,8 +59,6 @@ class CScriptEngine : public CObject
                 );
   bool ShowError (const HRESULT result, const CString strMsg);
   void DisableScripting (void);
-
-#ifdef USE_LUA
 
   void OpenLua ();
   void OpenLuaDelayed ();
@@ -103,8 +95,6 @@ class CScriptEngine : public CObject
 
   const bool IsLua () const { return L != NULL; }
   lua_State           * L;                  // Lua state
-
-#endif // USE_LUA
 
   private:
 

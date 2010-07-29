@@ -8,8 +8,6 @@
 #include "pcre\config.h"
 #include "pcre\pcre_internal.h"
 
-#ifdef USE_LUA
-
 set<string> LuaFunctionsSet;
 set<string> LuaTablesSet;
 
@@ -958,5 +956,3 @@ int win_io_pclose (lua_State *L) {
 }
 
 #endif // POPEN_STUFF_WHICH_DOESNT_WORK
-
-#endif  // USE_LUA

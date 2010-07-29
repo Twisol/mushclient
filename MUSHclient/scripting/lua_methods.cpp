@@ -9,8 +9,6 @@
 #include "..\sendvw.h"
 #include "..\dialogs\DebugLuaDlg.h"
 
-#ifdef USE_LUA
-
 const char mushclient_typename[] = "mushclient.world";
 
 /*------------------------------------------------------------------------
@@ -1007,7 +1005,7 @@ static int L_CallPlugin (lua_State *L)
     return 2;
     }
 
-  // new in 4.55 - Lua to Lua calls can handle multiple arguments and a return value
+  // new in 4.55 - Lua to Lua calls can handle multiple arguments and multiple return value
 
   // don't need to check *our* scripting language, we must be Lua, duh, or we wouldn't be here.
   if (pPlugin->m_ScriptEngine->IsLua())
@@ -1083,6 +1081,12 @@ static int L_CallPlugin (lua_State *L)
     unsigned short iOldStyle = pDoc->m_iNoteStyle;
     pDoc->m_iNoteStyle = NORMAL; // back to default style
 
+    CString strOldCallingPluginID = pPlugin->m_strCallingPluginID;
+    if (pDoc->m_CurrentPlugin)
+      pPlugin->m_strCallingPluginID = pDoc->m_CurrentPlugin->m_strID;
+    else
+      pPlugin->m_strCallingPluginID.Empty ();
+
     // do this so plugin can find its own state (eg. with GetPluginID)
     CPlugin * pSavedPlugin = pDoc->m_CurrentPlugin;
     pDoc->m_CurrentPlugin = pPlugin;
@@ -1108,6 +1112,7 @@ static int L_CallPlugin (lua_State *L)
       lua_pushstring (L, lua_tostring (pL, -1)); // original error
 
       lua_settop (pL, 0); // clean other stack up
+      pPlugin->m_strCallingPluginID = strOldCallingPluginID;
 
       return 3;
       }
@@ -1115,6 +1120,7 @@ static int L_CallPlugin (lua_State *L)
     // back to who *we* are (if no error)
     pDoc->m_CurrentPlugin = pSavedPlugin;
     pDoc->m_iNoteStyle = iOldStyle;
+    pPlugin->m_strCallingPluginID = strOldCallingPluginID;
 
     int ret_n = lua_gettop (pL);  // number of returned values (might be zero)
     if (pL == L)
@@ -7545,5 +7551,3 @@ int DisableDLLs (lua_State * L)
   lua_settop(L, 0);   // clear stack
   return 0;
 } // end of DisableDLLs
-
-#endif  // LUA

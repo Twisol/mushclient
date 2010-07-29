@@ -88,6 +88,7 @@ static tGlobalConfigurationAlphaOption AlphaGlobalOptionsTable  [] = {
 { GLB_ALPHA_OPT (m_strNotepadQuoteString       ), "NotepadQuoteString",     "> " },                    
 { GLB_ALPHA_OPT (m_strPluginList               ), "PluginList",                  "" },
 { GLB_ALPHA_OPT (m_strPluginsDirectory         ), "PluginsDirectory", ".\\worlds\\plugins\\" },
+{ GLB_ALPHA_OPT (m_strDefaultStateFilesDirectory), "StateFilesDirectory", ".\\worlds\\plugins\\state\\" },   // however see below
 { GLB_ALPHA_OPT (m_strPrinterFont              ), "PrinterFont",                "Courier" },
 { GLB_ALPHA_OPT (m_strTrayIconFileName         ), "TrayIconFileName",  "" },                    
 { GLB_ALPHA_OPT (m_strWordDelimiters           ), "WordDelimiters",         ".,()[]\"\'" },
@@ -135,6 +136,10 @@ int CMUSHclientApp::PopulateDatabase (void)
         strcmp (AlphaGlobalOptionsTable [i].pName, "FixedPitchFont") == 0)
        AlphaGlobalOptionsTable [i].sDefault = (LPCTSTR) m_strFixedPitchFont;
     
+    // For Willfa, see below
+    if (strcmp (AlphaGlobalOptionsTable [i].pName, "StateFilesDirectory") == 0)
+       AlphaGlobalOptionsTable [i].sDefault = (LPCTSTR) (App.m_strPluginsDirectory + "state\\");
+
     CString strValue = GetProfileString ("Global prefs",  
                                 AlphaGlobalOptionsTable [i].pName, 
                                 AlphaGlobalOptionsTable [i].sDefault);
@@ -158,6 +163,13 @@ void CMUSHclientApp::LoadGlobalsFromDatabase (void)
   {
   int i;
   string db_value;
+
+  // for Willfa - make state directory default to plugins directory (whatever that is now) with state\ at the end
+  for (i = 0; AlphaGlobalOptionsTable [i].pName; i++)
+    {
+    if (strcmp (AlphaGlobalOptionsTable [i].pName, "StateFilesDirectory") == 0)
+       AlphaGlobalOptionsTable [i].sDefault = (LPCTSTR) (App.m_strPluginsDirectory + "state\\");
+    }
 
   for (i = 0; GlobalOptionsTable [i].pName; i++)
     {
@@ -251,9 +263,7 @@ void CMUSHclientApp::SaveGlobalsToDatabase (void)
     const char * p = (const char *) this +  GlobalOptionsTable [i].iOffset;
     const int Value = * (const long *) p;
 
-
-    db_rc = db_execute ((LPCTSTR) CFormat ("UPDATE prefs SET value = %i WHERE name = '%s'",
-                        Value, GlobalOptionsTable [i].pName), true);
+    db_rc = db_write_int ("prefs", GlobalOptionsTable [i].pName, Value);
 
     if (db_rc != SQLITE_OK)
       break;
@@ -265,12 +275,9 @@ void CMUSHclientApp::SaveGlobalsToDatabase (void)
       {
       const char * p = (const char *) this +  AlphaGlobalOptionsTable [i].iOffset;
       CString strValue = * (CString *) p;
-    
-      strValue.Replace ("'", "''");  // fix up quotes
 
-      db_rc = db_execute ((LPCTSTR) CFormat ("UPDATE prefs SET value = '%s' WHERE name = '%s'",
-                          (LPCTSTR) strValue, AlphaGlobalOptionsTable [i].pName), true);
-
+      db_rc = db_write_string ("prefs", AlphaGlobalOptionsTable [i].pName, (LPCTSTR) strValue);
+      
       if (db_rc != SQLITE_OK)
         break;
 

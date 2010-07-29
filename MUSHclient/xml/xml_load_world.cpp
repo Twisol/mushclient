@@ -557,7 +557,7 @@ LONGLONG iCounterFrequency = large_int_frequency.QuadPart;
     m_CurrentPlugin = pCurrentPlugin;   
     if (iLineLastItemFound == 0)
       iLineLastItemFound = parser.m_xmlLine;
-    HandleLoadException ("problem in this file", e);
+    HandleLoadException ("Cannot load", e);
     AfxThrowArchiveException (CArchiveException::badSchema);
     }
 
@@ -567,7 +567,7 @@ LONGLONG iCounterFrequency = large_int_frequency.QuadPart;
 void CMUSHclientDoc::LoadError (const char * sType, const char * sMessage, UINT iLine)
   {
 
-  CString strTitle = "XML import warnings - ";
+  CString strTitle = "[WARNING] ";
   strTitle += strFileName;
 
   ColourNote (SCRIPTERRORFORECOLOUR, SCRIPTERRORBACKCOLOUR, strTitle);
@@ -694,7 +694,7 @@ POSITION lpos;
       }
     catch (CException* e)
       {
-      HandleLoadException ("include file not loaded", e);
+      HandleLoadException ("Not loaded", e);
       } // end of catch
 
     CheckUsed (*pIncludeElement);
@@ -783,7 +783,7 @@ bool bPlugin;
         {
         // don't include it twice
         if (m_strCurrentIncludeFileList.Find (strFileName))
-          ThrowErrorException ("Include file \"%s\" has already been included.",
+          ThrowErrorException ("File \"%s\" has already been included.",
                                 (LPCTSTR) strFileName);
 
         m_strCurrentIncludeFileList.AddTail (strFileName);
@@ -817,7 +817,7 @@ bool bPlugin;
         catch (CArchiveException* e)
           {
           e->Delete ();
-          ThrowErrorException ("Error processing include file \"%s\"",
+          ThrowErrorException ("Error in file \"%s\"",
                                (LPCTSTR) strFileName);
           } // end of catch
 
@@ -2323,7 +2323,7 @@ void CMUSHclientDoc::Load_Plugin_XML (CXMLelement & parent)
         {
         CPlugin * p = *itr;
         if (m_CurrentPlugin->m_strID == p->m_strID)
-           ThrowErrorException ("Plugin \"id\" field must be unique for this world");
+           ThrowErrorException ("The plugin '%s' is already loaded.", p->m_strName);
         }      // end of looping through each plugins
 
       // check language
@@ -2367,7 +2367,7 @@ void CMUSHclientDoc::Load_Plugin_XML (CXMLelement & parent)
         CArchive * ar = NULL;
         CXMLparser parser;
 
-        strFileName = CString (Make_Absolute_Path (App.m_strPluginsDirectory)) + "state\\";
+        strFileName = CString (Make_Absolute_Path (App.m_strDefaultStateFilesDirectory));
         // need a directory
           
         if (App.m_strPluginsDirectory.IsEmpty ())

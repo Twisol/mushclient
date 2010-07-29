@@ -21,8 +21,8 @@
 
 // New versions - things to change
 
-#define THISVERSION 454                       // Step 1.
-const CString MUSHCLIENT_VERSION = "4.54";    // Step 2.
+#define THISVERSION 455                       // Step 1.
+const CString MUSHCLIENT_VERSION = "4.55";    // Step 2.
 // Step 3. Don't forget VERSION resource in Resources tab
 // Step 4. Remember: README.TXT 
 
@@ -914,9 +914,10 @@ public:
                   // cleared if we get IAC WONT ECHO
   bool m_bDebugIncomingPackets;   // set if we want to display all incoming text
 
-  __int64 m_iInputPacketCount;   // count of packets received
-  __int64 m_iOutputPacketCount;   // count of packets sent
-  long m_iUTF8ErrorCount;      // count of lines with bad UTF8
+  __int64 m_iInputPacketCount;       // count of packets received
+  __int64 m_iOutputPacketCount;      // count of packets sent
+  long m_iUTF8ErrorCount;            // count of lines with bad UTF8
+  long m_iOutputWindowRedrawCount;   // count of times output window redrawn
 
   long m_iTriggersEvaluatedCount;    // how many triggers we evaluated
   long m_iTriggersMatchedCount;      // how many triggers matched
@@ -1266,6 +1267,12 @@ public:
   map<COLORREF, COLORREF> m_ColourTranslationMap;
 
   list<CPaneStyle> m_OutstandingLines;
+
+  long m_nCount_IAC_DO;         // count of IAC DO we got
+  long m_nCount_IAC_DONT;       // count of IAC DONT we got
+  long m_nCount_IAC_WILL;       // count of IAC WILL we got
+  long m_nCount_IAC_WONT;       // count of IAC WONT we got
+  long m_nCount_IAC_SB;         // count of IAC SB x IAC SE we got
 
 #ifdef PANE
   // for pane windows

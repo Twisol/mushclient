@@ -964,9 +964,214 @@ static int L_BroadcastPlugin (lua_State *L)
 static int L_CallPlugin (lua_State *L)
 {
   CMUSHclientDoc *pDoc = doc (L);
+  const char * sPluginID = my_checkstring (L, 1);
+  const char * sRoutine = my_checkstring (L, 2);
+  int i; // for iterating through arguments / return values
+
+  // preliminary checks ...
+
+  // function name given?
+  if (sRoutine[0] == '\0')
+    {
+    lua_pushnumber (L, eNoSuchRoutine);
+    lua_pushstring (L, "No function name supplied");
+    return 2;
+    }
+
+  // plugin exists?
+  CPlugin * pPlugin = pDoc->GetPlugin (sPluginID);
+  if (!pPlugin)
+    {
+    lua_pushnumber (L, eNoSuchPlugin);
+    lua_pushstring (L, TFormat ("Plugin ID (%s) is not installed", sPluginID));
+    return 2;
+    }
+
+  // plugin is enabled?
+  if (!pPlugin->m_bEnabled)
+    {
+    lua_pushnumber (L, ePluginDisabled);
+    lua_pushstring (L, TFormat ("Plugin '%s' (%s) disabled",
+        (LPCTSTR) pPlugin->m_strName,
+        sPluginID));
+    return 2;
+    }
+
+  // plugin has a script engine?
+  if (pPlugin->m_ScriptEngine == NULL)
+    {
+    lua_pushnumber (L, eNoSuchRoutine);
+    lua_pushstring (L, TFormat ("Scripting not enabled in plugin '%s' (%s)",
+        (LPCTSTR) pPlugin->m_strName,
+        sPluginID));
+    return 2;
+    }
+
+  // new in 4.55 - Lua to Lua calls can handle multiple arguments and a return value
+
+  // don't need to check *our* scripting language, we must be Lua, duh, or we wouldn't be here.
+  if (pPlugin->m_ScriptEngine->IsLua())
+    {
+    int n = lua_gettop(L); // number of arguments in calling script
+
+    lua_State *pL = pPlugin->m_ScriptEngine->L; // plugin's Lua state
+
+    // don't clear if we are calling ourselves
+    if (pL != L)
+      lua_settop (pL, 0); // clear stack in target plugin
+
+    // get wanted function onto stack
+    if (!GetNestedFunction (pL, sRoutine, false)) // don't raise error
+      {
+      lua_pushnumber (L, eNoSuchRoutine);
+      lua_pushstring (L, TFormat ("No function '%s' in plugin '%s' (%s)",
+          sRoutine,
+          (LPCTSTR) pPlugin->m_strName,
+          sPluginID));
+      return 2;
+      }
+
+    // if we are calling ourselves, don't make a copy of everything
+    if (pL == L)
+      lua_insert (L, 3);
+    else
+      {
+      // copy all our arguments to destination script space
+      // we can handle: nil, boolean, number, string
+      // but NOT: table, function, userdata, thread
+
+      // check we can push our arguments.
+      // we have (n - 2) arguments (first two are the plugin ID and the function name)
+      // however we need room for the function itself and at least room for the return value
+      lua_checkstack (pL, n);
+
+      // arg 1 is plugin ID, arg 2 is function name, so start at 3
+      for (i = 3; i <= n; ++i)
+        {
+        switch (lua_type (L, i))
+          {
+          case LUA_TNIL:
+            lua_pushnil (pL);
+            break;
+          case LUA_TBOOLEAN:
+            lua_pushboolean (pL, lua_toboolean (L, i));
+            break;
+          case LUA_TNUMBER:
+            lua_pushnumber (pL, lua_tonumber (L, i));
+            break;
+          case LUA_TSTRING:
+            {
+            size_t len;
+            const char * s = lua_tolstring (L, i, &len);
+            lua_pushlstring (pL, s, len);
+            break;
+            }
+
+          // not one of those? bail out, we can't handle it
+          default:
+            lua_settop (pL, 0); // clear target plugin's stack to remove whatever we pushed onto it
+
+            lua_pushnumber (L, eBadParameter);
+            lua_pushstring (L, TFormat ("Cannot pass argument #%i (%s type) to CallPlugin",
+                i,
+                lua_typename (L, lua_type (L, i))));
+            return 2;
+          }
+        }
+      }
+
+    unsigned short iOldStyle = pDoc->m_iNoteStyle;
+    pDoc->m_iNoteStyle = NORMAL; // back to default style
+
+    // do this so plugin can find its own state (eg. with GetPluginID)
+    CPlugin * pSavedPlugin = pDoc->m_CurrentPlugin;
+    pDoc->m_CurrentPlugin = pPlugin;
+
+    // now call the routine in the plugin
+    if (CallLuaWithTraceBack (pL, n - 2, LUA_MULTRET)) // true on error
+      {
+      // here for execution error in plugin function ...
+      LuaError (pL, "Run-time error", sRoutine,
+          TFormat ("Plugin %s", (LPCTSTR) pPlugin->m_strName),
+          TFormat ("Executing plugin %s sub %s", (LPCTSTR) pPlugin->m_strName, sRoutine)
+          );
+
+      // back to who *we* are (had to wait until after LuaError)
+      pDoc->m_CurrentPlugin = pSavedPlugin;
+      pDoc->m_iNoteStyle = iOldStyle;
+
+      // return values
+      lua_pushnumber (L, eErrorCallingPluginRoutine);
+      lua_pushstring (L, TFormat ("Runtime error in function '%s', plugin '%s' (%s)",
+          sRoutine,
+          (LPCTSTR) pPlugin->m_strName, sPluginID));
+      lua_pushstring (L, lua_tostring (pL, -1)); // original error
+
+      lua_settop (pL, 0); // clean other stack up
+
+      return 3;
+      }
+
+    // back to who *we* are (if no error)
+    pDoc->m_CurrentPlugin = pSavedPlugin;
+    pDoc->m_iNoteStyle = iOldStyle;
+
+    int ret_n = lua_gettop (pL);  // number of returned values (might be zero)
+    if (pL == L)
+      {
+      lua_insert (L, 3); // put return code as third item (after plugin ID, function name), pushing others up
+      return 1 + ret_n - 2; // eOK plus all returned values, minus plugin ID and function name
+      }
+
+    lua_checkstack (L, ret_n + 1);  // check we can push eOK plus all the return results
+
+    // copy return results back to original script space
+    // we can handle: nil, boolean, number, string
+    // but NOT: table, function, userdata, thread
+    for (i = 1; i <= ret_n; ++i)
+      {
+      switch (lua_type (pL, i))
+        {
+        case LUA_TNIL:
+          lua_pushnil (L);
+          break;
+        case LUA_TBOOLEAN:
+          lua_pushboolean (L, lua_toboolean (pL, i));
+          break;
+        case LUA_TNUMBER:
+          lua_pushnumber (L, lua_tonumber (pL, i));
+          break;
+        case LUA_TSTRING:
+          {
+          size_t len;
+          const char * s = lua_tolstring (pL, i, &len);
+          lua_pushlstring (L, s, len);
+          }
+
+        // not one of those? bail out, we can't handle it
+        default:
+          lua_pushnumber (L, eErrorCallingPluginRoutine);
+          lua_pushstring (L, CFormat ("Cannot handle return value #%i (%s type) from function '%s' in plugin '%s' (%s)",
+              i,
+              luaL_typename (pL, i),
+              sRoutine,
+              (LPCTSTR) pPlugin->m_strName,
+              sPluginID));
+
+          lua_settop (pL, 0); // clean stack in other plugin
+          
+          return 2;
+        }
+      }
+
+    return ret_n + 1; // eOK plus all returned values
+    }
+
+  // ------------- end stuff added for version 4.55 -------------------
+
   lua_pushnumber (L, pDoc->CallPlugin (
-      my_checkstring (L, 1),  // PluginID
-      my_checkstring (L, 2),  // Routine  
+      sPluginID, // PluginID
+      sRoutine,  // Routine  
       my_optstring (L, 3, "") // Argument - optional
       ));
   return 1;  // number of result fields

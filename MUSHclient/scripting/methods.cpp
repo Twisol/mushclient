@@ -3762,6 +3762,7 @@ tInfoTypeMapping InfoTypes [] = {
  { 82, "Preferences database pathname" },
  { 83, "SQLite3 version" },
  { 84, "File browsing directory" },
+ { 85, "State files path (directory)" },
 
   // (booleans - calculated at runtime)
 { 101, "No Echo" },
@@ -4090,6 +4091,7 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
     case   82: SetUpVariantString (vaResult, App.m_PreferencesDatabaseName.c_str ()); break;
     case   83: SetUpVariantString (vaResult, sqlite3_libversion ()); break;
     case   84: SetUpVariantString (vaResult, file_browsing_dir); break;
+    case   85: SetUpVariantString (vaResult, App.m_strDefaultStateFilesDirectory); break;
 
       // (booleans - calculated at runtime)
     case  101: SetUpVariantBool (vaResult, m_bNoEcho); break;
@@ -4479,6 +4481,10 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
       SetUpVariantLong (vaResult, result);
       break; // state of virtual keys
       }
+
+    case 295:
+      SetUpVariantLong (vaResult, m_iOutputWindowRedrawCount);
+      break; // window redraw count
 
       // (dates - calculated at runtime)
     case 301:
@@ -5005,7 +5011,7 @@ long CMUSHclientDoc::CallPlugin(LPCTSTR PluginID, LPCTSTR Routine, LPCTSTR Argum
   if (!pPlugin)
     return eNoSuchPlugin;
 
-  if (Routine[0] == '\0')
+  if (Routine[0] == '\0' || pPlugin->m_ScriptEngine == NULL)
     return eNoSuchRoutine;
 
   if (!pPlugin->m_bEnabled)
@@ -5025,7 +5031,7 @@ long CMUSHclientDoc::CallPlugin(LPCTSTR PluginID, LPCTSTR Routine, LPCTSTR Argum
                                Routine ); 
 
   long nInvocationCount = 0;
-  if (pPlugin->m_ScriptEngine && pPlugin->m_ScriptEngine->IsLua ())
+  if (pPlugin->m_ScriptEngine->IsLua ())
     {
     list<double> nparams;
     list<string> sparams;

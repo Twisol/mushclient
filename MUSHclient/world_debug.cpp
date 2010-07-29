@@ -4,6 +4,10 @@
 #include "mxp\mxp.h"
 #include "sendvw.h"
 #include "Color.h"
+#include "childfrm.h"
+#include "MUSHview.h"
+
+#include "png/png.h"  // for version
 
 // my debugging
 
@@ -18,6 +22,8 @@ extern tCommandIDMapping CommandIDs [];
 extern CString strMacroDescriptions [MACRO_COUNT];
 extern CString strKeypadNames [eKeypad_Max_Items];
 extern tInfoTypeMapping InfoTypes [];
+
+#define SHOW_TRUE(x) ((x) ? "yes" : "no")
 
 // compare-less for colours
 struct colour_less : binary_function<COLORREF, COLORREF, bool>
@@ -717,7 +723,7 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
       Note (TFormat ("Author:     %s", (LPCTSTR) p->m_strAuthor));
       Note (TFormat ("Disk file:  %s", (LPCTSTR) p->m_strSource));
       Note (TFormat ("Language:   %s", (LPCTSTR) p->m_strLanguage));
-      Note (TFormat ("Enabled:    %s", (LPCTSTR) (p->m_bEnabled ? "yes" : "no")));
+      Note (TFormat ("Enabled:    %s", SHOW_TRUE (p->m_bEnabled)));
 
       if (!p->m_strScript.IsEmpty ())
         {
@@ -821,7 +827,7 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
 
         Note (CFormat ("%03i: %s = %s", InfoTypes [iCount].iInfoType,
                        InfoTypes [iCount].sDescription,
-                       CString (v.bstrVal)));
+                       (LPCTSTR) CString (v.bstrVal)));
 
         v.Clear ();   // get rid of string (is this necessary?)
         } // end of not VT_NULL
@@ -830,6 +836,458 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
     Note (TFormat ("%i info item%s.", PLURAL (iCount)));
 
     } // end of info
+//-----------------------------------------------------------------------
+//          summary
+//-----------------------------------------------------------------------
+  else if (strcmp (Command, "summary") == 0)
+    {
+
+    POSITION pos;
+    CString strName;
+    CTrigger * pTrigger;
+    CAlias * pAlias;
+    CTimer * pTimer;
+    CPlugin * pPlugin;
+
+    __int64   nTotalMatches = 0;
+    __int64   nTotalMatchAttempts = 0;
+    long      nTotal = 0;
+    long      nEnabled = 0;
+    long      nRegexp = 0;
+    LONGLONG  iTimeTaken = 0;
+    double    elapsed_time;
+    int i;
+
+
+    Note ("");
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-------------- MUSHclient summary --------------");
+    Note ("");
+	  Note (TFormat ("MUSHclient version: %s", MUSHCLIENT_VERSION));
+    // show compilation date
+    Note (TFormat ("Compiled: %s.", __DATE__));
+    Note (CTime::GetCurrentTime().Format (TranslateTime ("Time now: %A, %B %d, %Y, %#I:%M %p")));
+
+    
+    OSVERSIONINFO ver;
+    // see which OS we are using
+    memset(&ver, 0, sizeof(ver));
+    ver.dwOSVersionInfoSize = sizeof(ver);
+    ::GetVersionEx (&ver);
+
+    // work out operating system
+
+    CString sVersion = TFormat ("Unknown (Platform %ld, Major %ld, Minor %ld)",
+                               ver.dwPlatformId, ver.dwMajorVersion, ver.dwMinorVersion);
+
+    if (ver.dwPlatformId == 1)  // Windows 95-style versions
+      {
+      switch (ver.dwMinorVersion)
+        {
+        case  0: sVersion = "Windows 95"; break;
+        case 10: sVersion = "Windows 98"; break;
+        case 90: sVersion = "Windows ME"; break;
+        } // end of switch on dwMinorVersion
+      }  // end of dwPlatformId == 1
+    else if  (ver.dwPlatformId == 2)  // Windows NT versions
+      {
+      switch (ver.dwMajorVersion)
+        {
+        case 3: sVersion = "Windows NT 3.51"; break;
+        case 4: sVersion = "Windows NT";      break;
+        case 5: 
+          switch (ver.dwMinorVersion)
+            {
+            case 0: sVersion = "Windows 2000";        break;
+            case 1: sVersion = "Windows XP";          break;
+            case 2: sVersion = "Windows Server 2003"; break;
+            } // end of switch on dwMinorVersion
+          break;  // end case 5 of dwMinorVersion
+
+        case 6: 
+          switch (ver.dwMinorVersion)
+            {
+            case 0: sVersion = "Windows Vista"; break;
+            case 1: sVersion = "Windows 7";     break;
+            } // end of switch on dwMinorVersion
+          break;  // end case 6 of dwMinorVersion
+
+        }  // end of switch on dwMajorVersion
+      }  // end of dwPlatformId == 2
+
+
+    Note (TFormat ("Operating system: %s", (LPCTSTR) sVersion));
+
+    // show included library versions
+    Note (TFormat ("Libraries: %s, PCRE %s, PNG %s, SQLite3 %s, Zlib %s", 
+          LUA_RELEASE, 
+          XSTRING(PCRE_MAJOR.PCRE_MINOR), 
+          PNG_LIBPNG_VER_STRING, 
+          SQLITE_VERSION, 
+          ZLIB_VERSION));
+
+    Note (TFormat ("World name: '%s', ID: %s", 
+                    (LPCTSTR) m_mush_name, (LPCTSTR) m_strWorldID));
+
+
+    // scripting info
+
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-- Scripting --");
+    Note (TFormat ("Script language: %s, enabled: %s", 
+                  (LPCTSTR) m_strLanguage,
+                  SHOW_TRUE (m_bEnableScripts)
+                  ));
+    Note (TFormat ("Scripting active: %s", SHOW_TRUE (GetScriptEngine ()) ));
+    if (!m_strScriptFilename.IsEmpty ())
+      Note (TFormat ("Script file: %s",
+                    (LPCTSTR) m_strScriptFilename
+                    ));
+
+    // time taken to execute scripts
+    if (App.m_iCounterFrequency > 0)
+      {
+      elapsed_time = ((double) m_iScriptTimeTaken) / 
+                      ((double) App.m_iCounterFrequency);
+      Note (TFormat ("Scripting for: %1.6f seconds.", elapsed_time));
+      }
+
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-- Triggers, aliases, timers, variables --");
+   
+    // count number of triggers matched
+    for (pos = m_TriggerMap.GetStartPosition(); pos; )
+      {
+      m_TriggerMap.GetNextAssoc (pos, strName, pTrigger);
+      nTotal++;
+
+      if (pTrigger->regexp)
+        {
+        iTimeTaken += pTrigger->regexp->TimeTaken ();
+        nTotalMatchAttempts += pTrigger->regexp->MatchAttempts ();
+        }
+
+      nTotalMatches += pTrigger->nMatched;
+
+      if (pTrigger->bRegexp)
+         nRegexp++;
+
+      if (pTrigger->bEnabled)
+         nEnabled++;
+      }
+
+    // time taken to execute triggers
+    if (App.m_iCounterFrequency > 0)
+      {
+      elapsed_time = ((double) iTimeTaken) / 
+                      ((double) App.m_iCounterFrequency);
+      }
+    else
+      elapsed_time = 0;
+
+    Note (TFormat ("** Triggers: %ld in world file, triggers enabled: %s.", 
+                  nTotal,
+                  SHOW_TRUE (m_enable_triggers)));
+    Note (TFormat ("   %ld enabled, %ld regexp, %I64d attempts, %I64d matched, %1.6f seconds.",
+                   nEnabled, nRegexp, nTotalMatchAttempts, nTotalMatches, elapsed_time));
+
+
+    nTotalMatches = 0;
+    nTotalMatchAttempts = 0;
+    nTotal = 0;
+    nEnabled = 0;
+    nRegexp = 0;
+    iTimeTaken = 0;
+    elapsed_time;
+
+    // count number of aliases matched
+    for (pos = m_AliasMap.GetStartPosition(); pos; )
+      {
+      m_AliasMap.GetNextAssoc (pos, strName, pAlias);
+      nTotal++;
+
+      if (pAlias->regexp)
+        {
+        iTimeTaken += pAlias->regexp->TimeTaken ();
+        nTotalMatchAttempts += pAlias->regexp->MatchAttempts ();
+        }
+
+      nTotalMatches += pAlias->nMatched;
+      if (pAlias->bRegexp)
+         nRegexp++;
+
+      if (pAlias->bEnabled)
+         nEnabled++;
+      }
+
+    // time taken to execute aliases
+    if (App.m_iCounterFrequency > 0)
+      {
+      elapsed_time = ((double) iTimeTaken) / 
+                      ((double) App.m_iCounterFrequency);
+      }
+    else
+      elapsed_time = 0;
+
+    Note (TFormat ("** Aliases: %ld in world file, aliases enabled: %s.", 
+                  nTotal,
+                  SHOW_TRUE (m_enable_aliases)));
+    Note (TFormat ("   %ld enabled, %ld regexp, %I64d attempts, %I64d matched, %1.6f seconds.",
+                   nEnabled, nRegexp, nTotalMatchAttempts, nTotalMatches, elapsed_time));
+
+    nTotalMatches = 0;
+    nTotal = 0;
+    nEnabled = 0;
+
+    // count number of timers fired
+    for (pos = m_TimerMap.GetStartPosition(); pos; )
+      {
+      m_TimerMap.GetNextAssoc (pos, strName, pTimer);
+      nTotal++;
+
+      nTotalMatches += pTimer->nMatched;
+
+      if (pTimer->bEnabled)
+         nEnabled++;
+      }
+
+
+    Note (TFormat ("** Timers: %ld in world file, timers enabled: %s.", 
+                  nTotal,
+                  SHOW_TRUE (m_bEnableTimers)));
+    Note (TFormat ("   %ld enabled, %I64d fired.",
+                   nEnabled, nTotalMatches));
+
+    // time taken to do MCCP
+    if (App.m_iCounterFrequency > 0)
+      {
+      elapsed_time = ((double) m_iCompressionTimeTaken) / 
+                      ((double) App.m_iCounterFrequency);
+      }
+    else
+      elapsed_time = 0;
+
+
+    nTotal = 0;
+
+    for (pos = GetVariableMap ().GetStartPosition(); pos; nTotal++)
+      {
+      CString strVariableName;
+      CVariable * variable_item;
+
+      GetVariableMap ().GetNextAssoc (pos, strVariableName, variable_item);
+      }
+
+    Note (TFormat ("** Variables: %ld.", nTotal));
+
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-- MCCP --");
+
+    if (m_bCompress)
+      {
+      Note (TFormat ("MCCP active, took %1.6f seconds to decompress", elapsed_time));
+      Note (TFormat ("MCCP received %I64d compressed bytes, decompressed to %I64d bytes.", m_nTotalCompressed, m_nTotalUncompressed));
+      if (m_nTotalUncompressed)
+        {
+        double fRatio = (double) m_nTotalCompressed / (double) m_nTotalUncompressed * 100.0;
+        Note (TFormat ("MCCP compression ratio was: %6.1f%% (lower is better)", fRatio));
+        }
+      }
+    else
+      Note (Translate ("MCCP not active."));
+
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-- Plugins --");
+
+    // count and display plugins
+
+    nTotal = 0;
+    nEnabled = 0;
+
+    CPluginList::iterator end = m_PluginList.end ();
+    for (CPluginList::iterator itr = m_PluginList.begin (); itr != end; ++itr, ++iCount)
+      {
+      pPlugin = *itr;
+      nTotal += 1;
+      
+      if (pPlugin->m_bEnabled)
+         nEnabled += 1;
+
+      Note (TFormat ("Plugin: %s, '%s', enabled: %s", 
+            (LPCTSTR) pPlugin->m_strID, 
+            (LPCTSTR) pPlugin->m_strName, 
+            SHOW_TRUE (pPlugin->m_bEnabled)));
+
+
+      }
+
+    Note (TFormat ("** Plugins: %ld loaded, %ld enabled.", nTotal, nEnabled));
+
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-- Comms --");
+
+    // show bytes sent/received
+
+    CString strStatus = GetConnectionStatus (m_iConnectPhase);
+
+    Note (TFormat ("Connect phase: %i (%s)", 
+          m_iConnectPhase, (LPCTSTR) strStatus));
+
+    __int64 nInK = m_nBytesIn / (__int64) 1024;
+    __int64 nOutK = m_nBytesOut / (__int64) 1024;
+    Note (TFormat ("Received: %I64d bytes (%I64d Kb)", m_nBytesIn, nInK));
+    Note (TFormat ("Sent: %I64d bytes (%I64d Kb)", m_nBytesOut, nOutK));
+    Note (TFormat ("Received %I64d packets, sent %I64d packets.", m_iInputPacketCount, m_iOutputPacketCount));
+    Note (TFormat ("Total lines received: %ld", m_total_lines));
+
+    Note (TFormat ("This connection: Sent %ld lines, received %ld lines.", m_nTotalLinesSent, m_nTotalLinesReceived));
+
+    // telnet negotiation
+
+    Note (TFormat ("Telnet (IAC) received: DO: %ld, DONT: %ld, WILL: %ld, WONT: %ld, SB: %ld",
+                  m_nCount_IAC_DO,      
+                  m_nCount_IAC_DONT,    
+                  m_nCount_IAC_WILL,    
+                  m_nCount_IAC_WONT,    
+                  m_nCount_IAC_SB));
+
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-- MXP --");
+
+    //MXP
+
+    Note (TFormat ("MXP active: %s, Pueblo mode: %s", 
+                    SHOW_TRUE (m_bMXP ),
+                    SHOW_TRUE (m_bPuebloActive) ));
+
+    Note (TFormat ("MXP tags received: %I64d", m_iMXPtags));        
+    Note (TFormat ("MXP entities received: %I64d", m_iMXPentities));    
+    Note (TFormat ("MXP errors: %I64d", m_iMXPerrors));              
+
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-- Commands --");
+
+    // commands typed
+
+    nTotal = 0;
+
+    for(pos = GetFirstViewPosition(); pos != NULL; )
+	    {
+	    CView* pView = GetNextView(pos);
+	    
+	    if (pView->IsKindOf(RUNTIME_CLASS(CSendView)))
+  	    {
+		    CSendView* pmyView = (CSendView*)pView;
+
+        for (POSITION pos = pmyView->m_msgList.GetHeadPosition(); pos; nTotal++)
+            pmyView->m_msgList.GetNext (pos);
+
+	      }	  // end of being a CSendView
+      }   // end of loop through views
+
+    Note (TFormat ("Commands in command history: %ld", nTotal));
+
+    // accelerators
+
+    Note (TFormat ("Accelerators defined: %ld", m_AcceleratorToCommandMap.size ()));
+
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-- Miniwindows --");
+
+    // miniwindows
+    nTotal = 0;
+    nEnabled = 0;
+
+    for (MiniWindowMapIterator it = m_MiniWindows.begin (); 
+         it != m_MiniWindows.end ();
+         it++)
+           {
+           CMiniWindow * pWindow = it->second;
+           nTotal++;
+           int nHotspots = 0;
+           int nFonts = 0;
+           int nImages = 0;
+
+           if (pWindow->GetShow ())
+             nEnabled++;
+
+          // count hotspots
+          for (HotspotMapIterator hit = pWindow->m_Hotspots.begin (); 
+               hit != pWindow->m_Hotspots.end ();
+               hit++)
+                 nHotspots++;
+
+          for (FontMap::const_iterator fit = pWindow->GetFonts ().begin (); 
+               fit != pWindow->GetFonts ().end ();
+               fit++)
+                 nFonts++;
+
+          for (ImageMap::const_iterator  imit = pWindow->GetImages ().begin (); 
+               imit != pWindow->GetImages ().end ();
+               imit++)
+                 nImages++;
+
+           Note (TFormat ("Window: '%s', at (%ld,%ld,%ld,%ld), shown: %s",
+                it->first.c_str (), 
+                pWindow->m_rect.left,
+                pWindow->m_rect.top,
+                pWindow->m_rect.right,
+                pWindow->m_rect.bottom,
+                SHOW_TRUE (pWindow->GetShow ())));
+
+           Note (TFormat ("        width: %ld, height: %ld, position: %d, hotspots: %ld, fonts: %ld, images: %ld", 
+                pWindow->GetWidth (),
+                pWindow->GetHeight (),
+                pWindow->GetPosition (),
+                nHotspots,
+                nFonts,
+                nImages
+                ));
+
+           }
+
+    Note (TFormat ("** Miniwindows: %ld loaded, %ld shown.", nTotal, nEnabled));
+
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-- Output window --");
+
+    // output window info
+
+    CRect r (0, 0, 0, 0);
+    CMUSHView* pmyView = GetFirstOutputWindow ();
+
+    if (pmyView)
+        pmyView->GetClientRect(&r);
+
+    Note (TFormat ("Output pixels: width %ld, height: %ld, font width: %ld, font height: %ld",
+          r.right, r.bottom, m_FontWidth, m_FontHeight));
+
+    if (m_FontWidth > 0 && m_FontHeight > 0)
+      Note (TFormat ("               width %ld characters, wrap at column %ld, height %ld lines.",
+            r.right / m_FontWidth, m_nWrapColumn, r.bottom / m_FontHeight));
+
+
+    Note (TFormat ("Output buffer: %i of %ld lines.", 
+                                  m_LineList.GetCount (),
+                                  m_maxlines));
+
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-- Miscellaneous --");
+
+    // logging?
+
+    Note (TFormat ("Logging: %s, tracing: %s", 
+          SHOW_TRUE (m_logfile), SHOW_TRUE (m_bTrace) ));
+
+    // databases?
+    Note (TFormat ("SQLite3 databases: %i", m_Databases.size ()));
+
+    // sound buffers?
+
+    nTotal = 0;
+
+    for (i = 0; i < MAX_SOUND_BUFFERS; i++)
+      if (m_pDirectSoundSecondaryBuffer [i])
+        nTotal++;
+
+    Note (TFormat ("Sound buffers in use: %ld", nTotal));
+
+    // end summary
+
+    Note ("");
+    ColourNote  (SCRIPTERRORCONTEXTFORECOLOUR, "", "-------------- End summary --------------");
+
+    } // end of summary
+
 #ifdef PANE
 //-----------------------------------------------------------------------
 //          panes
@@ -913,6 +1371,7 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
     Note ("plugins");
     Note ("server_elements");
     Note ("server_entities");
+    Note ("summary");
     Note ("triggers");
     Note ("variables");
     }   // end of invalid/none entered

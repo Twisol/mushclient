@@ -553,7 +553,7 @@ bool CPlugin::SaveState ()
 
   ExecutePluginScript (ON_PLUGIN_SAVE_STATE, m_dispid_plugin_save_state);
 
-  CString strFilename = CString (Make_Absolute_Path (App.m_strPluginsDirectory)) + "state\\";
+  CString strFilename = CString (Make_Absolute_Path (App.m_strDefaultStateFilesDirectory));
   strFilename += m_pDoc->m_strWorldID;    // world ID
   strFilename += "-";
   strFilename += m_strID;                 // plugin ID

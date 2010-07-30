@@ -3781,6 +3781,7 @@ tInfoTypeMapping InfoTypes [] = {
 { 114, "Output window paused" },
 { 115, "Localization active" },
 { 118, "Variables have changed" },
+{ 119, "Script engine active" },
 
   // (numbers (longs) - calculated at runtime)
 { 201, "Total lines received" },
@@ -4120,6 +4121,7 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
 
     case  115: SetUpVariantBool (vaResult, App.m_Translator_Lua != NULL); break;
     case  118: SetUpVariantBool (vaResult, m_bVariablesChanged); break;
+    case  119: SetUpVariantBool (vaResult, m_ScriptEngine != NULL); break;
 
       // (numbers (longs) - calculated at runtime)
     case  201: SetUpVariantLong (vaResult, m_total_lines); break;

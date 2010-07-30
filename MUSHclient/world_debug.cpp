@@ -586,15 +586,15 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
         }
 
       if (OptionsTable [i].iFlags & OPT_CUSTOM_COLOUR)
-        strNote = "Custom colour";
+        strNote = ", Custom colour";
       else
       if (OptionsTable [i].iFlags & OPT_RGB_COLOUR)
-        strNote = "RGB colour";
+        strNote = ", RGB colour";
       else
         strNote.Empty ();
 
-      Note (CFormat ("%s, %s, %s, %i, %s",  // name, type, range, default, note
-                     (LPCTSTR) OptionsTable [i].pName,
+      Note (CFormat ("%s, %s, %s, %0.0f%s",  // name, type, range, default, note
+                     OptionsTable [i].pName,
                      (LPCTSTR) strType,
                      (LPCTSTR) strRange,
                      OptionsTable [i].iDefault,
@@ -1189,11 +1189,11 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
     nTotal = 0;
     nEnabled = 0;
 
-    for (MiniWindowMapIterator it = m_MiniWindows.begin (); 
-         it != m_MiniWindows.end ();
-         it++)
+    for (MiniWindowMapIterator win_it = m_MiniWindows.begin (); 
+         win_it != m_MiniWindows.end ();
+         win_it++)
            {
-           CMiniWindow * pWindow = it->second;
+           CMiniWindow * pWindow = win_it->second;
            nTotal++;
            int nHotspots = 0;
            int nFonts = 0;
@@ -1219,7 +1219,7 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
                  nImages++;
 
            Note (TFormat ("Window: '%s', at (%ld,%ld,%ld,%ld), shown: %s",
-                it->first.c_str (), 
+                win_it->first.c_str (), 
                 pWindow->m_rect.left,
                 pWindow->m_rect.top,
                 pWindow->m_rect.right,
@@ -1269,7 +1269,18 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
           SHOW_TRUE (m_logfile), SHOW_TRUE (m_bTrace) ));
 
     // databases?
-    Note (TFormat ("SQLite3 databases: %i", m_Databases.size ()));
+
+    for (tDatabaseMapIterator db_it = m_Databases.begin (); 
+         db_it != m_Databases.end ();
+         db_it++)
+           {
+           Note (TFormat ("Database: '%s', disk file: '%s'",
+                db_it->first.c_str (), 
+                db_it->second->db_name.c_str ()
+                ));
+           }
+
+    Note (TFormat ("** SQLite3 databases: %i", m_Databases.size ()));
 
     // sound buffers?
 

@@ -996,21 +996,12 @@ static int L_CallPlugin (lua_State *L)
   const char * sPluginID = my_checkstring (L, 1);
   const char * sRoutine = my_checkstring (L, 2);
 
-  CPlugin * pPlugin = pDoc->GetPlugin (sPluginID);
-
-  // if the other plugin isn't Lua, default to the old behavior.
-  // don't need to check *our* scripting language, we must be Lua, duh, or we wouldn't be here.
-  if (!pPlugin || !pPlugin->m_ScriptEngine->IsLua())
-    {
-    lua_pushnumber (L, pDoc->CallPlugin (
-        sPluginID, // PluginID
-        sRoutine,  // Routine  
-        my_optstring (L, 3, "") // Argument - optional
-        ));
-    return 1;  // number of result fields
-    }
-  
-  // new in 4.55 - Lua to Lua calls can handle multiple arguments and multiple return value
+  // remove plugin ID and function name
+  // this is so, after the lua_pcall the stack should be empty
+  // so, if the called function does a CallPlugin back to us, it won't matter
+  // if we do a lua_settop (pL, 0) (below) to clear the stack
+  lua_remove (L, 1);
+  lua_remove (L, 2);
 
   // preliminary checks ...
 
@@ -1021,8 +1012,10 @@ static int L_CallPlugin (lua_State *L)
     lua_pushstring (L, "No function name supplied");
     return 2;
     }
+
   // plugin exists?
-  else if (!pPlugin)
+  CPlugin * pPlugin = pDoc->GetPlugin (sPluginID);
+  if (!pPlugin)
     {
     lua_pushnumber (L, eNoSuchPlugin);
     lua_pushstring (L, TFormat ("Plugin ID (%s) is not installed", sPluginID));
@@ -1047,7 +1040,21 @@ static int L_CallPlugin (lua_State *L)
     return 2;
     }
 
-  int n = lua_gettop(L); // number of arguments in calling script
+  // if the other plugin isn't Lua, default to the old behavior.
+  // don't need to check *our* scripting language, we must be Lua, duh, or we wouldn't be here.
+  if (!pPlugin->m_ScriptEngine->IsLua())
+    {
+    lua_pushnumber (L, pDoc->CallPlugin (
+        sPluginID, // PluginID
+        sRoutine,  // Routine  
+        my_optstring (L, 1, "") // Argument - optional
+        ));
+    return 1;  // number of result fields
+    }
+
+  // new in 4.55 - Lua to Lua calls can handle multiple arguments and multiple return value
+
+  int n = lua_gettop(L); // number of arguments in calling script (we removed plugin ID and function name already)
 
   lua_State *pL = pPlugin->m_ScriptEngine->L; // plugin's Lua state
 
@@ -1070,7 +1077,7 @@ static int L_CallPlugin (lua_State *L)
 
   // if we are calling ourselves, don't make a copy of everything
   if (pL == L)
-    lua_insert (L, 3);
+    lua_insert (pL, 1);
   else
     {
     // copy all our arguments to destination script space
@@ -1082,8 +1089,7 @@ static int L_CallPlugin (lua_State *L)
     // however we need room for the function itself and at least room for the return value
     lua_checkstack (pL, n);
 
-    // arg 1 is plugin ID, arg 2 is function name, so start at 3
-    for (i = 3; i <= n; ++i)
+    for (i = 1; i <= n; ++i)
       {
       if (!l_data_wormhole(L, pL, i))
         { // If it couldn't be copied over, bail out.
@@ -1091,7 +1097,7 @@ static int L_CallPlugin (lua_State *L)
 
         lua_pushnumber (L, eBadParameter);
         lua_pushstring (L, TFormat ("Cannot pass argument #%i (%s type) to CallPlugin",
-            i,
+            i + 2, // add two because we deleted plugin ID and function name
             luaL_typename (L, i)));
         return 2;
         }
@@ -1112,7 +1118,7 @@ static int L_CallPlugin (lua_State *L)
   pDoc->m_CurrentPlugin = pPlugin;
 
   // now call the routine in the plugin
-  if (CallLuaWithTraceBack (pL, n - 2, LUA_MULTRET)) // true on error
+  if (CallLuaWithTraceBack (pL, n, LUA_MULTRET)) // true on error
     {
     // here for execution error in plugin function ...
     LuaError (pL, "Run-time error", sRoutine,
@@ -1145,8 +1151,8 @@ static int L_CallPlugin (lua_State *L)
   int ret_n = lua_gettop (pL);  // number of returned values (might be zero)
   if (pL == L)
     {
-    lua_insert (L, 3); // put return code as third item (after plugin ID, function name), pushing others up
-    return 1 + ret_n - 2; // eOK plus all returned values, minus plugin ID and function name
+    lua_insert (L, 1); // put return code as first item, pushing others up
+    return 1 + ret_n; // eOK plus all returned values
     }
 
   lua_checkstack (L, ret_n + 1);  // check we can push eOK plus all the return results

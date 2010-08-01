@@ -236,9 +236,23 @@ void CMUSHclientDoc::Tell(LPCTSTR Message)
   if (Message [0] == 0)
     return;
 
+  // if output buffer doesn't exist yet, remember note for later
   if (m_pCurrentLine == NULL)
     {
-    m_OutstandingLines.push_back (CPaneStyle (Message, m_iNoteColourFore, m_iNoteColourBack, m_iNoteStyle));
+    COLORREF fore = m_iNoteColourFore,
+             back = m_iNoteColourBack;
+
+    // need to do this in case a normal Note follows a ColourNote ...
+
+    // select correct colour, if needed, from custom pallette
+    if (!m_bNotesInRGB &&
+        m_iNoteTextColour >= 0 && m_iNoteTextColour < MAX_CUSTOM)
+      {
+      fore = m_customtext [m_iNoteTextColour];
+      back = m_customtext [m_iNoteTextColour];
+      }
+
+    m_OutstandingLines.push_back (CPaneStyle (Message, fore, back, m_iNoteStyle));
     return;
     }
 
@@ -6368,7 +6382,7 @@ long CMUSHclientDoc::Execute(LPCTSTR Command)
         m_ScriptEngine->Parse (strCommand, "Command line");
       else
         ColourNote ("white", "red",
-            Translate ("Script cannot execute because of parse error in script file"));
+            Translate ("Scripting is not active yet, or script file had a parse error."));
       
       m_bInSendToScript = true;
       --m_iExecutionDepth;

@@ -2167,7 +2167,7 @@ VARIANT CMUSHclientDoc::GetTriggerInfo(LPCTSTR TriggerName, short InfoType)
 
     case   38:
       if (trigger_item->regexp)
-        SetUpVariantLong (vaResult, ((double) trigger_item->regexp->MatchAttempts()));
+        SetUpVariantLong (vaResult, trigger_item->regexp->MatchAttempts());
       break;
 
 #ifdef PANE

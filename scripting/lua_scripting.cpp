@@ -9,6 +9,8 @@
 #include "..\pcre\pcre_internal.h"
 #include "..\luacom\luacom.h"
 
+#include "lua_scriptengine.h"
+
 set<string> LuaFunctionsSet;
 set<string> LuaTablesSet;
 

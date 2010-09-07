@@ -9,9 +9,6 @@ extern "C"
 
 #include "paneline.h"
 
-#define DOCUMENT_STATE "mushclient.document"
-#define WORLD_LIBRARY "world"
-
 void LuaError (lua_State *L, 
                LPCTSTR strEvent = "Run-time error",
                LPCTSTR strProcedure = "",
@@ -19,26 +16,78 @@ void LuaError (lua_State *L,
                LPCTSTR strReason = "",
                CMUSHclientDoc * pDoc = NULL);
 
-class CScriptEngine : public CObject
-  {
+class IScriptEngine
+{
+  virtual bool CreateScriptEngine () = 0;
+  virtual void DisableScripting () = 0;
 
-  public:
-    CScriptEngine (CMUSHclientDoc * pDoc,
-                   const CString strLanguage) // constructor
-      {
-      m_pDoc = pDoc;
-      m_strLanguage = strLanguage;
-      m_IActiveScript = NULL;
-      m_IActiveScriptParse = NULL;
-      m_site = NULL;
-      m_pDispatch = NULL;
-      L = NULL;
-      };  // end of constructor
+  virtual DISPID GetDispid (const CString& routine) = 0;
+  virtual DISPID GetLuaDispid (const CString& routine) = 0;
 
-    ~CScriptEngine () // destructor
-      {
-      DisableScripting ();
-      }; // end of destuctor
+  virtual bool Parse (const CString& code, const CString& what) = 0;
+
+  virtual bool Execute (DISPID& dispid,
+                        LPCTSTR procedure,
+                        const unsigned short reason_code,
+                        LPCTSTR type,
+                        LPCTSTR reason,
+                        DISPPARAMS& params,
+                        long& invocation_count,
+                        COleVariant* result) = 0;
+
+  virtual bool ShowError (const HRESULT result, const CString& msg) = 0;
+
+  virtual void OpenLua () = 0;
+  virtual void CloseLua () = 0;
+
+  virtual bool ParseLua (const CString& code, const CString& what) = 0;
+
+  // returns true if script error
+  virtual bool ExecuteLua (DISPID& dispid,
+                           LPCTSTR procedure,
+                           const unsigned short reason_code,
+                           LPCTSTR type,
+                           LPCTSTR reason,
+                           list<double>& number_params,
+                           list<string>& string_params,
+                           long& invocation_count,
+                           const t_regexp* regexp = NULL,
+                           map<string, string>* table = NULL,
+                           CPaneLine* paneline = NULL,
+                           bool* result = NULL) = 0;
+
+  // returns true if script error
+  virtual bool ExecuteLua (DISPID& dispid,
+                           LPCTSTR procedure,
+                           const unsigned short reason_code,
+                           LPCTSTR type,
+                           LPCTSTR reason,
+                           CString script_argument,
+                           long& invocation_count,
+                           CString& result) = 0;
+
+  virtual bool IsLua () const = 0;
+};
+
+class CScriptEngine : public CObject, public IScriptEngine
+{
+public:
+  CScriptEngine (CMUSHclientDoc * pDoc,
+                 const CString strLanguage) // constructor
+    {
+    m_pDoc = pDoc;
+    m_strLanguage = strLanguage;
+    m_IActiveScript = NULL;
+    m_IActiveScriptParse = NULL;
+    m_site = NULL;
+    m_pDispatch = NULL;
+    L = NULL;
+    };  // end of constructor
+
+  ~CScriptEngine () // destructor
+    {
+    DisableScripting ();
+    }; // end of destuctor
 
   bool CreateScriptEngine (void);
   bool Parse (const CString & strCode, const CString & strWhat);
@@ -56,14 +105,11 @@ class CScriptEngine : public CObject
                 long & nInvocationCount,  // count of invocations
                 COleVariant * result    // result of call
                 );
-  bool ShowError (const HRESULT result, const CString strMsg);
+  bool ShowError (const HRESULT result, const CString& strMsg);
   void DisableScripting (void);
 
   void OpenLua ();
-  void OpenLuaDelayed ();
   void CloseLua ();
-
-//  void RegisterLuaRoutines ();
 
   bool ParseLua (const CString & strCode, const CString & strWhat);
   // returns true if script error
@@ -92,11 +138,12 @@ class CScriptEngine : public CObject
 
   // return value is return from call
 
-  const bool IsLua () const { return L != NULL; }
+  bool IsLua () const
+  { return L != NULL; }
+
   lua_State           * L;                  // Lua state
 
-  private:
-
+private:
   IActiveScript       * m_IActiveScript;          // VBscript interface
   IActiveScriptParse  * m_IActiveScriptParse;     // parser
   CActiveScriptSite   * m_site;                   // our local site (world object)
@@ -106,7 +153,8 @@ class CScriptEngine : public CObject
 
   CString               m_strLanguage;        // language, (vbscript, jscript, perlscript)
 
-  };
+  void OpenLuaDelayed ();
+};
 
 int RegisterLuaRoutines (lua_State * L);
 int DisableDLLs (lua_State * L);

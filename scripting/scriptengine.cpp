@@ -492,7 +492,7 @@ DISPID dispid;
 
 
 
-bool CScriptEngine::ShowError (const HRESULT hr, const CString strMsg)
+bool CScriptEngine::ShowError (const HRESULT hr, const CString& strMsg)
   {
 DWORD status = 0;
 char *formattedmsg;

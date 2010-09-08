@@ -18,6 +18,7 @@ void LuaError (lua_State *L,
 
 class IScriptEngine
 {
+public:
   virtual bool CreateScriptEngine () = 0;
   virtual void DisableScripting () = 0;
 
@@ -67,6 +68,8 @@ class IScriptEngine
                            CString& result) = 0;
 
   virtual bool IsLua () const = 0;
+
+  static IScriptEngine* Create (string language, CMUSHclientDoc* pDoc);
 };
 
 class CScriptEngine : public CObject, public IScriptEngine

@@ -9,6 +9,11 @@ static CString strType;
 static CString strReason;
 static bool bImmediate = true;
 
+IScriptEngine* IScriptEngine::Create (string language, CMUSHclientDoc* pDoc)
+{
+  return new CScriptEngine (pDoc, language.c_str());
+}
+
 // returns true if error
 bool CScriptEngine::Execute (DISPID & dispid,  // dispatch ID, will be set to DISPID_UNKNOWN on an error
                               LPCTSTR szProcedure,  // eg. ON_TRIGGER_XYZ

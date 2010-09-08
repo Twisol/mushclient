@@ -766,7 +766,7 @@ CEditMultiLine dlg;
 
   dlg.m_bScript = true;
 
-  if (m_doc->GetScriptEngine () && m_doc->GetScriptEngine ()->L)
+  if (m_doc->GetScriptEngine () && m_doc->GetScriptEngine ()->IsLua ())
     dlg.m_bLua = true;
 
   if (dlg.DoModal () != IDOK)

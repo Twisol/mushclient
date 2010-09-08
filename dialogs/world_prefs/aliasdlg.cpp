@@ -525,7 +525,7 @@ CEditMultiLine dlg;
   if (m_iSendTo == eSendToScript || m_iSendTo == eSendToScriptAfterOmit)
     dlg.m_bScript = true;
 
-  if (m_pDoc->GetScriptEngine () && m_pDoc->GetScriptEngine ()->L)
+  if (m_pDoc->GetScriptEngine () && m_pDoc->GetScriptEngine ()->IsLua ())
     dlg.m_bLua = true;
 
   if (dlg.DoModal () != IDOK)

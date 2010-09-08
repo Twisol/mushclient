@@ -11625,7 +11625,7 @@ CString m_strFilter = Name;
 
   bool bLua = false;
   
-  if (GetScriptEngine () && GetScriptEngine ()->L)
+  if (GetScriptEngine () && GetScriptEngine ()->IsLua ())
     bLua = true;
 
   // not exact match, show list matching filter

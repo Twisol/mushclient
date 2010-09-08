@@ -30,7 +30,7 @@ if (m_ScriptEngine)
 
   m_bSyntaxErrorOnly = false;
 
-  m_ScriptEngine = new CScriptEngine (this, m_strLanguage);
+  m_ScriptEngine = IScriptEngine::Create ((LPCTSTR) m_strLanguage, this);
 
   if (m_ScriptEngine->CreateScriptEngine ())
     {

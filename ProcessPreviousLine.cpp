@@ -796,9 +796,9 @@ assemble the full text of the original line.
     m_CurrentPlugin = deferred_it->pWhichPlugin;   // set back to correct plugin
     
     // if Lua, add style info to script space
-    if (GetScriptEngine () && GetScriptEngine ()->L)
+    if (GetScriptEngine () && GetScriptEngine ()->IsLua ())
       {
-      lua_State * L = GetScriptEngine ()->L;
+      lua_State * L = dynamic_cast<CScriptEngine*>(GetScriptEngine ())->L;
       lua_newtable(L);                                                            
       int i = 1;          // style run number
 

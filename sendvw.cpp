@@ -2779,7 +2779,7 @@ CString strSelection;
 
   bool bLua = false;
   
-  if (pDoc->GetScriptEngine () && pDoc->GetScriptEngine ()->L)
+  if (pDoc->GetScriptEngine () && pDoc->GetScriptEngine ()->IsLua ())
     bLua = true;
 
   ShowFunctionslist (strSelection, nStartChar, nEndChar, bLua);
@@ -2793,7 +2793,7 @@ void CSendView::OnCompleteFunction()
 
   bool bLua = false;
   
-  if (pDoc->GetScriptEngine () && pDoc->GetScriptEngine ()->L)
+  if (pDoc->GetScriptEngine () && pDoc->GetScriptEngine ()->IsLua ())
     bLua = true;
 
   FunctionMenu (GetEditCtrl(), bLua, &pDoc->m_ExtraShiftTabCompleteItems, pDoc->m_bTabCompleteFunctions);

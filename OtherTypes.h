@@ -928,7 +928,7 @@ class CPlugin :public CObject
   CTime   m_tDateInstalled;   // date installed
   CString m_strCallingPluginID; // during a CallPlugin - the ID of the calling plugin
 
-  CScriptEngine * m_ScriptEngine; // script engine for script, if any
+  IScriptEngine * m_ScriptEngine; // script engine for script, if any
 
   CAliasMap     m_AliasMap;     // aliases     
   CAliasArray   m_AliasArray;   // array of aliases for sequencing

@@ -1141,7 +1141,7 @@ public:
 
 // scripting
 
-  CScriptEngine * m_ScriptEngine;
+  IScriptEngine * m_ScriptEngine;
 
   bool m_bSyntaxErrorOnly;
   bool m_bDisconnectOK;
@@ -2091,7 +2091,7 @@ public:
       return m_VariableMap;
     };
 
-  CScriptEngine * GetScriptEngine (void)
+  IScriptEngine * GetScriptEngine (void)
     {
     if (m_CurrentPlugin)
       return m_CurrentPlugin->m_ScriptEngine;

@@ -560,7 +560,7 @@ void CGenPropertyPage::LoadList (void)
 
   // for filtering
 
-  auto_ptr<LuaScriptEngine> m_ScriptEngine = NULL; // for the filtering checks
+  auto_ptr<LuaScriptEngine> m_ScriptEngine; // for the filtering checks
 
   bool bFiltering = GetFilterFlag ();
   if (bFiltering)

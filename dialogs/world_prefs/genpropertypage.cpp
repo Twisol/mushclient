@@ -5,6 +5,8 @@
 #include "genpropertypage.h"
 #include "..\EditMultiLine.h"
 
+#include "..\..\scripting\lua_scriptengine.h"
+
 #ifdef _DEBUG
 //#define new DEBUG_NEW
 #undef THIS_FILE
@@ -558,35 +560,28 @@ void CGenPropertyPage::LoadList (void)
 
   // for filtering
 
-  CScriptEngine * m_ScriptEngine = NULL;    // for the filtering checks
-  bool bFiltering = GetFilterFlag ();
+  auto_ptr<LuaScriptEngine> m_ScriptEngine = NULL; // for the filtering checks
 
-  
+  bool bFiltering = GetFilterFlag ();
   if (bFiltering)
     {
-    m_ScriptEngine = new CScriptEngine (m_doc, "Lua");
-
-    if (m_ScriptEngine->CreateScriptEngine ())
-      bFiltering = false;
-    else
+    try
       {
+      m_ScriptEngine = new LuaScriptEngine (m_doc);
 
-        // compile filter script
-       try
-         {
-
-          if (m_ScriptEngine->Parse (GetFilterScript (), "Script file"))
-            bFiltering = false;
-
-         }  // end of try
-       catch (CException * e)
-         {
-          e->ReportError ();
-          e->Delete ();
-          bFiltering = false;
-         }
-      }  // not error creating engine
-
+      if (m_ScriptEngine->Parse ((LPCTSTR) GetFilterScript (), "Script file"))
+        bFiltering = false;
+      }
+    catch (ScriptEngineException& ex)
+      {
+      bFiltering = false;
+      }
+    catch (CException* e)
+      {
+      e->ReportError ();
+      e->Delete ();
+      bFiltering = false;
+      }
     }  // end of filtering wanted
 
   lua_State * L = NULL;
@@ -594,7 +589,7 @@ void CGenPropertyPage::LoadList (void)
   // if filtering, get the "filter" function on the stack
   if (bFiltering)
     {
-    L = m_ScriptEngine->L;   // make copy for convenience
+    L = m_ScriptEngine->LuaState ();   // make copy for convenience
 
     lua_settop(L, 0);   // clear stack, just in case
 
@@ -666,9 +661,6 @@ void CGenPropertyPage::LoadList (void)
   if (iNotShown)
     strSummary += TFormat (" (%i item%s hidden by filter)", PLURAL (iNotShown));
   m_ctlSummary->SetWindowText (strSummary);
-
-  delete m_ScriptEngine;
-
   }  // end of CGenPropertyPage::LoadList
 
 

@@ -30,12 +30,12 @@ if (m_ScriptEngine)
 
   m_bSyntaxErrorOnly = false;
 
-  m_ScriptEngine = IScriptEngine::Create ((LPCTSTR) m_strLanguage, this);
-
-  if (m_ScriptEngine->CreateScriptEngine ())
+  try
     {
-    delete m_ScriptEngine;
-    m_ScriptEngine = NULL;
+    m_ScriptEngine = IScriptEngine::Create ((LPCTSTR) m_strLanguage, this);
+    }
+  catch (ScriptEngineException& ex)
+    {
     return true;
     }
 

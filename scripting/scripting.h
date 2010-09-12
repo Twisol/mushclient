@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MUSHCLIENT_SCRIPTING_SCRIPTING_H
+#define MUSHCLIENT_SCRIPTING_SCRIPTING_H
 
 extern "C"
   {
@@ -7,6 +8,7 @@ extern "C"
   #include "lauxlib.h"
   }
 
+#include "hostsite.h"
 #include "paneline.h"
 
 void LuaError (lua_State *L, 
@@ -16,11 +18,29 @@ void LuaError (lua_State *L,
                LPCTSTR strReason = "",
                CMUSHclientDoc * pDoc = NULL);
 
+
+class ScriptEngineException : public exception
+{
+public:
+  ScriptEngineException (const char* msg)
+    : _msg(msg)
+  {}
+  
+  ScriptEngineException (const CString& msg)
+    : _msg((LPCTSTR) msg)
+  {}
+  
+  virtual const char* what ()
+  { return _msg; }
+
+private:
+  const char* _msg;
+};
+
 class IScriptEngine
 {
 public:
-  virtual bool CreateScriptEngine () = 0;
-  virtual void DisableScripting () = 0;
+  virtual ~IScriptEngine() {};
 
   virtual DISPID GetDispid (const CString& routine) = 0;
   virtual DISPID GetLuaDispid (const CString& routine) = 0;
@@ -35,11 +55,6 @@ public:
                         DISPPARAMS& params,
                         long& invocation_count,
                         COleVariant* result) = 0;
-
-  virtual bool ShowError (const HRESULT result, const CString& msg) = 0;
-
-  virtual void OpenLua () = 0;
-  virtual void CloseLua () = 0;
 
   virtual bool ParseLua (const CString& code, const CString& what) = 0;
 
@@ -68,31 +83,17 @@ public:
                            CString& result) = 0;
 
   virtual bool IsLua () const = 0;
+  virtual lua_State* LuaState () = 0;
 
-  static IScriptEngine* Create (string language, CMUSHclientDoc* pDoc);
+  static IScriptEngine* Create (const CString& language, CMUSHclientDoc* pDoc);
 };
 
 class CScriptEngine : public CObject, public IScriptEngine
 {
 public:
-  CScriptEngine (CMUSHclientDoc * pDoc,
-                 const CString strLanguage) // constructor
-    {
-    m_pDoc = pDoc;
-    m_strLanguage = strLanguage;
-    m_IActiveScript = NULL;
-    m_IActiveScriptParse = NULL;
-    m_site = NULL;
-    m_pDispatch = NULL;
-    L = NULL;
-    };  // end of constructor
+  CScriptEngine (CMUSHclientDoc * pDoc, const CString strLanguage);
+  ~CScriptEngine ();
 
-  ~CScriptEngine () // destructor
-    {
-    DisableScripting ();
-    }; // end of destuctor
-
-  bool CreateScriptEngine (void);
   bool Parse (const CString & strCode, const CString & strWhat);
 
   DISPID GetDispid (const CString & strName);
@@ -109,10 +110,6 @@ public:
                 COleVariant * result    // result of call
                 );
   bool ShowError (const HRESULT result, const CString& strMsg);
-  void DisableScripting (void);
-
-  void OpenLua ();
-  void CloseLua ();
 
   bool ParseLua (const CString & strCode, const CString & strWhat);
   // returns true if script error
@@ -141,10 +138,8 @@ public:
 
   // return value is return from call
 
-  bool IsLua () const
-  { return L != NULL; }
-
-  lua_State           * L;                  // Lua state
+  bool IsLua () const { return false; }
+  lua_State* LuaState () { return NULL; }
 
 private:
   IActiveScript       * m_IActiveScript;          // VBscript interface
@@ -156,9 +151,18 @@ private:
 
   CString               m_strLanguage;        // language, (vbscript, jscript, perlscript)
 
-  void OpenLuaDelayed ();
+  bool CScriptEngine::Invoke (DISPID& dispid,
+                              DISPPARAMS& params,
+                              COleVariant* result,
+                              LPCTSTR procedure,
+                              LPCTSTR type,
+                              LPCTSTR reason,
+                              const unsigned short reason_code,
+                              long& invocation_count);
 };
 
 int RegisterLuaRoutines (lua_State * L);
 int DisableDLLs (lua_State * L);
 #include "lua_helpers.h"
+
+#endif // MUSHCLIENT_SCRIPTING_SCRIPTING_H

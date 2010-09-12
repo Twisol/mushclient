@@ -61,7 +61,7 @@
 				ProgramDataBaseFileName=".\WinDebug/"
 				BrowseInformation="1"
 				BrowseInformationFile=".\WinDebug/"
-				WarningLevel="1"
+				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
 			/>
@@ -3835,6 +3835,10 @@
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\scripting\lua_scriptengine.cpp"
+				>
 			</File>
 			<File
 				RelativePath="scripting\lua_scripting.cpp"

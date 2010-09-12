@@ -905,7 +905,7 @@ typedef CTypedPtrList <CPtrList, CActiveTag*> CActiveTagList;
 /////////////////////////////////////////////////////////////////////////////
 //  CPlugin - these are world plugins
 
-class CScriptEngine;
+class IScriptEngine;
 
 class CPlugin :public CObject
   {

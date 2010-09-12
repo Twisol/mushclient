@@ -1034,7 +1034,7 @@ static int L_CallPlugin (lua_State *L)
     {
     int n = lua_gettop(L);  // number of arguments in calling script (we removed plugin ID and function name already)
 
-    lua_State *pL = dynamic_cast<CScriptEngine*>(pPlugin->m_ScriptEngine)->L;  // plugin's Lua state
+    lua_State *pL = pPlugin->m_ScriptEngine->LuaState ();  // plugin's Lua state
 
     // don't clear if we are calling ourselves
     if (pL != L)

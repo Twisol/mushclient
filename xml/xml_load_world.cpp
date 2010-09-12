@@ -467,11 +467,14 @@ LONGLONG iCounterFrequency = large_int_frequency.QuadPart;
 
       if (!m_CurrentPlugin->m_strScript.IsEmpty () || m_CurrentPlugin->m_bSendToScriptUsed)
         {
-
-        m_CurrentPlugin->m_ScriptEngine = IScriptEngine::Create ((LPCTSTR) m_CurrentPlugin->m_strLanguage, this);
-
-        if (m_CurrentPlugin->m_ScriptEngine->CreateScriptEngine ())
-          ThrowErrorException ("Could not initialise script engine");
+          try
+            {
+             m_CurrentPlugin->m_ScriptEngine = IScriptEngine::Create ((LPCTSTR) m_CurrentPlugin->m_strLanguage, this);
+            }
+          catch (ScriptEngineException& ex)
+            {
+            ThrowErrorException ("Could not initialize script engine");
+            }
 
         if (m_CurrentPlugin->m_ScriptEngine->Parse (m_CurrentPlugin->m_strScript, "Plugin"))
           ThrowErrorException ("Error parsing script");

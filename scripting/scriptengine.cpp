@@ -3,146 +3,261 @@
 #include "..\MUSHclient.h"
 #include "..\doc.h"
 #include "..\dialogs\ScriptErrorDlg.h"
+#include "lua_scriptengine.h"
 
 static CString strProcedure;
 static CString strType;
 static CString strReason;
 static bool bImmediate = true;
 
-IScriptEngine* IScriptEngine::Create (string language, CMUSHclientDoc* pDoc)
+IScriptEngine* IScriptEngine::Create (const CString& language, CMUSHclientDoc* pDoc)
 {
-  return new CScriptEngine (pDoc, language.c_str());
+  if (language.CompareNoCase ("Lua") == 0)
+    return new LuaScriptEngine (pDoc);
+  else
+    return new CScriptEngine (pDoc, language);
+}
+
+CScriptEngine::CScriptEngine (CMUSHclientDoc* pDoc, const CString strLanguage)
+  : m_pDoc(pDoc), m_strLanguage(strLanguage), m_IActiveScript(NULL),
+    m_IActiveScriptParse(NULL), m_site(NULL), m_pDispatch(NULL)
+{
+  // not under Wine
+  if (bWine)
+    throw ScriptEngineException ("Cannot create WSH engine under Wine.");
+
+  try
+    {
+    /*
+    Note: very, very important!
+
+    To use swprintf successfully, you must specify %S for converting a single-byte
+    string to a wide string, not %s. Alternatively, you can specify %hs which means
+    the same thing. See reference to wprintf for details.
+
+    If you don't, be prepared for access violations as the swprintf goes mad
+    and writes all over memory, depending on whether there are two consecutive
+    nulls in the string being printed.
+    */
+
+    OLECHAR wszOutput[101];
+    swprintf (wszOutput, 100, OLESTR("%S"), (LPCTSTR) m_strLanguage);
+
+    // javascript: {f414c260-6ac0-11cf-b6d1-00aa00bbbb58}
+    // jscript:    {f414c260-6ac0-11cf-b6d1-00aa00bbbb58}   ???
+    // python:     {DF630910-1C1D-11d0-AE36-8C0F5E000000}
+
+    CLSID clsid;
+    HRESULT hr = CLSIDFromProgID (wszOutput, &clsid);
+    if (hr != S_OK)
+      {
+      CString strMsg;
+      strMsg.Format ("finding CLSID of scripting language \"%s\"", (LPCTSTR) m_strLanguage);
+      ShowError (hr, strMsg);
+      throw ScriptEngineException (strMsg);
+      }
+
+    // create an instance of the VBscript/perlscript/jscript engine
+    hr = ::CoCreateInstance (clsid, NULL, CLSCTX_ALL, IID_IActiveScript,
+                             reinterpret_cast<void**>(&m_IActiveScript));
+    if (ShowError (hr, "loading scripting engine"))
+      throw ScriptEngineException ("loading scripting engine");
+
+    hr = m_IActiveScript->QueryInterface (IID_IActiveScriptParse, 
+                                          reinterpret_cast<void**>(&m_IActiveScriptParse));
+    if (ShowError (hr, "locating parse interface"))
+      throw ScriptEngineException ("locating parse interface");
+
+    hr = m_IActiveScriptParse->InitNew ();
+    if (ShowError (hr, "initialising scripting engine"))
+      throw ScriptEngineException ("initialising scripting engine");
+
+    // create host site object
+    m_site = new CActiveScriptSite (m_pDoc->GetIDispatch (TRUE), m_pDoc);
+    m_site->AddRef ();
+
+    hr = m_IActiveScript->SetScriptSite (m_site);
+    if (ShowError (hr, "setting site"))
+      throw ScriptEngineException ("setting site");
+
+    // add world object to engine's namespace
+    // added SCRIPTITEM_GLOBALMEMBERS in 3.27
+
+    WCHAR charWorld[] = L"world";
+
+    hr = m_IActiveScript->AddNamedItem (
+        charWorld,
+        SCRIPTITEM_ISVISIBLE | SCRIPTITEM_ISSOURCE | SCRIPTITEM_GLOBALMEMBERS);
+    if (ShowError (hr, "adding world to script engine"))
+      throw ScriptEngineException ("adding world to script engine");
+
+    // set state to started
+    hr = m_IActiveScript->SetScriptState (SCRIPTSTATE_STARTED);
+    if (ShowError (hr, "starting script engine"))
+      throw ScriptEngineException ("starting script engine");
+
+    // connect outbound objects (ie. world)
+    hr = m_IActiveScript->SetScriptState (SCRIPTSTATE_CONNECTED);
+    if (ShowError (hr, "connecting script engine"))
+      throw ScriptEngineException ("connecting script engine");
+
+    // get script engine dispatch pointer
+    hr = m_IActiveScript->GetScriptDispatch (0, &m_pDispatch);
+    if (ShowError (hr, "getting script engine dispatch pointer"))
+      throw ScriptEngineException ("getting script engine dispatch pointer");
+    }
+  catch (HRESULT hr)
+    {
+    ShowError (hr, "starting scripting support");
+    throw ScriptEngineException ("starting scripting support");
+    }
+  catch (ScriptEngineException& ex)
+    {
+    ShowError (true, ex.what ());
+    throw;
+    }
+  catch (...)
+    {
+    ::TMessageBox ("Something nasty happened whilst initialising the scripting engine");
+    throw;
+    }
+}
+
+CScriptEngine::~CScriptEngine ()
+{
+  // release engine
+  if (m_IActiveScript)
+    {
+    m_IActiveScript->SetScriptState(SCRIPTSTATE_DISCONNECTED);
+    m_IActiveScript->Close ();
+    m_IActiveScript->Release ();
+    }
+
+  // release parser
+  if (m_IActiveScriptParse)
+    m_IActiveScriptParse->Release ();
+
+  // release site
+  if (m_site)
+    m_site->Release ();
 }
 
 // returns true if error
 bool CScriptEngine::Execute (DISPID & dispid,  // dispatch ID, will be set to DISPID_UNKNOWN on an error
-                              LPCTSTR szProcedure,  // eg. ON_TRIGGER_XYZ
-                              const unsigned short iReason,  // value for m_iCurrentActionSource
-                              LPCTSTR szType,   // eg. trigger, alias
-                              LPCTSTR szReason, // eg. trigger subroutine XXX
-                              DISPPARAMS & params,  // parameters
-                              long & nInvocationCount,  // count of invocations
-                              COleVariant * result    // result of call
-                              )
-  {
-
-
-  // If Lua, we may have been called with no arguments, so just do that
-  if (L)
-    {
-    list<double> nparams;
-    list<string> sparams;
-    bool r;
-    bool status = ExecuteLua (dispid, 
-                             szProcedure, 
-                             iReason,
-                             szType, 
-                             szReason, 
-                             nparams,
-                             sparams, 
-                             nInvocationCount,
-                             NULL, NULL, NULL, &r);
-
-
-    if (result)
-      {
-      result->vt = VT_BOOL;
-      result->boolVal = r; 
-      }
-    return status;
-    } // have Lua 
-
+                             LPCTSTR szProcedure,  // eg. ON_TRIGGER_XYZ
+                             const unsigned short iReason,  // value for m_iCurrentActionSource
+                             LPCTSTR szType,   // eg. trigger, alias
+                             LPCTSTR szReason, // eg. trigger subroutine XXX
+                             DISPPARAMS & params,  // parameters
+                             long & nInvocationCount,  // count of invocations
+                             COleVariant * result)   // result of call
+{
   // don't do it if no routine address 
   if (dispid == DISPID_UNKNOWN)
     return false;
 
-  strProcedure = szProcedure;
-  strType = szType;
-  strReason = szReason;
+  return this->Invoke (dispid, params, result,
+                       szProcedure, szType, szReason, iReason,
+                       nInvocationCount);
+}
+ 
+bool CScriptEngine::Invoke (DISPID& dispid,
+                            DISPPARAMS& params,
+                            COleVariant* result,
+                            LPCTSTR procedure,
+                            LPCTSTR type,
+                            LPCTSTR reason,
+                            const unsigned short reason_code,
+                            long& invocation_count)
+{
+  strProcedure = procedure;
+  strType = type;
+  strReason = reason;
   bImmediate = false;
 
   unsigned short iOldStyle = m_pDoc->m_iNoteStyle;
   m_pDoc->m_iNoteStyle = NORMAL;    // back to default style
 
   HRESULT hr;
-
-  EXCEPINFO ExcepInfo;
-  unsigned int ArgErr;
-  LARGE_INTEGER start, 
-                finish;
-  SCRIPTSTATE ss;
-
-  m_pDoc->Trace (TFormat ("Executing %s script \"%s\"", szType, szProcedure));
-//  Frame.SetStatusMessageNow (TFormat ("Executing %s subroutine \"%s\"", szType, szProcedure));
-
-  if (m_IActiveScript)
+  try
     {
-    // new for Python - an error may have caused the script state to change
+    m_pDoc->Trace (TFormat ("Executing %s script \"%s\"", type, procedure));
+
+    SCRIPTSTATE ss;
     hr = m_IActiveScript->GetScriptState (&ss);
-  
-    if (hr == S_OK)
+    if (hr == S_OK && ss != SCRIPTSTATE_CONNECTED)
+      hr = m_IActiveScript->SetScriptState (SCRIPTSTATE_CONNECTED);
+
+    if (hr != S_OK)
       {
-      // try to put it back to connected
-      if (ss != SCRIPTSTATE_CONNECTED)
-        hr = m_IActiveScript->SetScriptState (SCRIPTSTATE_CONNECTED);
+      throw ScriptEngineException(TFormat (
+          "Script engine problem invoking subroutine \"%s\" when %s",
+          procedure, reason));
+      }
+
+    LARGE_INTEGER start;
+    if (App.m_iCounterFrequency)
+      QueryPerformanceCounter (&start);
+
+    if (reason_code != eDontChangeAction)
+      m_pDoc->m_iCurrentActionSource = reason_code;
+
+    // Invoke the script
+    hr = m_pDispatch->Invoke (dispid, IID_NULL, 0, DISPATCH_METHOD,
+        &params, result, NULL, NULL);
+
+    if (reason_code != eDontChangeAction)
+      m_pDoc->m_iCurrentActionSource = eUnknownActionSource;
+
+    if (hr == S_OK && App.m_iCounterFrequency)
+      {
+      LARGE_INTEGER finish;
+      QueryPerformanceCounter (&finish);
+      m_pDoc->m_iScriptTimeTaken += finish.QuadPart - start.QuadPart;
       }
 
     if (hr != S_OK)
       {
-      ::UMessageBox (TFormat ("Script engine problem invoking subroutine \"%s\" when %s",
-                               (LPCTSTR) szProcedure,
-                               (LPCTSTR) szReason));
-      strProcedure.Empty ();
-      strType.Empty ();
-      strReason.Empty ();
-      bImmediate = true;
+      dispid = DISPID_UNKNOWN; // stop further invocations
 
-      m_pDoc->m_iNoteStyle = iOldStyle;
-      return true;
+      if (hr == 0x800a01c2) // wrong number of arguments
+        throw ScriptEngineException (TFormat (
+              "Wrong number of arguments for script subroutine \"%s\" when %s"
+              "\n\nWe expected your subroutine to have %i argument%s",
+            procedure, reason, PLURAL (params.cArgs)));
+      else
+        throw ScriptEngineException (TFormat (
+            "Unable to invoke script subroutine \"%s\" when %s",
+            procedure, reason));
       }
-    } // end of having script engine
-
-  if (App.m_iCounterFrequency)
-    QueryPerformanceCounter (&start);
-
-  if (iReason != eDontChangeAction)
-    m_pDoc->m_iCurrentActionSource = iReason;
-
-  hr = m_pDispatch->Invoke (dispid, IID_NULL, 0, 
-                            DISPATCH_METHOD, &params, result, &ExcepInfo, &ArgErr);
-
-  if (iReason != eDontChangeAction)
-    m_pDoc->m_iCurrentActionSource = eUnknownActionSource;
-
-  if (hr == S_OK && App.m_iCounterFrequency)
+    }
+  catch (ScriptEngineException& ex)
     {
-    QueryPerformanceCounter (&finish);
-    m_pDoc->m_iScriptTimeTaken += finish.QuadPart - start.QuadPart;
+    strProcedure.Empty ();
+    strType.Empty ();
+    strReason.Empty ();
+    bImmediate = true;
+
+    m_pDoc->m_iNoteStyle = iOldStyle;
+
+    ::UMessageBox (ex.what ());
+    return true;
+    }
+  catch (...)
+    {
+    strProcedure.Empty ();
+    strType.Empty ();
+    strReason.Empty ();
+    bImmediate = true;
+
+    m_pDoc->m_iNoteStyle = iOldStyle;
+    throw;
     }
 
-  // put status line back
-//  ShowStatusLine ();
+  // count number of times used
+  invocation_count += 1;
 
-
-  if (hr == S_OK)
-    nInvocationCount++;   // count number of times used
-  else
-    {
-    dispid = DISPID_UNKNOWN;   // stop further invocations
-
-    if (hr == 0x800a01c2)   // wrong number of arguments
-      ::UMessageBox (TFormat ("Wrong number of arguments for script subroutine \"%s\" when %s"
-                                "\n\nWe expected your subroutine to have %i argument%s",
-                               (LPCTSTR) szProcedure,
-                               (LPCTSTR) szReason,
-                               PLURAL (params.cArgs)));
-    else
-      ::UMessageBox (TFormat ("Unable to invoke script subroutine \"%s\" when %s",
-                               (LPCTSTR) szProcedure,
-                               (LPCTSTR) szReason));
-    }   // end of bad invoke
-
-
+  // cleanups
   strProcedure.Empty ();
   strType.Empty ();
   strReason.Empty ();
@@ -150,10 +265,9 @@ bool CScriptEngine::Execute (DISPID & dispid,  // dispatch ID, will be set to DI
 
   m_pDoc->m_iNoteStyle = iOldStyle;
 
-  return hr != S_OK;    // true on error
-
-  } // end of CScriptEngine::ExecuteScript
- 
+  // true on error
+  return hr != S_OK;
+}
 
 
 STDMETHODIMP CActiveScriptSite::OnScriptError(IActiveScriptError *pscripterror) 
@@ -257,172 +371,19 @@ STDMETHODIMP CActiveScriptSite::OnScriptError(IActiveScriptError *pscripterror)
   return S_OK;
   }   // end of CActiveScriptSite::OnScriptError
 
-bool CScriptEngine::CreateScriptEngine (void)
-  {
-  
- // Lua does not use scripting engine
-  if (m_strLanguage.CompareNoCase ("Lua") == 0)
-    {
-    OpenLua ();
-    return false;
-    }  // end of Lua
-
-  // not under Wine
- if (bWine)
-    return true;
-
- try
-  {
-
-
-  CLSID clsid;
-  OLECHAR wszOutput[101];
-
-  /*
-
-  Note: very, very important!
-
-  To use swprintf successfully, you must specify %S for converting a single-byte
-  string to a wide string, not %s. Alternatively, you can specify %hs which means
-  the same thing. See reference to wprintf for details.
-
-  If you don't, be prepared for access violations as the swprintf goes mad
-  and writes all over memory, depending on whether there are two consecutive
-  nulls in the string being printed.
-
-  */
-
-//  CString strFixedLanguage = m_strLanguage;
-//
-//  strFixedLanguage.MakeLower ();
-//
-//  if (strFixedLanguage == "rubyscript")
-//    swprintf(wszOutput, OLESTR("%S"), "GlobalRubyScript");
-//  else
-  swprintf(wszOutput, OLESTR("%S"), (LPCTSTR) m_strLanguage.Left (100));
-  
-  CString strMsg;
-
-
-  strMsg.Format ("finding CLSID of scripting language \"%s\"", (LPCTSTR) m_strLanguage);
-
-  // javascript: {f414c260-6ac0-11cf-b6d1-00aa00bbbb58}
-  // jscript:    {f414c260-6ac0-11cf-b6d1-00aa00bbbb58}   ???
-  // python:     {DF630910-1C1D-11d0-AE36-8C0F5E000000}
-
-  if (ShowError (CLSIDFromProgID(wszOutput, &clsid), 
-    strMsg))
-    return true;
-  
-  // create an instance of the VBscript/perlscript/jscript engine
-    
-  if (ShowError (::CoCreateInstance(clsid,  
-    NULL, 
-    CLSCTX_ALL,   // CLSCTX_INPROC_SERVER, 
-    IID_IActiveScript,
-    reinterpret_cast<void**>(&m_IActiveScript)),
-    "loading scripting engine"))
-    return true;
-
-  if (ShowError (m_IActiveScript->QueryInterface(
-    IID_IActiveScriptParse, 
-    reinterpret_cast<void**>(&m_IActiveScriptParse)),
-    "locating parse interface"))
-    return true; 
-
-  if (ShowError (m_IActiveScriptParse->InitNew (),
-    "initialising scripting engine"))
-    return true;
-
-  // create host site object
-
-  m_site = new CActiveScriptSite (m_pDoc->GetIDispatch (TRUE), m_pDoc);
-
-  m_site->AddRef ();
-  
-  if (ShowError (m_IActiveScript->SetScriptSite (m_site),
-    "setting site"))
-    return true;
-
-// add world object to engine's namespace
-// added SCRIPTITEM_GLOBALMEMBERS in 3.27
-
-WCHAR charWorld[]=L"world";
-
-  if (ShowError (m_IActiveScript->AddNamedItem (charWorld,
-    SCRIPTITEM_ISVISIBLE | SCRIPTITEM_ISSOURCE | SCRIPTITEM_GLOBALMEMBERS),
-    "adding world to script engine"))
-    return true;
-
-//  if (ShowError (m_IActiveScript->AddNamedItem (L"world",
-//    SCRIPTITEM_ISVISIBLE | SCRIPTITEM_ISSOURCE | SCRIPTITEM_GLOBALMEMBERS),
-//    "adding world to script engine"))
-//    return true;
-
-// set state to started
-
-  if (ShowError (m_IActiveScript->SetScriptState (SCRIPTSTATE_STARTED),
-    "starting script engine"))
-    return true;
-
-// connect outbound objects (ie. world)
-
-  if (ShowError (m_IActiveScript->SetScriptState (SCRIPTSTATE_CONNECTED),
-    "connecting script engine"))
-    return true;
-
-// get script engine dispatch pointer
-
-  if (ShowError (m_IActiveScript->GetScriptDispatch (0, &m_pDispatch),
-    "getting script engine dispatch pointer"))
-    return true;
-
-  }   // end of try block
-
- catch (HRESULT hr)
-   {
-   ShowError (hr, "starting scripting support");
-   DisableScripting ();
-   return true;
-   }
-
- catch (...)
-   {
-   ::TMessageBox ("Something nasty happened whilst initialising the scripting engine");
-   throw;
-   }
-
- return false;
-
-  } // end of CScriptEngine::CreateScriptEngine
-
 bool CScriptEngine::Parse (const CString & strCode, const CString & strWhat)
-  {
-
-  if (strWhat == "Script file" || strWhat == "Plugin")
-    bImmediate = false;
-  else
-    bImmediate = true;
-
- // Do Lua differently
-  if (L)
-    return ParseLua (strCode, strWhat);
+{
+  bImmediate = (strWhat != "Script file"  && strWhat != "Plugin");
 
   if (!m_IActiveScriptParse || !m_IActiveScript)
     return true;   // no script engine
 
-HRESULT hr;
-SCRIPTSTATE ss;
-
   // new for Python - an error may have caused the script state to change
-  hr = m_IActiveScript->GetScriptState (&ss);
-  
-  if (hr == S_OK)
-    {
-    // try to put it back to connected
-    if (ss != SCRIPTSTATE_CONNECTED)
-      hr = m_IActiveScript->SetScriptState (SCRIPTSTATE_CONNECTED);
-    }
+  // if so, try to put it back to connected
+  SCRIPTSTATE ss;
+  HRESULT hr = m_IActiveScript->GetScriptState (&ss);
+  if (hr == S_OK && ss != SCRIPTSTATE_CONNECTED)
+    hr = m_IActiveScript->SetScriptState (SCRIPTSTATE_CONNECTED);
 
   if (hr != S_OK)
     {
@@ -430,18 +391,14 @@ SCRIPTSTATE ss;
     return true;
     }
 
-  BSTR bstrCode;
-  EXCEPINFO ei; 
-
-  bstrCode = strCode.AllocSysString ();
-  ZeroMemory(&ei, sizeof(ei));
-
+  BSTR bstrCode = strCode.AllocSysString ();
   if (!bstrCode)
     return true;  // error
 
-  LARGE_INTEGER start, 
-                finish;
+  EXCEPINFO ei;
+  ZeroMemory(&ei, sizeof(ei));
 
+  LARGE_INTEGER start, finish;
   if (App.m_iCounterFrequency)
     QueryPerformanceCounter (&start);
 
@@ -452,90 +409,67 @@ SCRIPTSTATE ss;
                                NULL, 
                                &ei);
 
-  if (hr == S_OK && 
-      App.m_iCounterFrequency)
+  if (hr == S_OK && App.m_iCounterFrequency)
     {
     QueryPerformanceCounter (&finish);
     m_pDoc->m_iScriptTimeTaken += finish.QuadPart - start.QuadPart;
     }
 
- ::SysFreeString (bstrCode);
+  ::SysFreeString (bstrCode);
 
-  return hr != S_OK;    // true = error
-
-  } // end of CScriptEngine::ParseScript 
-
+  return hr != S_OK; // true = error
+} // end of CScriptEngine::Parse
 
 DISPID CScriptEngine::GetDispid (const CString & strName)
-    {
-
- // Do Lua differently
-  if (L)
-    return GetLuaDispid (strName);
-
+{
   if (!m_pDispatch)
     return DISPID_UNKNOWN;   // no script engine
 
-BSTR bstrProcedure;
-HRESULT hr;
-DISPID dispid;
+  DISPID dispid;
 
-  bstrProcedure = strName.AllocSysString ();
-
-// LCID en_us = MAKELCID (MAKELANGID (LANG_ENGLISH, SUBLANG_ENGLISH_US), SORT_DEFAULT);
-
-  hr = m_pDispatch->GetIDsOfNames (IID_NULL, &bstrProcedure, 1, LOCALE_SYSTEM_DEFAULT, &dispid);    // was LCID of 9
-  
+  BSTR bstrProcedure = strName.AllocSysString ();
+  HRESULT hr = m_pDispatch->GetIDsOfNames (IID_NULL, &bstrProcedure, 1, LOCALE_SYSTEM_DEFAULT, &dispid);    // was LCID of 9
   ::SysFreeString (bstrProcedure);
 
-  if (hr != S_OK)
-     return DISPID_UNKNOWN;
-
-  return dispid;     // might be zero, the way PHP currently is :)
-
-  } // end of CScriptEngine::GetDispid
-
-
+  return (hr == S_OK) ? dispid : DISPID_UNKNOWN;
+  // might be zero, the way PHP currently is :)
+} // end of CScriptEngine::GetDispid
 
 bool CScriptEngine::ShowError (const HRESULT hr, const CString& strMsg)
-  {
-DWORD status = 0;
-char *formattedmsg;
-CString str;
+{
+  static const char * sForeColour = "darkorange";
+  static const char * sBackColour = "black";
 
   if (hr == S_OK)
     return false;
 
-  const char * sForeColour = "darkorange";
-  const char * sBackColour = "black";
+  DWORD status = 0;
+  char *formattedmsg;
 
   CScriptErrorDlg dlg;
   dlg.m_iError = hr;
   dlg.m_strEvent = strMsg;
   
-  if (!FormatMessage (FORMAT_MESSAGE_FROM_SYSTEM |
-                    FORMAT_MESSAGE_ALLOCATE_BUFFER | 
-                    FORMAT_MESSAGE_IGNORE_INSERTS,
-                    NULL, 
-                    hr, 
-                    LANG_NEUTRAL, 
-                    (LPTSTR) &formattedmsg, 
-                    0, 
-                    NULL))
-  {
-   status = GetLastError ();
-   dlg.m_strDescription.Format ("<<Unable to convert error number %ld>>", hr);
-  }
- else
-  {
-   dlg.m_strDescription.Format ("Error %ld occurred when %s:\n\n%s", 
-                hr,
-                (LPCTSTR) strMsg,
-                formattedmsg);
-   LocalFree (formattedmsg);
-  }
-
-  DisableScripting ();
+  if (!FormatMessage (
+      FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
+      NULL, 
+      hr, 
+      LANG_NEUTRAL, 
+      (LPTSTR) &formattedmsg, 
+      0, 
+      NULL))
+    {
+    status = GetLastError ();
+    dlg.m_strDescription.Format ("<<Unable to convert error number %ld>>", hr);
+    }
+  else
+    {
+    dlg.m_strDescription.Format ("Error %ld occurred when %s:\n\n%s", 
+                                 hr,
+                                 (LPCTSTR) strMsg,
+                                 formattedmsg);
+    LocalFree (formattedmsg);
+    }
 
   dlg.m_strRaisedBy = "No active world";
 
@@ -570,44 +504,4 @@ CString str;
     }
 
   return true;
-
-  } // end of CScriptEngine::ShowError
-
-void CScriptEngine::DisableScripting (void)
-  {
-
-  // Do Lua differently
-  if (L)
-    {
-    CloseLua ();
-    return;
-    }
-
-  // release engine
-
-  if (m_IActiveScript)
-    {
-    m_IActiveScript->SetScriptState(SCRIPTSTATE_DISCONNECTED);
-    m_IActiveScript->Close ();
-    m_IActiveScript->Release ();
-    m_IActiveScript = NULL;
-    }
-
-  // release parser
-
-  if (m_IActiveScriptParse)
-    {
-    m_IActiveScriptParse->Release ();
-    m_IActiveScriptParse = NULL;
-    }
-
-  // release site
-
-  if (m_site)
-    {
-    m_site->Release ();
-    m_site = NULL;
-    }
-
-  } // end of CScriptEngine::DisableScripting 
-
+} // end of CScriptEngine::ShowError

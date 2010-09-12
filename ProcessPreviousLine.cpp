@@ -8,6 +8,8 @@
 #include "mxp\mxp.h"
 #include "scripting\errors.h"
 
+#include "scripting\lua_scriptengine.h"
+
 #ifdef _DEBUG
 //#define new DEBUG_NEW
 #undef THIS_FILE
@@ -798,7 +800,8 @@ assemble the full text of the original line.
     // if Lua, add style info to script space
     if (GetScriptEngine () && GetScriptEngine ()->IsLua ())
       {
-      lua_State * L = dynamic_cast<CScriptEngine*>(GetScriptEngine ())->L;
+      lua_State * L = GetScriptEngine ()->LuaState ();
+
       lua_newtable(L);                                                            
       int i = 1;          // style run number
 

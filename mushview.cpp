@@ -5989,7 +5989,7 @@ long startcol,
   // compile regular expression
   try 
     {
-    regexp = regcomp (strText, (dlg.m_bMatchCase ?  0 : PCRE_CASELESS) | (pDoc->m_bUTF_8 ? PCRE_UTF8 : 0) );
+    regexp = new t_regexp (strText, (dlg.m_bMatchCase ?  0 : PCRE_CASELESS) | (pDoc->m_bUTF_8 ? PCRE_UTF8 : 0) );
     }   // end of try
   catch(CException* e)
     {
@@ -6073,7 +6073,7 @@ CString strSelection;
   // compile regular expression
   try 
     {
-    regexp = regcomp (strText, (dlg.m_bMatchCase ?  0 : PCRE_CASELESS) | (pDoc->m_bUTF_8 ? PCRE_UTF8 : 0) );
+    regexp = new t_regexp (strText, (dlg.m_bMatchCase ?  0 : PCRE_CASELESS) | (pDoc->m_bUTF_8 ? PCRE_UTF8 : 0) );
     }   // end of try
   catch(CException* e)
     {

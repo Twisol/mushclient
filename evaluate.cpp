@@ -343,17 +343,6 @@ int iCount = GetTriggerArray ().GetSize ();    // how many there are
                                         false,         // don't throw exceptions
                                         NULL);    // no name substitution in match text
 
-
-        LONGLONG iOldTimeTaken = 0;
-
-        // remember time taken to execute them
-
-        if (trigger_item->regexp)
-          iOldTimeTaken = trigger_item->regexp->iTimeTaken;
-
-        delete trigger_item->regexp;    // get rid of earlier regular expression
-        trigger_item->regexp = NULL;
-
       // all triggers are now regular expressions
 
         CString strRegexp; 
@@ -365,7 +354,14 @@ int iCount = GetTriggerArray ().GetSize ();    // how many there are
 
         try
           {
-          trigger_item->regexp = regcomp (strRegexp,
+          if (trigger_item->regexp)
+            trigger_item->regexp->Compile (strRegexp,
+                                          (trigger_item->ignore_case  ? PCRE_CASELESS : 0) |
+                                          (trigger_item->bMultiLine  ? PCRE_MULTILINE : 0) |
+                                          (m_bUTF_8 ? PCRE_UTF8 : 0)
+                                         );
+          else
+            trigger_item->regexp = new t_regexp (strRegexp,
                                           (trigger_item->ignore_case  ? PCRE_CASELESS : 0) |
                                           (trigger_item->bMultiLine  ? PCRE_MULTILINE : 0) |
                                           (m_bUTF_8 ? PCRE_UTF8 : 0)
@@ -377,17 +373,12 @@ int iCount = GetTriggerArray ().GetSize ();    // how many there are
           e->Delete ();
           continue;
           }   // end of catch
-
-        // add back execution time
-        if (trigger_item->regexp)
-          trigger_item->regexp->iTimeTaken += iOldTimeTaken;
-
         } // end of variable substitution
 
       try
         {
 //        timer t ("Evaluating regular expression");
-        if (!regexec (trigger_item->regexp, strTarget))
+        if (!trigger_item->regexp->Execute (strTarget))
           continue;
         } // end of try
     	catch(CException* e)
@@ -397,8 +388,7 @@ int iCount = GetTriggerArray ().GetSize ();    // how many there are
         continue;
         }   // end of catch
 
-      iStartCol = trigger_item->regexp->m_vOffsets [0];
-      iEndCol   = trigger_item->regexp->m_vOffsets [1];
+      trigger_item->regexp->GetWildcardOffsets (0, iStartCol, iEndCol);
 
       trigger_item->wildcards.clear ();
 
@@ -790,7 +780,7 @@ bool CMUSHclientDoc::ProcessOneAliasSequence (const CString strCurrentLine,
   
     try
       {
-      bMatched = regexec (alias_item->regexp, strTarget);
+      bMatched = alias_item->regexp->Execute (strTarget);
       }
     catch(CException* e)
       {

@@ -10,11 +10,10 @@
 
 #include "scripting\errors.h"
 
-#include "pcre\config.h"
-#include "pcre\pcre_internal.h"
-
 #define PNG_NO_CONSOLE_IO
 #include "png\png.h"
+
+#include "dialogs\RegexpProblemDlg.h"
 
 #ifdef _DEBUG
 //#define new DEBUG_NEW
@@ -2518,78 +2517,34 @@ static char sPathName [_MAX_PATH];
 
   } // end of Make_Absolute_Path
 
-
-const char * Convert_PCRE_Runtime_Error (const int iError)
-  {
-  switch (iError)
-    {
-    case PCRE_ERROR_NOMATCH        : return Translate ("No match");       
-    case PCRE_ERROR_NULL           : return Translate ("Null");           
-    case PCRE_ERROR_BADOPTION      : return Translate ("Bad option");     
-    case PCRE_ERROR_BADMAGIC       : return Translate ("Bad magic");      
-    case PCRE_ERROR_UNKNOWN_OPCODE : return Translate ("Unknown Opcode"); 
-    case PCRE_ERROR_NOMEMORY       : return Translate ("No Memory");      
-    case PCRE_ERROR_NOSUBSTRING    : return Translate ("No Substring");   
-    case PCRE_ERROR_MATCHLIMIT     : return Translate ("Match Limit");    
-    case PCRE_ERROR_CALLOUT        : return Translate ("Callout");        
-    case PCRE_ERROR_BADUTF8        : return Translate ("Bad UTF8");       
-    case PCRE_ERROR_BADUTF8_OFFSET : return Translate ("Bad UTF8 Offset");
-    case PCRE_ERROR_PARTIAL        : return Translate ("Partial");        
-    case PCRE_ERROR_BADPARTIAL     : return Translate ("Bad Partial");    
-    case PCRE_ERROR_INTERNAL       : return Translate ("Internal");       
-    case PCRE_ERROR_BADCOUNT       : return Translate ("Bad Count");      
-    case PCRE_ERROR_DFA_UITEM      : return Translate ("Dfa Uitem");      
-    case PCRE_ERROR_DFA_UCOND      : return Translate ("Dfa Ucond");      
-    case PCRE_ERROR_DFA_UMLIMIT    : return Translate ("Dfa Umlimit");    
-    case PCRE_ERROR_DFA_WSSIZE     : return Translate ("Dfa Wssize");     
-    case PCRE_ERROR_DFA_RECURSE    : return Translate ("Dfa Recurse");    
-    case PCRE_ERROR_RECURSIONLIMIT : return Translate ("Recursion Limit");
-    case PCRE_ERROR_NULLWSLIMIT    : return Translate ("Null Ws Limit");  
-    case PCRE_ERROR_BADNEWLINE     : return Translate ("Bad Newline");    
-    default: return Translate ("Unknown PCRE error");
-    }
-  } // end of Convert_PCRE_Runtime_Error
-
-
-/*************************************************
-*    Find first set of multiple named strings    *
-*************************************************/
-
-// taken from pcre_get.c - with minor modifications
-
-/* This function allows for duplicate names in the table of named substrings.
-It returns the number of the first one that was set in a pattern match.
-
-Arguments:
-  code         the compiled regex
-  stringname   the name of the capturing substring
-  ovector      the vector of matched substrings
-
-Returns:       the number of the first that is set,
-               or the number of the last one if none are set,
-               or a negative number on error
-*/
-
-typedef unsigned char uschar;
-
-int
-njg_get_first_set(const pcre *code, const char *stringname, const int *ovector)
+// checks a regular expression, raises a dialog if bad
+bool CheckRegularExpression (const CString strRegexp, const int iOptions)
 {
-const real_pcre *re = (const real_pcre *)code;
-int entrysize;
-char *first, *last;
-uschar *entry;
-if ((re->options & (PCRE_DUPNAMES | PCRE_JCHANGED)) == 0)
-  return pcre_get_stringnumber(code, stringname);
-entrysize = pcre_get_stringtable_entries(code, stringname, &first, &last);
-if (entrysize <= 0) return entrysize;
-for (entry = (uschar *)first; entry <= (uschar *)last; entry += entrysize)
-  {
-  int n = (entry[0] << 8) + entry[1];
-  if (ovector[n*2] >= 0) return n;
-  }
-return (first[0] << 8) + first[1];
+  const char* error;
+  int erroroffset;
+  if (t_regexp::CheckPattern(strRegexp, iOptions, &error, &erroroffset))
+    return true; // It's valid!
+
+  CRegexpProblemDlg dlg;
+  dlg.m_strErrorMessage = Translate (error);
+  dlg.m_strErrorMessage += ".";   // end the sentence
+
+  // make first character upper-case, so it looks like a sentence. :)
+  dlg.m_strErrorMessage.SetAt (0, toupper (dlg.m_strErrorMessage [0]));
+
+  dlg.m_iColumn = erroroffset + 1;
+  dlg.m_strColumn = TFormat ("Error occurred at column %i.", dlg.m_iColumn);
+
+  dlg.m_strText = strRegexp;
+  dlg.m_strText += ENDLINE;
+  if (erroroffset > 0)
+    dlg.m_strText += CString ('-', erroroffset - 1);
+  dlg.m_strText += '^';
+
+  dlg.DoModal ();
+  return false;   // bad
 }
+
 
 // i18n (Internationalization) stuff
 

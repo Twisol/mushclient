@@ -111,7 +111,7 @@ CFindDlg dlg (FindInfo.m_strFindStringList);
 
     // compile regular expression if needed
     if (FindInfo.m_bRegexp )
-      FindInfo.m_regexp = regcomp (FindInfo.m_strFindStringList.GetHead (),
+      FindInfo.m_regexp = new t_regexp (FindInfo.m_strFindStringList.GetHead (),
       (FindInfo.m_bMatchCase ? 0 :  PCRE_CASELESS) | (FindInfo.m_bUTF8 ? PCRE_UTF8 : 0));
 
     }   // end of not repeating the last find
@@ -214,11 +214,10 @@ CString strStatus = TFormat ("Finding: %s", (LPCTSTR) FindInfo.m_strFindStringLi
       if (FindInfo.m_bRegexp )
         {
 
-        if (regexec (FindInfo.m_regexp, strLine))
+        if (FindInfo.m_regexp->Execute (strLine))
           {
           // work out what column it must have been at
-          FindInfo.m_iStartColumn = FindInfo.m_regexp->m_vOffsets [0];
-          FindInfo.m_iEndColumn = FindInfo.m_regexp->m_vOffsets [1];
+          FindInfo.m_regexp->GetWildcardOffsets (0, FindInfo.m_iStartColumn, FindInfo.m_iEndColumn);
           WrapUpFind (FindInfo);
           return true;    // found it!
           }

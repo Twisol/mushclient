@@ -1,12 +1,11 @@
-
 /* regexp.h - Definitions etc. for regexp(3) routines. */
-
 #ifndef __REGEXP_H
 #define __REGEXP_H
 
+#define PCRE_EXP_DECL extern
+#include "pcre\pcre.h"
 
-
-#define MAX_WILDCARDS 10
+const short MAX_WILDCARDS = 10;
 
 // This is Perl-Compatible Regular Expressions 
 
@@ -16,86 +15,58 @@
 
 /* Copyright (c) 1997-2000 University of Cambridge */
 
-#define PCRE_EXP_DECL extern
-
-#include "pcre\pcre.h"
-                 
-// for duplicate named wildcards
-int njg_get_first_set(const pcre *code, const char *stringname, const int *ovector);
-
 // compiled regular expression type
 
 class t_regexp 
-  {
+{
+public:
+  t_regexp (const char* pattern, const int flags);
+  ~t_regexp ();
 
-  public:
+  void Compile (const char* pattern, const int flags);
+  bool Execute (const char* string, const int start_offset=0);
 
-  t_regexp () { 
-      m_program = NULL; 
-      m_extra = NULL;
-      iTimeTaken = 0;
-      m_iCount = 0;
-      m_iMatchAttempts = 0;
-      m_iExecutionError = 0;
-                };   // constructor
-  ~t_regexp () { 
-    if (m_program) 
-      pcre_free (m_program); 
-    if (m_extra) 
-      pcre_free (m_extra); 
-    };  // destructor
+  string LastTarget () const;
+  int LastError () const;
 
-  // pairs of offsets from match
-  vector<int> m_vOffsets;
-  // count of matching wildcards
-  int m_iCount;
-  long m_iMatchAttempts;
-  // the string we match on (to extract wildcards from)
-  string m_sTarget;
-  // the program itself
-  pcre * m_program;	    
+  // returns a wildcard by number
+  string GetWildcard (const int iNumber) const;
+  // returns a wildcard by name
+  string GetWildcard (const string sName) const;
 
-  // extra stuff for speed
-  pcre_extra * m_extra;
+  bool GetWildcardOffsets (const int iNumber, int& iLeft, int& iRight) const;
+  bool GetWildcardOffsets (const string& sName, int& iLeft, int& iRight) const;
 
-  LONGLONG iTimeTaken;
+  int MatchedCapturesCount () const;
+  long MatchAttempts () const;
 
-  int m_iExecutionError;  // error code if failed execution
+  LONGLONG TimeTaken () const;
 
-  // returns a numbered wildcard
-  string GetWildcard (const int iNumber) const
-    {
-    if (iNumber >= 0 && iNumber < m_iCount)
-      return string (
-      &m_sTarget.c_str () [m_vOffsets [iNumber * 2]],
-      m_vOffsets [(iNumber * 2) + 1] - m_vOffsets [iNumber * 2]).c_str ();
-    else
-      return "";
-    };
+  int GetInfo (int info_type, void* out) const;
+  bool DupNamesAllowed () const;
 
-  // returns a named wildcard
-  string GetWildcard (const string sName) const
-    {
-    int iNumber;
-    if (IsStringNumber (sName))
-      iNumber = atoi (sName.c_str ());
-    else
-      {
-      if (m_program == NULL)
-        iNumber = PCRE_ERROR_NOSUBSTRING;
-      else
-        iNumber = njg_get_first_set (m_program, sName.c_str (), &m_vOffsets [0]);
-      }
-    return GetWildcard (iNumber);
-    }
+  static const char* ErrorCodeToString(const int code);
+  static bool CheckPattern (const char* pattern, const int iOptions,
+                            const char** error, int* errorOffset);
 
-  };
+private:
+  void AcquirePattern(pcre* program, pcre_extra* extra);
+  void ReleasePattern();
 
-t_regexp * regcomp(const char *exp, const int options = 0);
-int regexec(register t_regexp *prog,
-            register const char *string,
-            const int start_offset = 0);
+  string m_sTarget;       // the string we last matched on (to extract wildcards from)
+  int m_iCount;           // count of matching wildcards
+  vector<int> m_vOffsets; // pairs of offsets from match
 
-bool CheckRegularExpression (const CString strRegexp, const int iOptions);
+  int m_iExecutionError; // error code from last execution
+
+  // TODO: Consider moving m_iMatchAttempts and m_iTimeTaken out of t_regexp and into a
+  // class that actually uses them, like CAlias and CTrigger. It's just extra bookkeeping
+  // that t_regexp itself has no need for.
+  long m_iMatchAttempts; // number of times a match has been attempted
+  LONGLONG m_iTimeTaken; // total time taken to match
+
+  pcre * m_program;     // the program itself
+  pcre_extra * m_extra; // extra stuff for speed
+};
 
 #endif  // #ifndef __REGEXP_H

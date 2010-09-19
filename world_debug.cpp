@@ -1076,8 +1076,8 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
 
       if (pTrigger->regexp)
         {
-        iTimeTaken += pTrigger->regexp->iTimeTaken;
-        nTotalMatchAttempts += pTrigger->regexp->m_iMatchAttempts;
+        iTimeTaken += pTrigger->regexp->TimeTaken ();
+        nTotalMatchAttempts += pTrigger->regexp->MatchAttempts ();
         }
 
       nTotalMatches += pTrigger->nMatched;
@@ -1132,8 +1132,8 @@ VARIANT CMUSHclientDoc::Debug(LPCTSTR Command)
 
       if (pAlias->regexp)
         {
-        iTimeTaken += pAlias->regexp->iTimeTaken;
-        nTotalMatchAttempts += pAlias->regexp->m_iMatchAttempts;
+        iTimeTaken += pAlias->regexp->TimeTaken ();
+        nTotalMatchAttempts += pAlias->regexp->MatchAttempts ();
         }
 
       nTotalMatches += pAlias->nMatched;
@@ -2270,11 +2270,11 @@ void CMUSHclientDoc::DebugHelper (const CString strAction, CString strArgument)
       {
       if (App.m_iCounterFrequency > 0)
         {
-        DebugShowD (Translate ("Time to match"), ((double) pTrigger->regexp->iTimeTaken) / 
+        DebugShowD (Translate ("Time to match"), ((double) pTrigger->regexp->TimeTaken ()) / 
                         ((double) App.m_iCounterFrequency));
         }
 
-      DebugShow  (Translate ("Match attempts"), pTrigger->regexp->m_iMatchAttempts);
+      DebugShow  (Translate ("Match attempts"), pTrigger->regexp->MatchAttempts ());
       }
 
     Note ("");
@@ -2339,10 +2339,10 @@ void CMUSHclientDoc::DebugHelper (const CString strAction, CString strArgument)
       {
       if (App.m_iCounterFrequency > 0)
         {
-        DebugShowD (Translate ("Time to match"), ((double) pAlias->regexp->iTimeTaken) / 
+        DebugShowD (Translate ("Time to match"), ((double) pAlias->regexp->TimeTaken ()) / 
                         ((double) App.m_iCounterFrequency));
         }
-      DebugShow  (Translate ("Match attempts"), pAlias->regexp->m_iMatchAttempts);
+      DebugShow  (Translate ("Match attempts"), pAlias->regexp->MatchAttempts ());
       }
 
     Note ("");

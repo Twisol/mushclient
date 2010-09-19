@@ -597,7 +597,7 @@ bool bReplace = false;
   // compile regular expression
   try 
     {
-    regexp = regcomp (strRegexp, (Flags & eIgnoreCase ? PCRE_CASELESS : 0) | (m_bUTF_8 ? PCRE_UTF8 : 0));
+    regexp = new t_regexp (strRegexp, (Flags & eIgnoreCase ? PCRE_CASELESS : 0) | (m_bUTF_8 ? PCRE_UTF8 : 0));
     }   // end of try
   catch(CException* e)
     {
@@ -1027,7 +1027,7 @@ bool bReplace = false;
   // compile regular expression
   try 
     {
-    regexp = regcomp (strRegexp, (Flags & eIgnoreAliasCase ? PCRE_CASELESS : 0)
+    regexp = new t_regexp (strRegexp, (Flags & eIgnoreAliasCase ? PCRE_CASELESS : 0)
 #if ALIASES_USE_UTF8
                                   | (m_bUTF_8 ? PCRE_UTF8 : 0)
 #endif // ALIASES_USE_UTF8
@@ -2240,14 +2240,14 @@ CAlias * alias_item;
 
     case  24: // number of matches to regexp
       if (alias_item->regexp)      
-        SetUpVariantLong   (vaResult, alias_item->regexp->m_iCount);
+        SetUpVariantLong   (vaResult, alias_item->regexp->MatchedCapturesCount ());
       else
         SetUpVariantLong   (vaResult, 0);
       break;
 
     case  25: // last matching string
       if (alias_item->regexp)      
-        SetUpVariantString   (vaResult, alias_item->regexp->m_sTarget.c_str ());
+        SetUpVariantString   (vaResult, alias_item->regexp->LastTarget ().c_str ());
       else
         SetUpVariantString   (vaResult, "");
       break;
@@ -2256,8 +2256,8 @@ CAlias * alias_item;
     case  27: SetUpVariantBool   (vaResult, alias_item->dispid != DISPID_UNKNOWN); break;
 
     case  28: 
-      if (alias_item->regexp && alias_item->regexp->m_program == NULL)      
-        SetUpVariantLong   (vaResult, alias_item->regexp->m_iExecutionError);
+      if (alias_item->regexp)
+        SetUpVariantLong   (vaResult, alias_item->regexp->LastError ());
       else
         SetUpVariantLong   (vaResult, 0);
       break;
@@ -2266,7 +2266,7 @@ CAlias * alias_item;
     case  30:
       if (alias_item->regexp && App.m_iCounterFrequency)
         {
-        double elapsed_time = ((double) alias_item->regexp->iTimeTaken) / 
+        double elapsed_time = ((double) alias_item->regexp->TimeTaken ()) / 
                               ((double) App.m_iCounterFrequency);
 
         SetUpVariantDouble (vaResult, elapsed_time);
@@ -2275,7 +2275,7 @@ CAlias * alias_item;
 
     case  31:
       if (alias_item->regexp)
-        SetUpVariantLong   (vaResult, alias_item->regexp->m_iMatchAttempts);
+        SetUpVariantLong   (vaResult, alias_item->regexp->MatchAttempts ());
       break;
 
     case 101: SetUpVariantString (vaResult, alias_item->wildcards [1].c_str ()); break;
@@ -2358,22 +2358,22 @@ CTrigger * trigger_item;
     case  30: SetUpVariantLong   (vaResult, trigger_item->iOtherBackground); break;
     case  31: // number of matches to regexp
       if (trigger_item->regexp)      
-        SetUpVariantLong   (vaResult, trigger_item->regexp->m_iCount);
+        SetUpVariantLong   (vaResult, trigger_item->regexp->MatchedCapturesCount ());
       else
         SetUpVariantLong   (vaResult, 0);
       break;
 
     case  32: // last matching string
       if (trigger_item->regexp)      
-        SetUpVariantString   (vaResult, trigger_item->regexp->m_sTarget.c_str ());
+        SetUpVariantString   (vaResult, trigger_item->regexp->LastTarget ().c_str ());
       else
         SetUpVariantString   (vaResult, "");
       break;
     case  33: SetUpVariantBool   (vaResult, trigger_item->bExecutingScript); break;
     case  34: SetUpVariantBool   (vaResult, trigger_item->dispid != DISPID_UNKNOWN); break;
     case  35: 
-      if (trigger_item->regexp && trigger_item->regexp->m_program == NULL)      
-        SetUpVariantLong   (vaResult, trigger_item->regexp->m_iExecutionError);
+      if (trigger_item->regexp)
+        SetUpVariantLong   (vaResult, trigger_item->regexp->LastError ());
       else
         SetUpVariantLong   (vaResult, 0);
       break;
@@ -2382,10 +2382,8 @@ CTrigger * trigger_item;
     case  37:
       if (trigger_item->regexp && App.m_iCounterFrequency)
         {
-        double   elapsed_time;
-
-        elapsed_time = ((double) trigger_item->regexp->iTimeTaken) / 
-                       ((double) App.m_iCounterFrequency);
+        double elapsed_time = ((double) trigger_item->regexp->TimeTaken ()) / 
+                                ((double) App.m_iCounterFrequency);
 
         SetUpVariantDouble (vaResult, elapsed_time);
         }
@@ -2393,7 +2391,7 @@ CTrigger * trigger_item;
 
     case  38:
       if (trigger_item->regexp)
-        SetUpVariantLong   (vaResult, trigger_item->regexp->m_iMatchAttempts);
+        SetUpVariantLong   (vaResult, trigger_item->regexp->MatchAttempts ());
       break;
 
 #ifdef PANE
@@ -4608,7 +4606,7 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
           GetTriggerMap ().GetNextAssoc (pos, strName, pTrigger);
           // calculate time taken to execute triggers
           if (pTrigger->regexp)
-            iTimeTaken += pTrigger->regexp->iTimeTaken;
+            iTimeTaken += pTrigger->regexp->TimeTaken ();
           }
 
         elapsed_time = ((double) iTimeTaken) / 
@@ -4633,7 +4631,7 @@ VARIANT CMUSHclientDoc::GetInfo(long InfoType)
           GetAliasMap ().GetNextAssoc (pos, strName, pAlias);
           // calculate time taken to execute triggers
           if (pAlias->regexp)
-            iTimeTaken += pAlias->regexp->iTimeTaken;
+            iTimeTaken += pAlias->regexp->TimeTaken ();
           }
 
         elapsed_time = ((double) iTimeTaken) / 
@@ -6443,7 +6441,7 @@ bool bChanged;
         // compile regular expression
         try 
           {
-          regexp = regcomp (strRegexp, (trigger_item->ignore_case ? PCRE_CASELESS : 0) |
+          regexp = new t_regexp (strRegexp, (trigger_item->ignore_case ? PCRE_CASELESS : 0) |
                                        (trigger_item->bMultiLine  ? PCRE_MULTILINE : 0) |
                                        (m_bUTF_8 ? PCRE_UTF8 : 0)
                                        );
@@ -6719,7 +6717,7 @@ bool bChanged;
         // compile regular expression
         try 
           {
-          regexp = regcomp (strRegexp, (Alias_item->bIgnoreCase ? PCRE_CASELESS : 0)
+          regexp = new t_regexp (strRegexp, (Alias_item->bIgnoreCase ? PCRE_CASELESS : 0)
 #if ALIASES_USE_UTF8
                              | (m_bUTF_8 ? PCRE_UTF8 : 0)
 #endif // ALIASES_USE_UTF8

@@ -2649,11 +2649,10 @@ void CPrefsP7::LoadDialog (CDialog * pDlg, CObject * pItem)
   dlg->m_pAliasMap = &m_doc->m_AliasMap;
   dlg->m_current_alias = alias_item;
 
-  if (alias_item->regexp && 
-      alias_item->regexp->m_program == NULL && 
-      alias_item->regexp->m_iExecutionError < PCRE_ERROR_NOMATCH)
+  if (alias_item->regexp &&
+      alias_item->regexp->LastError ())
     dlg->m_strRegexpError = 
-      TFormat ("Error: %s ", Convert_PCRE_Runtime_Error (alias_item->regexp->m_iExecutionError));
+      TFormat ("Error: %s ", t_regexp::ErrorCodeToString (alias_item->regexp->LastError ()));
 
   // NB - also see MapDlg.cpp for alias processing
 
@@ -2704,7 +2703,7 @@ void CPrefsP7::UnloadDialog (CDialog * pDlg, CObject * pItem)
   else
     strRegexp = ConvertToRegularExpression (alias_item->name);
 
-  alias_item->regexp = regcomp (strRegexp,
+  alias_item->regexp = new t_regexp (strRegexp,
                                   (alias_item->bIgnoreCase  ? PCRE_CASELESS : 0)
 #if ALIASES_USE_UTF8
                                   | (m_pDoc->m_bUTF_8 ? PCRE_UTF8 : 0)
@@ -3319,27 +3318,27 @@ void CPrefsP7::GetFilterInfo (CObject * pItem, lua_State * L)
 
   //  GetAliasInfo  (24)
   if (alias->regexp)      
-    MakeTableItem   (L, "match_count",  alias->regexp->m_iCount);
+    MakeTableItem   (L, "match_count",  alias->regexp->MatchedCapturesCount ());
 
   //  GetAliasInfo  (25)
   if (alias->regexp)      
-    MakeTableItem   (L, "last_match",   alias->regexp->m_sTarget);
+    MakeTableItem   (L, "last_match",   alias->regexp->LastTarget ());
 
   //  GetAliasInfo  (27)
   MakeTableItemBool (L, "script_valid", alias->dispid != DISPID_UNKNOWN);
 
   //  GetAliasInfo  (28)
-  if (alias->regexp && alias->regexp->m_program == NULL)      
-    MakeTableItem   (L, "execution_error", alias->regexp->m_iExecutionError);
+  if (alias->regexp)
+    MakeTableItem   (L, "execution_error", alias->regexp->LastError ());
 
   //  GetAliasInfo  (30)
   if (alias->regexp && App.m_iCounterFrequency)
-    MakeTableItem (L, "execution_time", ((double) alias->regexp->iTimeTaken) / 
+    MakeTableItem (L, "execution_time", ((double) alias->regexp->TimeTaken ()) / 
                                         ((double) App.m_iCounterFrequency));
 
   //  GetAliasInfo  (31)
   if (alias->regexp)
-    MakeTableItem   (L, "match_attempts", alias->regexp->m_iMatchAttempts);
+    MakeTableItem   (L, "match_attempts", alias->regexp->MatchAttempts ());
 
   }   // end of CPrefsP7::GetFilterInfo
 
@@ -3568,10 +3567,9 @@ void CPrefsP8::LoadDialog (CDialog * pDlg, CObject * pItem)
   dlg->m_iColourChangeType = trigger_item->iColourChangeType;
 
   if (trigger_item->regexp && 
-      trigger_item->regexp->m_program == NULL && 
-      trigger_item->regexp->m_iExecutionError < PCRE_ERROR_NOMATCH)
+      trigger_item->regexp->LastError ())
     dlg->m_strRegexpError = 
-      TFormat ("Error: %s ", Convert_PCRE_Runtime_Error (trigger_item->regexp->m_iExecutionError));
+      TFormat ("Error: %s ", t_regexp::ErrorCodeToString (trigger_item->regexp->LastError ()));
 
   }   // end of CPrefsP8::LoadDialog
 
@@ -3671,16 +3669,6 @@ void CPrefsP8::UnloadDialog (CDialog * pDlg, CObject * pItem)
     trigger_item->sound_to_play = dlg->m_sound_pathname;
   trigger_item->omit_from_log = dlg->m_omit_from_log;
 
-  LONGLONG iOldTimeTaken = 0;
-
-  // remember time taken to execute them
-
-  if (trigger_item->regexp)
-    iOldTimeTaken = trigger_item->regexp->iTimeTaken;
-
-  delete trigger_item->regexp;    // get rid of earlier regular expression
-  trigger_item->regexp = NULL;
-
 // all triggers are now regular expressions
 
   CString strRegexp; 
@@ -3690,14 +3678,16 @@ void CPrefsP8::UnloadDialog (CDialog * pDlg, CObject * pItem)
   else
     strRegexp = ConvertToRegularExpression (trigger_item->trigger);
 
-  trigger_item->regexp = regcomp (strRegexp,
+  if (trigger_item->regexp)
+    trigger_item->regexp->Compile (strRegexp,
                                   (trigger_item->ignore_case  ? PCRE_CASELESS : 0) |
                                   (trigger_item->bMultiLine  ? PCRE_MULTILINE : 0) |
                                   (m_doc->m_bUTF_8 ? PCRE_UTF8 : 0));
-
-  // add back execution time
-  if (trigger_item->regexp)
-    trigger_item->regexp->iTimeTaken += iOldTimeTaken;
+  else
+    trigger_item->regexp = new t_regexp (strRegexp,
+                                  (trigger_item->ignore_case  ? PCRE_CASELESS : 0) |
+                                  (trigger_item->bMultiLine  ? PCRE_MULTILINE : 0) |
+                                  (m_doc->m_bUTF_8 ? PCRE_UTF8 : 0));
   }    // end of  CPrefsP8::UnloadDialog
 
 CString CPrefsP8::GetObjectName (CDialog * pDlg) const
@@ -4386,27 +4376,27 @@ ASSERT( trigger->IsKindOf( RUNTIME_CLASS( CTrigger ) ) );
 
   //  GetTriggerInfo  (31)
   if (trigger->regexp)      
-    MakeTableItem   (L, "match_count",  trigger->regexp->m_iCount);
+    MakeTableItem   (L, "match_count",  trigger->regexp->MatchedCapturesCount ());
 
   //  GetTriggerInfo  (32)
   if (trigger->regexp)      
-    MakeTableItem   (L, "last_match",   trigger->regexp->m_sTarget);
+    MakeTableItem   (L, "last_match",   trigger->regexp->LastTarget ());
 
   //  GetTriggerInfo  (34)
   MakeTableItemBool (L, "script_valid", trigger->dispid != DISPID_UNKNOWN);
 
   //  GetTriggerInfo  (35)
-  if (trigger->regexp && trigger->regexp->m_program == NULL)      
-    MakeTableItem   (L, "execution_error", trigger->regexp->m_iExecutionError);
+  if (trigger->regexp)      
+    MakeTableItem   (L, "execution_error", trigger->regexp->LastError ());
 
   //  GetTriggerInfo  (37)
   if (trigger->regexp && App.m_iCounterFrequency)
-    MakeTableItem (L, "execution_time", ((double) trigger->regexp->iTimeTaken) / 
+    MakeTableItem (L, "execution_time", ((double) trigger->regexp->TimeTaken ()) / 
                                         ((double) App.m_iCounterFrequency));
 
   //  GetTriggerInfo  (38)
   if (trigger->regexp)
-    MakeTableItem   (L, "match_attempts", trigger->regexp->m_iMatchAttempts);
+    MakeTableItem   (L, "match_attempts", trigger->regexp->MatchAttempts ());
 
   }   // end of CPrefsP8::GetFilterInfo
 
